@@ -1,0 +1,744 @@
+{
+  "name": "Gestão de Faturação (Pessoal)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -4576,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "folder",
+        "operation": "list",
+        "path": "/_faturas",
+        "filters": {}
+      },
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "List Folder",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -4416,
+        512
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "JCLog8VQpfo6EsPv",
+          "name": "Dropbox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const supportedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.tif'];\nreturn items.filter(item => {\n  const d = item.json;\n  const type = d.type || d['.tag'] || '';\n  if (type === 'folder') return false;\n  const name = (d.name || d.pathDisplay || d.path_display || '').toLowerCase();\n  return supportedExts.some(ext => name.endsWith(ext));\n});"
+      },
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "Filter Invoices",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4256,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "d4e5f6a7-b8c9-0123-def1-234567890123",
+      "name": "Loop Over Files",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -4080,
+        512
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "e5f6a7b8-c9d0-1234-ef12-345678901234",
+      "name": "Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -3840,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "download",
+        "path": "={{ $json.pathDisplay }}"
+      },
+      "id": "f6a7b8c9-d0e1-2345-f123-456789012345",
+      "name": "Download PDF",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -3840,
+        512
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "JCLog8VQpfo6EsPv",
+          "name": "Dropbox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const binaryKeys = Object.keys(items[0].binary || {});\nif (binaryKeys.length === 0) throw new Error('No binary data from Dropbox download');\nconst binaryMeta = items[0].binary[binaryKeys[0]];\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKeys[0]);\nif (buffer.length > 10 * 1024 * 1024) throw new Error('File exceeds 10MB limit');\nconst base64Data = buffer.toString('base64');\nconst originalPath = items[0].json.pathDisplay || items[0].json.path_display || items[0].json.pathLower || '';\nconst originalName = items[0].json.name || originalPath.split('/').pop() || 'unknown.pdf';\nconst ext = originalName.split('.').pop().toLowerCase();\nconst mimeMap = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', tiff: 'image/tiff', tif: 'image/tiff' };\nconst mimeType = mimeMap[ext] || binaryMeta.mimeType || 'application/pdf';\n\nconst prompt = 'Extract the following from this invoice and return ONLY a JSON object:\\\\n\\\\n' +\n  '1. vendor: The company NAME that ISSUED the invoice (the seller, at the top)\\\\n' +\n  '2. seller_vat: The VAT/NIF of the SELLER/ISSUER. Digits only, strip PT prefix.\\\\n' +\n  '3. buyer_vat: The VAT/NIF of the BUYER/CLIENT. Digits only, strip PT prefix. Look in Cliente/Adquirente/Bill To sections.\\\\n' +\n  '4. invoice_id: The full invoice number/reference (e.g., FT 2025/123, FS 2025/45)\\\\n' +\n  '5. date: The invoice/emission date in YYYY-MM-DD format (NOT due date)\\\\n' +\n  '6. amount: The total amount as a number (e.g., 123.45). Use the FINAL total.\\\\n' +\n  '7. iva_rate: The main IVA/VAT percentage as a number (e.g., 23, 16, 6, 4, 0). If multiple rates, return the highest.\\\\n' +\n  '8. currency: The currency code (default EUR)\\\\n\\\\n' +\n  'CRITICAL RULES:\\\\n' +\n  '- seller_vat and buyer_vat: ONLY digits, no letters, no spaces, no PT prefix\\\\n' +\n  '- For Portuguese AT invoices: seller is at the top, buyer is in the Cliente/Adquirente section\\\\n' +\n  '- invoice_id: Include the document type prefix (FT, FS, FR, NC, VD, etc.)\\\\n' +\n  '- amount: The grand total (Total a Pagar), not subtotals\\\\n' +\n  '- Return ONLY valid JSON, no markdown, no explanation.';\n\nconst requestBody = {\n  contents: [{ parts: [\n    { inline_data: { mime_type: mimeType, data: base64Data } },\n    { text: prompt }\n  ]}],\n  generationConfig: { temperature: 0.1, responseMimeType: 'application/json' }\n};\n\nreturn [{ json: { originalPath, originalName, pdfBase64: base64Data, requestBody } }];"
+      },
+      "id": "a7b8c9d0-e1f2-3456-1234-567890123456",
+      "name": "Prepare Gemini Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3600,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "b8c9d0e1-f2a3-4567-2345-678901234567",
+      "name": "Call Gemini Vision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3360,
+        512
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "var item = items[0].json;\nvar metadata = $('Prepare Gemini Request').first().json;\nvar originalPath = metadata.originalPath;\nvar originalName = metadata.originalName;\n\nfunction makeError(msg) {\n  return [{ json: {\n    status: 'error', errorMessage: msg,\n    originalPath: originalPath, originalName: originalName,\n    destinationPath: '/_faturas/review/' + originalName,\n    vendor: 'N/A', sellerVat: 'N/A', buyerVat: 'N/A',\n    invoiceId: 'N/A', date: 'N/A', amount: 0, ivaRate: 'N/A',\n    currency: 'EUR', sheetName: 'Review', needsBranding: false,\n    brandedDestPath: '', routeType: 'Erro',\n    processedAt: new Date().toISOString()\n  }}];\n}\n\nif (item.error || (item.statusCode && item.statusCode >= 400)) {\n  return makeError('Gemini API failed: ' + (item.error || item.message || 'status ' + item.statusCode));\n}\nif (!item.candidates || item.candidates.length === 0) {\n  return makeError('Gemini returned no candidates');\n}\nvar candidate = item.candidates[0];\nif (candidate.finishReason && candidate.finishReason !== 'STOP') {\n  return makeError('Gemini stopped early: ' + candidate.finishReason);\n}\nif (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {\n  return makeError('Gemini response has no content');\n}\n\nvar geminiResult;\ntry {\n  geminiResult = JSON.parse(candidate.content.parts[0].text);\n} catch (e) {\n  return makeError('Failed to parse Gemini JSON: ' + e.message);\n}\n\nvar vendor = geminiResult.vendor || null;\nvar sellerVat = geminiResult.seller_vat ? String(geminiResult.seller_vat).replace(/[^0-9]/g, '') : null;\nvar buyerVat = geminiResult.buyer_vat ? String(geminiResult.buyer_vat).replace(/[^0-9]/g, '') : null;\nvar invoiceId = geminiResult.invoice_id || null;\nvar date = geminiResult.date || null;\nvar amount = geminiResult.amount != null ? Number(geminiResult.amount) : null;\nvar ivaRate = geminiResult.iva_rate != null ? Number(geminiResult.iva_rate) : null;\nvar currency = geminiResult.currency || 'EUR';\n\nfunction getQuarter(dateStr) {\n  var d = new Date(dateStr);\n  var m = d.getMonth() + 1;\n  var y = d.getFullYear();\n  if (m <= 3) return y + ' - 03T';\n  if (m <= 6) return y + ' - 06T';\n  if (m <= 9) return y + ' - 09T';\n  return y + ' - 12T';\n}\n\nfunction cleanForFilename(s) {\n  if (!s) return '';\n  return s.replace(/[\\/\\\\:*?\"<>|]/g, '-').replace(/[\\x00-\\x1f]/g, '').replace(/-+/g, '-').replace(/^-|-$/g, '').trim();\n}\n\nfunction shortVendor(v) {\n  if (!v) return 'N/A';\n  return v.trim().split(/s+/).slice(0, 2).join(' ');\n}\n\nfunction makeExpenseFilename(vendor, invoiceId, date, amount, ext) {\n  var v = cleanForFilename(vendor || 'Unknown');\n  var id = cleanForFilename(invoiceId || 'NoID');\n  var d = date || 'NoDate';\n  var a = amount != null ? amount.toFixed(2).replace('.', ',') : '0,00';\n  return v + '_' + id + '_' + d + '_' + a + (ext || '.pdf');\n}\n\nif (!date) return makeError('Missing invoice date');\n\nvar quarter = getQuarter(date);\nvar ext = '.' + originalName.split('.').pop().toLowerCase();\nvar status = 'success';\nvar errorMessage = '';\nvar destinationPath = '';\nvar newFilename = '';\nvar sheetName = '';\nvar needsBranding = false;\nvar brandedDestPath = '';\nvar routeType = 'unknown';\n\nvar isRevenue = (sellerVat === '226887499' || sellerVat === '243863438');\nvar isExpense = !isRevenue && (buyerVat === '226887499' || buyerVat === '243863438');\n\nif (isRevenue && sellerVat === '226887499' && ivaRate === 16) {\n  routeType = 'Descomplica - Clientes (IVA 16%)';\n  var folder = '/André/Profissional/Descomplicador/Fiscalidade/1 - Clientes/' + quarter;\n  newFilename = originalName;\n  destinationPath = folder + '/' + newFilename;\n  needsBranding = true;\n  var baseName = originalName.replace(/\\.[^.]+$/, '');\n  brandedDestPath = folder + '/' + baseName + '_b.pdf';\n  sheetName = 'Descomplica';\n\n} else if (isRevenue && sellerVat === '226887499') {\n  routeType = 'Refúgio - Clientes';\n  var folder = \"/André/Profissional/AL's/O Refúgio/Fiscalidade/Faturas/3 - Clientes/\" + quarter;\n  newFilename = originalName;\n  destinationPath = folder + '/' + newFilename;\n  sheetName = 'Refúgio';\n\n} else if (isRevenue && sellerVat === '243863438') {\n  routeType = 'Casca de Noz - Clientes';\n  var folder = \"/André/Profissional/AL's/Casca de Noz/Fiscalidade/Faturas/3 - Clientes/\" + quarter;\n  newFilename = originalName;\n  destinationPath = folder + '/' + newFilename;\n  sheetName = 'Casca de Noz';\n\n} else if (isExpense && buyerVat === '226887499') {\n  sheetName = 'Refúgio';\n  newFilename = makeExpenseFilename(vendor, invoiceId, date, amount, ext);\n  var vendorLower = (vendor || '').toLowerCase();\n  var basePath = \"/André/Profissional/AL's/O Refúgio/Fiscalidade/Faturas\";\n\n  if (['booking.com', 'booking'].some(function(v) { return vendorLower.indexOf(v) >= 0; }) ||\n      vendorLower.indexOf('airbnb') >= 0 || vendorLower.indexOf('vrbo') >= 0 ||\n      vendorLower.indexOf('freetobook') >= 0) {\n    routeType = 'Refúgio - Plataformas';\n    destinationPath = basePath + '/2 - Cobrança reversível/' + quarter + '/1 - Plataformas (Airbnb, Booking, VRBO, Freetobook)/' + newFilename;\n  } else if (vendorLower.indexOf('amazon') >= 0) {\n    routeType = 'Refúgio - Amazon';\n    destinationPath = basePath + '/2 - Cobrança reversível/' + quarter + '/2 - Amazon/' + newFilename;\n  } else if (vendorLower.indexOf('facebook') >= 0 || vendorLower.indexOf('meta') >= 0 ||\n             vendorLower.indexOf('google') >= 0 || vendorLower.indexOf('stripe') >= 0) {\n    routeType = 'Refúgio - Outros (reversível)';\n    destinationPath = basePath + '/2 - Cobrança reversível/' + quarter + '/3 - Outros (Facebook, Google ads, etc)/' + newFilename;\n  } else {\n    routeType = 'Refúgio - Despesas nacionais';\n    destinationPath = basePath + '/1 - Despesas nacionais/' + quarter + '/' + newFilename;\n  }\n\n} else if (isExpense && buyerVat === '243863438') {\n  sheetName = 'Casca de Noz';\n  newFilename = makeExpenseFilename(vendor, invoiceId, date, amount, ext);\n  var vendorLower = (vendor || '').toLowerCase();\n  var basePath = \"/André/Profissional/AL's/Casca de Noz/Fiscalidade/Faturas\";\n\n  var rcVendors = ['booking.com', 'booking', 'airbnb', 'vrbo', 'freetobook', 'amazon', 'facebook', 'meta', 'google', 'stripe'];\n  var isRC = rcVendors.some(function(v) { return vendorLower.indexOf(v) >= 0; });\n\n  if (isRC) {\n    routeType = 'Casca de Noz - Cobrança reversível';\n    destinationPath = basePath + '/2 - Cobrança reversível/' + quarter + '/' + newFilename;\n  } else {\n    routeType = 'Casca de Noz - Despesas nacionais';\n    destinationPath = basePath + '/1 - Despesas nacionais/' + quarter + '/' + newFilename;\n  }\n\n} else {\n  routeType = 'Revisão manual';\n  status = 'review';\n  errorMessage = 'Cannot determine route. Seller: ' + (sellerVat || 'N/A') + ', Buyer: ' + (buyerVat || 'N/A');\n  destinationPath = '/_faturas/review/' + originalName;\n  newFilename = originalName;\n  sheetName = 'Review';\n}\n\nreturn [{ json: {\n  status: status, routeType: routeType,\n  vendor: shortVendor(vendor), sellerVat: sellerVat || 'N/A',\n  buyerVat: buyerVat || 'N/A', invoiceId: invoiceId || 'N/A',\n  date: date || 'N/A', amount: amount || 0,\n  ivaRate: ivaRate != null ? ivaRate : 'N/A', currency: currency,\n  originalPath: originalPath, originalName: originalName,\n  newFilename: newFilename, destinationPath: destinationPath,\n  needsBranding: needsBranding, brandedDestPath: brandedDestPath,\n  sheetName: sheetName, errorMessage: errorMessage,\n  processedAt: new Date().toISOString()\n}}];"
+      },
+      "id": "c9d0e1f2-a3b4-5678-3456-789012345678",
+      "name": "Business Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3120,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "1a2b3c4d-5e6f-7890-abcd-ef1234567890",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d0e1f2a3-b4c5-6789-4567-890123456789",
+      "name": "Is Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2880,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dropboxapi.com/2/files/move_v2",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "dropboxOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from_path: $json.originalPath, to_path: $json.destinationPath, autorename: true }) }}",
+        "options": {}
+      },
+      "id": "e1f2a3b4-c5d6-7890-5678-901234567890",
+      "name": "Move to Review",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2752,
+        704
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "JCLog8VQpfo6EsPv",
+          "name": "Dropbox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.dropboxapi.com/2/files/move_v2",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "dropboxOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ from_path: $json.originalPath, to_path: $json.destinationPath, autorename: true }) }}",
+        "options": {}
+      },
+      "id": "f2a3b4c5-d6e7-8901-6789-012345678901",
+      "name": "Move to Destination",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -2640,
+        512
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "JCLog8VQpfo6EsPv",
+          "name": "Dropbox account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "2b3c4d5e-6f7a-8901-bcde-f12345678901",
+              "leftValue": "={{ $json.needsBranding }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a3b4c5d6-e7f8-9012-7890-123456789012",
+      "name": "Needs Branding?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -4064,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "var pdfBase64 = $('Prepare Gemini Request').first().json.pdfBase64;\nvar fileName = $('Business Logic').first().json.originalName;\nreturn [{ json: { pdfBase64: pdfBase64, fileName: fileName } }];"
+      },
+      "id": "b4c5d6e7-f8a9-0123-8901-234567890123",
+      "name": "Prepare Brand Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3888,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://invoice-branding:3010/brand-invoice",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "c5d6e7f8-a9b0-1234-9012-345678901234",
+      "name": "Call Branding Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3648,
+        720
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "var response = items[0].json;\nvar biz = $('Business Logic').first().json;\nif (response.error || !response.success) {\n  return [{ json: { brandingFailed: true, brandingError: response.error || 'Branding failed' } }];\n}\nvar buffer = Buffer.from(response.brandedPdfBase64, 'base64');\nvar filename = biz.brandedDestPath.split('/').pop() || 'branded.pdf';\nvar binaryData = await this.helpers.prepareBinaryData(buffer, filename, 'application/pdf');\nreturn [{ json: { brandingFailed: false, brandedUploadPath: biz.brandedDestPath }, binary: { data: binaryData } }];"
+      },
+      "id": "d6e7f8a9-b0c1-2345-0123-456789012345",
+      "name": "Handle Brand Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3408,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "path": "={{ $json.brandedUploadPath }}"
+      },
+      "id": "e7f8a9b0-c1d2-3456-1234-567890123456",
+      "name": "Upload Branded Copy",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -3168,
+        720
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "JCLog8VQpfo6EsPv",
+          "name": "Dropbox account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "15taOoUcAfVs7ahIGOAYEnQCp6l-Ek2-eSVQLhkaArG8"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Business Logic').first().json.sheetName }}"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Business Logic').first().json.processedAt }}",
+            "Filename": "={{ $('Business Logic').first().json.originalName }}",
+            "Route": "={{ $('Business Logic').first().json.routeType }}",
+            "Vendor": "={{ $('Business Logic').first().json.vendor }}",
+            "InvoiceID": "={{ $('Business Logic').first().json.invoiceId }}",
+            "Date": "={{ $('Business Logic').first().json.date }}",
+            "Amount": "={{ $('Business Logic').first().json.amount }}",
+            "IVA": "={{ $('Business Logic').first().json.ivaRate }}",
+            "SellerVAT": "={{ $('Business Logic').first().json.sellerVat }}",
+            "BuyerVAT": "={{ $('Business Logic').first().json.buyerVat }}",
+            "Status": "={{ $('Business Logic').first().json.status }}",
+            "Destination": "={{ $('Business Logic').first().json.destinationPath }}",
+            "Error": "={{ $('Business Logic').first().json.errorMessage }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Filename",
+              "displayName": "Filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Route",
+              "displayName": "Route",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vendor",
+              "displayName": "Vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "InvoiceID",
+              "displayName": "InvoiceID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "IVA",
+              "displayName": "IVA",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "SellerVAT",
+              "displayName": "SellerVAT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "BuyerVAT",
+              "displayName": "BuyerVAT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Destination",
+              "displayName": "Destination",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error",
+              "displayName": "Error",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f8a9b0c1-d2e3-4567-2345-678901234567",
+      "name": "Log to Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2608,
+        848
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "List Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Folder": {
+      "main": [
+        [
+          {
+            "node": "Filter Invoices",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter Invoices": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Files": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download PDF",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download PDF": {
+      "main": [
+        [
+          {
+            "node": "Prepare Gemini Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Gemini Request": {
+      "main": [
+        [
+          {
+            "node": "Call Gemini Vision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Gemini Vision": {
+      "main": [
+        [
+          {
+            "node": "Business Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Business Logic": {
+      "main": [
+        [
+          {
+            "node": "Is Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Error?": {
+      "main": [
+        [
+          {
+            "node": "Move to Review",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move to Destination",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to Review": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move to Destination": {
+      "main": [
+        [
+          {
+            "node": "Needs Branding?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Needs Branding?": {
+      "main": [
+        [
+          {
+            "node": "Prepare Brand Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Brand Request": {
+      "main": [
+        [
+          {
+            "node": "Call Branding Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Branding Service": {
+      "main": [
+        [
+          {
+            "node": "Handle Brand Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Brand Response": {
+      "main": [
+        [
+          {
+            "node": "Upload Branded Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Branded Copy": {
+      "main": [
+        [
+          {
+            "node": "Log to Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to Sheet": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Atlantic/Azores"
+  },
+  "versionId": "5d624256-f516-4bc1-b97a-3151af592f50",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "00000000-0000-0000-0000-000000000000",
+  "tags": []
+}

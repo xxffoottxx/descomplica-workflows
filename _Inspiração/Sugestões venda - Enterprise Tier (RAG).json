@@ -1,0 +1,568 @@
+{
+  "name": "Sugestões venda - Enterprise Tier (RAG)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hardware-demo-enterprise",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "15a667bc-fc8e-4e49-b064-e19af3e00b81",
+      "name": "Webhook - Cart Info",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        -608,
+        304
+      ],
+      "webhookId": "hardware-demo-enterprise-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cache Check - Same as Standard tier\nif (typeof global.suggestionCacheEnterprise === 'undefined') global.suggestionCacheEnterprise = {};\nif (typeof global.processingRequestsEnterprise === 'undefined') global.processingRequestsEnterprise = {};\nif (typeof global.newestRequestsEnterprise === 'undefined') global.newestRequestsEnterprise = {};\nif (typeof global.metricsEnterprise === 'undefined') {\n  global.metricsEnterprise = { total: 0, hits: 0, misses: 0, waits: 0 };\n}\n\nconst webhookData = $input.first().json;\nconst body = webhookData.body || webhookData;\n\nconst sessionId = body.session_id || 'unknown';\nconst cartHash = body.cart_hash || 'unknown';\nconst requestId = body.request_id || 'unknown';\nconst customerId = body.customer_id || 'demo';\nconst cartEmpty = body.cart_empty || false;\n\nconst cacheKey = `${sessionId}:${cartHash}`;\nconst now = Date.now();\nconst TTL = 300000;\nconst PROCESSING_TTL = 90000; // Longer for RAG\n\nglobal.metricsEnterprise.total++;\n\nif (cartEmpty) {\n  Object.keys(global.suggestionCacheEnterprise).forEach(k => {\n    if (k.startsWith(sessionId + ':')) delete global.suggestionCacheEnterprise[k];\n  });\n  return { json: { success: false, suggestions: [], _skipProcessing: true, _cacheHit: false } };\n}\n\nglobal.newestRequestsEnterprise[sessionId] = { request_id: requestId, cart_hash: cartHash, timestamp: now };\n\n// Cleanup\nObject.keys(global.suggestionCacheEnterprise).forEach(k => {\n  if (now - global.suggestionCacheEnterprise[k].timestamp > TTL) delete global.suggestionCacheEnterprise[k];\n});\nObject.keys(global.processingRequestsEnterprise).forEach(k => {\n  if (now - global.processingRequestsEnterprise[k].timestamp > PROCESSING_TTL) delete global.processingRequestsEnterprise[k];\n});\n\nconst cached = global.suggestionCacheEnterprise[cacheKey];\nif (cached && now - cached.timestamp < TTL) {\n  global.metricsEnterprise.hits++;\n  return { json: { ...cached.data, cached: true, _cacheHit: true, _skipProcessing: true } };\n}\n\nconst processing = global.processingRequestsEnterprise[cacheKey];\nif (processing && now - processing.timestamp < PROCESSING_TTL) {\n  global.metricsEnterprise.waits++;\n  return { json: { ...webhookData, cacheKey, timestamp: now, _skipProcessing: true, _waitForProcessing: true } };\n}\n\nglobal.processingRequestsEnterprise[cacheKey] = { request_id: requestId, timestamp: now };\n\nreturn {\n  json: {\n    ...webhookData,\n    cacheKey,\n    timestamp: now,\n    _skipProcessing: false,\n    _sessionId: sessionId,\n    _requestId: requestId,\n    _customerId: customerId\n  }\n};"
+      },
+      "id": "6a84c46b-bc4d-472a-8fc3-5f9c18ca780b",
+      "name": "Check Cache",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json._skipProcessing}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "b11f8bf2-0b3e-410d-b84b-b4a87990db02",
+      "name": "Skip Processing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json._cacheHit}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "08b1ecc0-a2f9-44cd-b2b1-93d6ebf3f569",
+      "name": "Cache Hit or Wait?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Cache-Status",
+                "value": "HIT"
+              },
+              {
+                "name": "X-Tier",
+                "value": "enterprise"
+              }
+            ]
+          }
+        }
+      },
+      "id": "6430b185-1f76-4e9f-b56b-52ca13bd1591",
+      "name": "Return Cached",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Wait for processing\nconst cacheKey = $json.cacheKey;\nfor (let i = 0; i < 90; i++) {\n  await new Promise(r => setTimeout(r, 1000));\n  if (global.suggestionCacheEnterprise?.[cacheKey]) {\n    const cached = global.suggestionCacheEnterprise[cacheKey];\n    return { json: { ...cached.data, cached: true, waited_ms: (i + 1) * 1000 } };\n  }\n}\nreturn { json: { success: false, suggestions: [], error: 'Timeout' } };"
+      },
+      "id": "b0c44610-554a-4cf1-9495-79949883a1dc",
+      "name": "Wait for Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id FROM demo_products WHERE in_stock = true AND (sellable IS NULL OR sellable = true)",
+        "options": {}
+      },
+      "id": "6578893b-c4b4-4189-93b4-c8963f570847",
+      "name": "Pre-Filter Products",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        0,
+        464
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "acM3cJuEGq6fcPDx",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.openweathermap.org/data/2.5/weather",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "lat",
+              "value": "38.7223"
+            },
+            {
+              "name": "lon",
+              "value": "-9.1393"
+            },
+            {
+              "name": "appid",
+              "value": "{{$env.OPENWEATHER_API_KEY}}"
+            },
+            {
+              "name": "units",
+              "value": "metric"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 500
+        }
+      },
+      "id": "9aa6f316-aa63-469a-a3a5-e5faef2f562d",
+      "name": "Get Weather",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        608
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.id, p.name, p.category FROM purchase_history ph JOIN demo_products p ON ph.product_id = p.id WHERE ph.customer_id = '{{ $node[\"Check Cache\"].json._customerId }}' ORDER BY ph.purchase_date DESC LIMIT 10",
+        "options": {}
+      },
+      "id": "c27383a5-0166-4f4b-a19f-c066ff97b9e7",
+      "name": "Get Purchase History",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        0,
+        752
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "acM3cJuEGq6fcPDx",
+          "name": "Postgres account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build cart text for embedding\nconst webhookData = $node[\"Webhook - Cart Info\"].json;\nconst body = webhookData.body || webhookData;\nconst cartItems = body.cart_items || [];\n\n// Build descriptive text for embedding\nconst cartText = cartItems\n  .map(item => `${item.product_name || item.name} (${item.category || 'unknown'})`)\n  .join(', ');\n\n// Get valid product IDs from pre-filter\nlet validIds = [];\nconst prefilterNode = $node[\"Pre-Filter Products\"];\nif (prefilterNode && prefilterNode.json) {\n  if (Array.isArray(prefilterNode.json)) {\n    validIds = prefilterNode.json.map(p => p.id);\n  } else if (prefilterNode.json.id) {\n    validIds = [prefilterNode.json.id];\n  }\n}\n\n// Also check all inputs for pre-filter results\nconst allInputs = $input.all();\nallInputs.forEach(input => {\n  if (input.json && input.json.id && typeof input.json.id === 'number') {\n    if (!validIds.includes(input.json.id)) validIds.push(input.json.id);\n  }\n});\n\n// Exclude cart items from valid IDs\nconst cartProductIds = cartItems.map(i => i.product_id || i.id);\nvalidIds = validIds.filter(id => !cartProductIds.includes(id));\n\nconsole.log('[RAG] Cart text for embedding:', cartText);\nconsole.log('[RAG] Valid product IDs for vector search:', validIds.length);\n\nreturn {\n  cartText: cartText,\n  cartItems: cartItems,\n  cartProductIds: cartProductIds,\n  validProductIds: validIds\n};"
+      },
+      "id": "4ad9d20f-2aa9-4cff-a22a-1b57e9e0c9eb",
+      "name": "Prepare Embedding",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/embeddings",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"nomic-embed-text\",\n  \"prompt\": \"{{ $json.cartText }}\"\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "5b2d0679-4a08-4de9-827b-7e641dbb8f7e",
+      "name": "Generate Cart Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        512,
+        464
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://qdrant:6333/collections/products/points/search",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"vector\": {{ $json.embedding }},\n  \"limit\": 30,\n  \"filter\": {\n    \"must\": [\n      {\n        \"key\": \"id\",\n        \"match\": {\n          \"any\": {{ $node[\"Prepare Embedding\"].json.validProductIds }}\n        }\n      }\n    ]\n  },\n  \"with_payload\": true,\n  \"score_threshold\": 0.3\n}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "e32ebd87-7ff5-4f18-a789-54d1b37b5189",
+      "name": "Qdrant Vector Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        704,
+        464
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge RAG results with context\nconst webhookData = $node[\"Webhook - Cart Info\"].json;\nconst body = webhookData.body || webhookData;\nconst cartItems = body.cart_items || [];\nconst cartProductIds = cartItems.map(i => i.product_id || i.id);\n\n// Get weather\nlet weather = { temp: 20, condition: 'unknown', is_raining: false, is_cold: false };\ntry {\n  const w = $node[\"Get Weather\"].json;\n  if (w && w.main) {\n    weather = {\n      temp: Math.round(w.main.temp),\n      condition: w.weather?.[0]?.main || 'unknown',\n      is_raining: ['Rain', 'Drizzle', 'Thunderstorm'].includes(w.weather?.[0]?.main),\n      is_cold: w.main.temp < 10\n    };\n  }\n} catch (e) {}\n\n// Get purchase history\nlet purchaseHistory = [];\ntry {\n  const h = $node[\"Get Purchase History\"].json;\n  purchaseHistory = Array.isArray(h) ? h : (h?.id ? [h] : []);\n} catch (e) {}\n\n// Get vector search results\nlet vectorResults = [];\ntry {\n  const qdrantResponse = $input.first().json;\n  if (qdrantResponse && qdrantResponse.result) {\n    vectorResults = qdrantResponse.result.map(r => ({\n      id: r.payload?.id || r.id,\n      name: r.payload?.name,\n      category: r.payload?.category,\n      subcategory: r.payload?.subcategory,\n      price: r.payload?.price,\n      description: r.payload?.description,\n      similarity_score: r.score,\n      in_stock: true\n    }));\n  }\n} catch (e) {\n  console.log('[RAG] Qdrant search failed:', e.message);\n}\n\nconsole.log('[RAG] Vector search returned:', vectorResults.length, 'products');\n\n// Filter out recently purchased and cart items\nconst recentPurchaseIds = new Set(purchaseHistory.map(h => h.id));\nlet compatibleProducts = vectorResults\n  .filter(p => !cartProductIds.includes(p.id))\n  .filter(p => !recentPurchaseIds.has(p.id));\n\n// Add safety products if power tools in cart\nconst hasPowerTools = cartItems.some(i => {\n  const cat = i.category || '';\n  return cat.toLowerCase().includes('power') || cat.toLowerCase().includes('tool');\n});\n\n// Date context\nconst now = new Date();\nconst month = now.getMonth() + 1;\nconst season = month >= 3 && month <= 5 ? 'spring' : month >= 6 && month <= 8 ? 'summer' : month >= 9 && month <= 11 ? 'autumn' : 'winter';\n\nconst contextData = {\n  cart_items: cartItems.map(i => ({\n    id: i.product_id || i.id,\n    name: i.product_name || i.name,\n    category: i.category,\n    quantity: i.quantity || 1\n  })),\n  cart_product_ids: cartProductIds,\n  cart_total: cartItems.reduce((sum, i) => sum + ((i.price || 0) * (i.quantity || 1)), 0).toFixed(2),\n  compatible_products: compatibleProducts,\n  weather: weather,\n  season: season,\n  purchase_history: purchaseHistory.slice(0, 5),\n  has_power_tools: hasPowerTools,\n  customer_id: body.customer_id || 'demo',\n  session_id: body.session_id || 'demo'\n};\n\nconst ollamaRequest = {\n  model: \"llama3.2\",\n  messages: [\n    {\n      role: \"system\",\n      content: `És um assistente de vendas de ferramentas com acesso a pesquisa semântica de produtos.\n\nPRODUTOS DISPONÍVEIS: Os produtos na lista compatible_products foram selecionados por similaridade semântica ao carrinho.\n\nCONTEXTO:\n- Clima: ${weather.temp}°C, ${weather.condition}\n- Estação: ${season}\n- Ferramentas elétricas no carrinho: ${hasPowerTools ? 'SIM - prioriza segurança!' : 'Não'}\n\nSugere 5 produtos complementares usando APENAS IDs da lista compatible_products.\n\nRETORNA JSON:\n{\n  \"suggestions\": [\n    { \"product_id\": <id>, \"product_name\": \"<nome>\", \"reason\": \"<razão>\", \"confidence\": <0.0-1.0> }\n  ]\n}`\n    },\n    {\n      role: \"user\",\n      content: JSON.stringify(contextData)\n    }\n  ],\n  stream: false,\n  format: \"json\",\n  options: { temperature: 0.4, num_predict: 2000 }\n};\n\nreturn { contextData, ollamaRequest };"
+      },
+      "id": "7a92884f-ff30-4671-800f-b1a9f1d6c7c0",
+      "name": "Merge RAG Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.ollamaRequest }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "3c50b70d-2b14-4c7a-9c3f-48876ca477c3",
+      "name": "Ollama AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        464
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format response with strict validation\nconst contextData = $node[\"Merge RAG Context\"].json.contextData;\n\nconst productMap = {};\ncontextData.compatible_products.forEach(p => { productMap[p.id] = p; });\nconst validIds = new Set(contextData.compatible_products.map(p => p.id));\n\nlet suggestions = [];\nlet llmUsed = 'ollama-rag';\n\ntry {\n  const input = $input.first().json;\n  if (input.error) throw new Error(input.error.message);\n\n  let response = input;\n  if (input.body) response = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n\n  if (response.message?.content) {\n    const content = typeof response.message.content === 'string' ? JSON.parse(response.message.content) : response.message.content;\n    suggestions = content.suggestions || [];\n  }\n\n  const enriched = suggestions\n    .map(s => {\n      const id = parseInt(s.product_id);\n      if (!validIds.has(id)) return null;\n      const p = productMap[id];\n      if (!p) return null;\n      return {\n        product_id: id,\n        product_name: p.name,\n        category: p.category,\n        subcategory: p.subcategory || '',\n        price: parseFloat(p.price),\n        confidence: parseFloat(s.confidence || 0.75),\n        reason: s.reason || '',\n        similarity_score: p.similarity_score,\n        in_stock: true\n      };\n    })\n    .filter(s => s && !contextData.cart_product_ids.includes(s.product_id))\n    .sort((a, b) => b.confidence - a.confidence)\n    .slice(0, 5);\n\n  if (enriched.length === 0 && contextData.compatible_products.length > 0) {\n    llmUsed = 'fallback-rag';\n    contextData.compatible_products.slice(0, 3).forEach(p => {\n      enriched.push({\n        product_id: p.id,\n        product_name: p.name,\n        category: p.category,\n        price: parseFloat(p.price),\n        confidence: 0.7,\n        reason: 'Semantically similar',\n        similarity_score: p.similarity_score,\n        in_stock: true\n      });\n    });\n  }\n\n  return {\n    success: true,\n    suggestions: enriched,\n    context_used: {\n      weather: contextData.weather,\n      season: contextData.season,\n      rag_products_found: contextData.compatible_products.length\n    },\n    analytics: {\n      cart_value: parseFloat(contextData.cart_total),\n      suggested_value: enriched.reduce((s, p) => s + p.price, 0),\n      suggestion_count: enriched.length\n    },\n    metadata: {\n      llm_used: llmUsed,\n      tier: 'enterprise',\n      rag_enabled: true,\n      generated_at: new Date().toISOString()\n    }\n  };\n} catch (e) {\n  return {\n    success: false,\n    suggestions: [],\n    error: e.message,\n    metadata: { tier: 'enterprise', llm_used: 'error' }\n  };\n}"
+      },
+      "id": "a1c3c487-4100-4227-973c-f0d7842f1d77",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store in cache\nconst cacheKey = $node[\"Check Cache\"].json.cacheKey;\nconst requestId = $node[\"Check Cache\"].json._requestId || 'unknown';\n\nif (cacheKey && cacheKey !== 'unknown:unknown') {\n  global.suggestionCacheEnterprise[cacheKey] = {\n    data: $json,\n    timestamp: Date.now(),\n    request_id: requestId\n  };\n  delete global.processingRequestsEnterprise[cacheKey];\n}\n\nreturn { json: { ...$json, cached: false } };"
+      },
+      "id": "cb21a382-2c7f-418e-9351-707e9e2f15da",
+      "name": "Store in Cache",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-Cache-Status",
+                "value": "MISS"
+              },
+              {
+                "name": "X-Tier",
+                "value": "enterprise"
+              },
+              {
+                "name": "X-RAG",
+                "value": "enabled"
+              }
+            ]
+          }
+        }
+      },
+      "id": "5d6a187b-9e6f-44f3-b6ab-d95c0b158547",
+      "name": "Return Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1712,
+        304
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Cart Info": {
+      "main": [
+        [
+          {
+            "node": "Check Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Cache": {
+      "main": [
+        [
+          {
+            "node": "Skip Processing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Processing?": {
+      "main": [
+        [
+          {
+            "node": "Cache Hit or Wait?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pre-Filter Products",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Weather",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Purchase History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Hit or Wait?": {
+      "main": [
+        [
+          {
+            "node": "Return Cached",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait for Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Result": {
+      "main": [
+        [
+          {
+            "node": "Return Cached",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pre-Filter Products": {
+      "main": [
+        [
+          {
+            "node": "Prepare Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weather": {
+      "main": [
+        [
+          {
+            "node": "Prepare Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Purchase History": {
+      "main": [
+        [
+          {
+            "node": "Prepare Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Embedding": {
+      "main": [
+        [
+          {
+            "node": "Generate Cart Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Cart Embedding": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Search",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Search": {
+      "main": [
+        [
+          {
+            "node": "Merge RAG Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge RAG Context": {
+      "main": [
+        [
+          {
+            "node": "Ollama AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama AI": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Store in Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store in Cache": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "1b59161a-38aa-495e-9d2b-fae8f13a7975",
+  "meta": {
+    "instanceId": "0ad473ca5f04731bc02a819377b7037140df61c07ce29e449d14e76e6e995ec1"
+  },
+  "id": "_g5PMigqOUXl3B-XgxEPA",
+  "tags": [
+    {
+      "name": "enterprise",
+      "id": "wIyTxPvhpdpprfN6",
+      "updatedAt": "2026-01-19T17:47:15.697Z",
+      "createdAt": "2026-01-19T17:47:15.697Z"
+    },
+    {
+      "name": "rag",
+      "id": "zn8fOjpAhStBSqDh",
+      "updatedAt": "2026-01-19T17:47:15.660Z",
+      "createdAt": "2026-01-19T17:47:15.660Z"
+    }
+  ]
+}

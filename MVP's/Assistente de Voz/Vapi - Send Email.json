@@ -1,0 +1,238 @@
+{
+  "name": "Vapi - Send Email",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-email",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "34594cb0-67c1-4596-bcef-7fdb8edaf65d",
+      "name": "Webhook - Receive from Vapi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        96,
+        0
+      ],
+      "webhookId": "3407d670-3436-4f86-933c-84d339ea2bf1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Validate required fields\n  if (!body.subject || body.subject.trim().length === 0) {\n    return { _error: true, errorMessage: 'O assunto do email e obrigatorio. Qual o assunto da mensagem?', toolCallId };\n  }\n  if (!body.message || body.message.trim().length === 0) {\n    return { _error: true, errorMessage: 'A mensagem do email e obrigatoria. O que gostaria de comunicar?', toolCallId };\n  }\n  if (body.message.length > 5000) {\n    return { _error: true, errorMessage: 'A mensagem e demasiado longa. Por favor, resuma a mensagem.', toolCallId };\n  }\n\n  // Sanitize inputs\n  function sanitize(text) {\n    if (!text) return '';\n    return String(text).replace(/<[^>]*>/g, '').substring(0, 1000);\n  }\n\n  // All emails go to owner - custom_recipient removed for security\n  const recipientType = body.recipient_type || 'owner';\n\n  return {\n    _error: false,\n    recipient_type: recipientType,\n    subject: sanitize(body.subject.trim()),\n    message: sanitize(body.message.trim()),\n    customer_name: sanitize(body.customer_name || ''),\n    customer_email: body.customer_email || '',\n    customer_phone: body.customer_phone || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao preparar o email. Por favor, tente novamente.', toolCallId };\n}"
+      },
+      "id": "f73ecb1b-fd95-4c83-97e4-489908038cc8",
+      "name": "Extract & Validate Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-0005-4000-8000-000000000001",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f6d80ba3-796f-463a-ac20-02af1e520ff5",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.errorMessage }] } }}",
+        "options": {}
+      },
+      "id": "94de90aa-cbcf-4da0-b241-e1797d7358ce",
+      "name": "Respond Error to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// All emails go to owner address\nconst defaultEmail = 'andrefloresbrasil@gmail.com';\n\n// Build email body with context\nconst contactDetails = [];\nif ($json.customer_name) contactDetails.push('Nome: ' + $json.customer_name);\nif ($json.customer_email) contactDetails.push('Email: ' + $json.customer_email);\nif ($json.customer_phone) contactDetails.push('Telemovel: ' + $json.customer_phone);\n\nconst emailBody = $json.message + (contactDetails.length > 0 ? '\\n\\n---\\nDETALHES DO CONTACTO:\\n' + contactDetails.join('\\n') : '') + '\\n\\n---\\nEnviado automaticamente via Assistente Virtual';\n\nreturn {\n  to_email: defaultEmail,\n  subject: $json.subject,\n  body: emailBody,\n  recipient_type: $json.recipient_type,\n  toolCallId: $json.toolCallId\n};"
+      },
+      "id": "bc57635f-6a14-4000-859b-15680132107f",
+      "name": "Prepare Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $json.to_email }}",
+        "subject": "={{ $json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        800,
+        64
+      ],
+      "id": "ea111aa2-8088-4582-8b46-51d91e5f9105",
+      "name": "Send Email via Gmail",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "webhookId": "bcf7048f-f17b-4b21-b885-4b2789b22afc",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const gmailResult = $input.item.json;\nconst prepData = $('Prepare Email').item.json;\n\n// Check if Gmail send failed\nif (gmailResult.error || (!gmailResult.id && !gmailResult.messageId && !gmailResult.threadId)) {\n  return {\n    message: 'Desculpe, nao foi possivel enviar o email neste momento. Pode tentar novamente mais tarde ou contactar-nos diretamente.',\n    toolCallId: prepData.toolCallId\n  };\n}\n\nreturn {\n  message: 'Email enviado com sucesso. A nossa equipa ira responder em breve.',\n  toolCallId: prepData.toolCallId\n};"
+      },
+      "id": "96542b66-f2de-4447-a939-f4d8dd7dbfd9",
+      "name": "Handle Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        976,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.message }] } }}",
+        "options": {}
+      },
+      "id": "51a961ad-f5e4-42d3-9a81-10a299e6924a",
+      "name": "Respond to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        64
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Receive from Vapi": {
+      "main": [
+        [
+          {
+            "node": "Extract & Validate Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Validate Email": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Respond Error to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email via Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email via Gmail": {
+      "main": [
+        [
+          {
+            "node": "Handle Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Result": {
+      "main": [
+        [
+          {
+            "node": "Respond to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "versionId": "4379f295-4949-423e-9151-4f2094b76b06",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "O98nfl3SRYQPRsOHVo5RI",
+  "tags": []
+}

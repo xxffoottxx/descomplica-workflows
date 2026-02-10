@@ -1,0 +1,1324 @@
+{
+  "name": "ai-chatbot-lead-qualification-system",
+  "tags": [],
+  "nodes": [
+    {
+      "id": "ai-agent-main",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -848,
+        192
+      ],
+      "parameters": {
+        "text": "={{ $('Webhook').last().json.body.message }}\n\n## Attached file content\n{{ $json.combinedText }}",
+        "options": {
+          "systemMessage": "[CUSTOM AI SYSTEM PROMPT - Define your chatbot personality, company info, and response guidelines here]",
+          "passthroughBinaryImages": false
+        },
+        "promptType": "define",
+        "hasOutputParser": true
+      },
+      "typeVersion": 1.8
+    },
+    {
+      "id": "postgres-memory",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "position": [
+        -800,
+        368
+      ],
+      "parameters": {
+        "tableName": "chat_histories",
+        "sessionKey": "={{ $('Webhook').last().json.headers['x-conversation-id'] }}",
+        "sessionIdType": "customKey",
+        "contextWindowLength": 10
+      },
+      "credentials": {
+        "postgres": {
+          "id": "YOUR_POSTGRES_CREDENTIAL_ID",
+          "name": "postgres_db"
+        }
+      },
+      "typeVersion": 1.3
+    },
+    {
+      "id": "parse-files",
+      "name": "Parse Files",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueRegularOutput",
+      "position": [
+        -1696,
+        208
+      ],
+      "parameters": {
+        "jsCode": "return items.map(item => {\n  const files = item.json.body?.files || [];\n  return files.map(file => {\n    const [prefix, rawBase64] = (file.base64 || '').split(',');\n    const mimeMatch = prefix?.match(/^data:(.*?);base64$/);\n    return {\n      json: {\n        name: file.name,\n        base64: file.base64,\n        base64Clean: rawBase64 || '',\n        mime_type: mimeMatch ? mimeMatch[1] : 'application/octet-stream'\n      }\n    };\n  });\n}).flat();\n"
+      },
+      "typeVersion": 2,
+      "alwaysOutputData": true
+    },
+    {
+      "id": "loop-files",
+      "name": "Loop Over Files",
+      "type": "n8n-nodes-base.splitInBatches",
+      "position": [
+        -1280,
+        224
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 3
+    },
+    {
+      "id": "combine-files",
+      "name": "Combine Files",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -1088,
+        80
+      ],
+      "parameters": {
+        "jsCode": "let combinedText = '';\n\nfor (const item of items) {\n  const parts = item.json?.candidates?.[0]?.content?.parts;\n  if (Array.isArray(parts)) {\n    for (const part of parts) {\n      if (part.text) {\n        combinedText += part.text + '\\n\\n';\n      }\n    }\n  }\n}\n\nreturn [\n  {\n    json: {\n      combinedText: combinedText.trim()\n    }\n  }\n];\n"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "check-files",
+      "name": "If Files Exist",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -1504,
+        208
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "check-empty",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "leftValue": "={{$json}}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "gemini-model",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -944,
+        368
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "credentials": {
+        "googlePalmApi": {
+          "id": "YOUR_GEMINI_API_CREDENTIAL",
+          "name": "Gemini API"
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "gemini-analyze",
+      "name": "Gemini Analyze File",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -1088,
+        240
+      ],
+      "parameters": {
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        "method": "POST",
+        "options": {},
+        "jsonBody": "={\n  \"model\": \"models/gemini-2.0-flash\",\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [\n        {\n          \"inline_data\": {\n            \"mime_type\": \"{{ $json.mime_type }}\",\n            \"data\": \"{{ $json.base64Clean }}\"\n          }\n        },\n        {\n          \"text\": \"Analyze this file and extract all relevant information.\"\n        }\n      ]\n    }\n  ]\n}",
+        "sendBody": true,
+        "sendQuery": true,
+        "specifyBody": "json",
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "YOUR_GEMINI_API_KEY_HERE"
+            }
+          ]
+        }
+      },
+      "typeVersion": 4.2
+    },
+    {
+      "id": "google-search",
+      "name": "Google Search Tool",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "position": [
+        -736,
+        528
+      ],
+      "parameters": {
+        "url": "https://google.serper.dev/search",
+        "method": "POST",
+        "sendBody": true,
+        "sendHeaders": true,
+        "parametersBody": {
+          "values": [
+            {
+              "name": "=q"
+            }
+          ]
+        },
+        "toolDescription": "Search the internet for additional information when needed",
+        "parametersHeaders": {
+          "values": [
+            {
+              "name": "Content-Type",
+              "value": "application/json",
+              "valueProvider": "fieldValue"
+            },
+            {
+              "name": "X-API-KEY",
+              "value": "YOUR_SERPER_API_KEY_HERE",
+              "valueProvider": "fieldValue"
+            }
+          ]
+        }
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "extract-contact",
+      "name": "Extract Contact Info",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "maxTries": 2,
+      "position": [
+        -384,
+        368
+      ],
+      "parameters": {
+        "text": "={{ $('Webhook').item.json.body.message }}",
+        "options": {},
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\",\n      \"description\": \"Person's full name if mentioned\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"description\": \"Email address if mentioned\"\n    },\n    \"company_url\": {\n      \"type\": \"string\",\n      \"description\": \"Company website if mentioned\"\n    },\n    \"phone\": {\n      \"type\": \"string\",\n      \"description\": \"Phone number if mentioned\"\n    },\n    \"CRM_Ready\": {\n      \"type\": \"number\",\n      \"description\": \"Set to 1 if contact info found, 0 otherwise\"\n    }\n  },\n  \"required\": []\n}"
+      },
+      "retryOnFail": true,
+      "typeVersion": 1.1
+    },
+    {
+      "id": "gemini-extractor",
+      "name": "Gemini for Extraction",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -368,
+        544
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "check-qualified",
+      "name": "Check If Qualified Lead",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2288,
+        128
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "check-crm",
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.output.CRM_Ready }}",
+              "rightValue": 1
+            }
+          ]
+        },
+        "looseTypeValidation": true
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "early-qualification",
+      "name": "Early Contact Detection",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        960,
+        160
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "early-check",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.output.CRM_Ready }}",
+              "rightValue": "=1"
+            }
+          ]
+        },
+        "looseTypeValidation": true
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "gemini-pro",
+      "name": "Gemini Pro for Analysis",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        1712,
+        352
+      ],
+      "parameters": {
+        "options": {},
+        "modelName": "models/gemini-2.5-pro"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "json-cleaner",
+      "name": "Clean JSON Output",
+      "type": "n8n-nodes-base.code",
+      "onError": "continueErrorOutput",
+      "position": [
+        2048,
+        144
+      ],
+      "parameters": {
+        "jsCode": "try {\n  const rawOutput = $input.first().json.output || \"\";\n  const jsonMatch = rawOutput.match(/```(?:json|html|[a-zA-Z]*)\\s*([\\s\\S]*?)\\s*```/);\n  let cleanedOutput = jsonMatch ? jsonMatch[1] : rawOutput;\n  cleanedOutput = cleanedOutput.replace(\n    /<!DOCTYPE[^>]*>|<html[^>]*>|<\\/html>|<head[^>]*>[\\s\\S]*?<\\/head>|<body[^>]*>|<\\/body>/gi,\n    ''\n  );\n  cleanedOutput = cleanedOutput.replace(/^\\uFEFF/, '').trim();\n  cleanedOutput = cleanedOutput.replace(/[\\u0000-\\u001F\\u007F]/g, (char) => {\n    return (char === '\\n' || char === '\\r' || char === '\\t') ? char : ' ';\n  });\n  cleanedOutput = cleanedOutput.replace(/>\\s+</g, '><').replace(/\\s+/g, ' ').trim();\n  let parsedData;\n  try {\n    parsedData = JSON.parse(cleanedOutput);\n  } catch (parseError) {\n    const furtherSanitizedOutput = cleanedOutput.replace(/>([^<]+)</g, (match, p1) => {\n      return '>' + p1.replace(/\"/g, '\\\\\"') + '<';\n    });\n    parsedData = JSON.parse(furtherSanitizedOutput);\n  }\n  function convertHtmlToSingleLine(data) {\n    if (typeof data === 'string') {\n      return data.replace(/[\\n\\r]+/g, ' ').replace(/\\s+/g, ' ').trim();\n    } else if (Array.isArray(data)) {\n      return data.map(item => convertHtmlToSingleLine(item));\n    } else if (typeof data === 'object' && data !== null) {\n      const newObj = {};\n      for (const key in data) {\n        if (data.hasOwnProperty(key)) {\n          newObj[key] = convertHtmlToSingleLine(data[key]);\n        }\n      }\n      return newObj;\n    }\n    return data;\n  }\n  parsedData = convertHtmlToSingleLine(parsedData);\n  return [{ output: parsedData }];\n} catch (error) {\n  throw new Error(\"Failed to parse JSON: \" + error.message);\n}\n"
+      },
+      "executeOnce": false,
+      "retryOnFail": false,
+      "typeVersion": 2
+    },
+    {
+      "id": "merge-branches",
+      "name": "Merge Data Paths",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        784,
+        160
+      ],
+      "parameters": {
+        "mode": "chooseBranch",
+        "useDataOfInput": 2
+      },
+      "typeVersion": 3.1
+    },
+    {
+      "id": "get-history",
+      "name": "Get Chat History",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        1168,
+        144
+      ],
+      "parameters": {
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "keyValue": "={{ $('Webhook').item.json.headers[\"x-conversation-id\"] }}",
+              "condition": "eq"
+            }
+          ]
+        },
+        "tableId": "chat_histories",
+        "matchType": "allFilters",
+        "operation": "getAll"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "check-visitor",
+      "name": "Check Visitor",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        112,
+        48
+      ],
+      "parameters": {
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "x_forwarded_for",
+              "keyValue": "={{ $('Webhook').item.json.headers['x-forwarded-for'] }}"
+            }
+          ]
+        },
+        "tableId": "user_tracking",
+        "operation": "get"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "is-new",
+      "name": "Is New Visitor",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        272,
+        48
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "new-visitor",
+              "operator": {
+                "type": "object",
+                "operation": "empty",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json }}",
+              "rightValue": ""
+            }
+          ]
+        }
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "format-messages",
+      "name": "Format Chat Messages",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1344,
+        144
+      ],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "msg-content",
+              "name": "content",
+              "type": "string",
+              "value": "={{ $json.message.content }}"
+            },
+            {
+              "id": "msg-type",
+              "name": "type",
+              "type": "string",
+              "value": "={{ $json.message.type }}"
+            },
+            {
+              "id": "msg-time",
+              "name": "timestamp",
+              "type": "string",
+              "value": "={{ $json.timestamp }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "aggregate-conv",
+      "name": "Aggregate Conversation",
+      "type": "n8n-nodes-base.aggregate",
+      "position": [
+        1520,
+        144
+      ],
+      "parameters": {
+        "options": {},
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "chat_history"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "analyze-lead",
+      "name": "Analyze Lead Quality",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1712,
+        144
+      ],
+      "parameters": {
+        "text": "=## TASK\nYou are a CRM data extraction assistant. Analyze the conversation and extract structured lead information.\n\n## CONVERSATION DATA\n{{ JSON.stringify($json.chat_history) }}\n\n## OUTPUT REQUIREMENTS\nReturn ONLY valid JSON with this exact structure:\n{\n  \"CRM_Ready\": \"1 if all key fields present, 0 otherwise\",\n  \"Title\": \"Brief summary (max 16 chars)\",\n  \"E-Mail\": \"customer email\",\n  \"Phone\": \"phone number\",\n  \"Name\": \"full name\",\n  \"CompanyURL\": \"company website\",\n  \"Response\": \"• Bullet point summary of conversation\",\n  \"Language\": \"ISO language code (EN, DE, FR, etc.)\",\n  \"Unternehmensname\": \"company name\",\n  \"gender_salutation\": \"appropriate salutation\"\n}",
+        "options": {},
+        "promptType": "define"
+      },
+      "typeVersion": 1.7
+    },
+    {
+      "id": "notify-team",
+      "name": "Notify Team on Slack",
+      "type": "n8n-nodes-base.slack",
+      "position": [
+        2528,
+        320
+      ],
+      "parameters": {
+        "text": "⚠️ New chatbot lead requires manual review",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_SLACK_CHANNEL_ID",
+          "cachedResultName": "sales-channel"
+        },
+        "otherOptions": {}
+      },
+      "typeVersion": 2.3
+    },
+    {
+      "id": "note-1",
+      "name": "Section 1: Input",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1968,
+        -240
+      ],
+      "parameters": {
+        "color": 3,
+        "width": 1440,
+        "height": 980,
+        "content": "# INPUT PROCESSING & AI PREPARATION\n\nIncoming messages and file uploads are processed and analyzed by AI."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-2",
+      "name": "Section 2: Response",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -528,
+        -240
+      ],
+      "parameters": {
+        "color": 2,
+        "width": 1220,
+        "height": 980,
+        "content": "# RESPONSE & ANALYTICS\n\nAI generates response and visitor analytics are tracked."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-3",
+      "name": "Section 3: Lead Detection",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        704,
+        -240
+      ],
+      "parameters": {
+        "color": 7,
+        "width": 1300,
+        "height": 980,
+        "content": "# LEAD DETECTION & QUALIFICATION\n\nContact information is extracted and leads are qualified."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "note-4",
+      "name": "Section 4: CRM",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2000,
+        -240
+      ],
+      "parameters": {
+        "color": 5,
+        "width": 1500,
+        "height": 980,
+        "content": "# CRM INTEGRATION\n\nQualified leads are automatically added to your CRM with full context."
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "extract-structured",
+      "name": "Extract Structured Response",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "position": [
+        -384,
+        48
+      ],
+      "parameters": {
+        "text": "={{$input.first().json.output || \"\"}}",
+        "options": {},
+        "schemaType": "fromJson",
+        "jsonSchemaExample": "{\n  \"chatResponse\": \"<p>AI response here</p>\",\n  \"pills\": [\"Key Point 1\", \"Key Point 2\"],\n  \"sources\": [{\"title\":\"Source\",\"url\":\"https://example.com\"}],\n  \"ctaType\": \"contact\"\n}"
+      },
+      "typeVersion": 1.1
+    },
+    {
+      "id": "gemini-struct",
+      "name": "Gemini for Structuring",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -384,
+        208
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "final-validation",
+      "name": "Validate Lead Data",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -16,
+        368
+      ],
+      "parameters": {
+        "options": {},
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "final-check",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              },
+              "leftValue": "={{ $json.output.CRM_Ready }}",
+              "rightValue": "1"
+            }
+          ]
+        },
+        "looseTypeValidation": true
+      },
+      "typeVersion": 2.2
+    },
+    {
+      "id": "update-visitor",
+      "name": "Update Visitor Count",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        448,
+        144
+      ],
+      "parameters": {
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "x_forwarded_for",
+              "keyValue": "={{ String($('Webhook').item.json.headers['x-forwarded-for'] || '').split(',')[0].trim() }}",
+              "condition": "eq"
+            }
+          ]
+        },
+        "tableId": "user_tracking",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "last_updated",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldId": "visits",
+              "fieldValue": "={{ $json.visits + 1 }}"
+            }
+          ]
+        },
+        "matchType": "allFilters",
+        "operation": "update"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "create-visitor",
+      "name": "Create New Visitor",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        464,
+        -144
+      ],
+      "parameters": {
+        "tableId": "user_tracking",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "x_forwarded_for",
+              "fieldValue": "={{ String($('Webhook').item.json.headers['x-forwarded-for'] || '').split(',')[0].trim() || null }}"
+            },
+            {
+              "fieldId": "visits",
+              "fieldValue": "1"
+            }
+          ]
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "crm-person-simple",
+      "name": "Create Contact (Simple Path)",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        2656,
+        -448
+      ],
+      "parameters": {
+        "name": "={{ $json.output.Name }}",
+        "resource": "person",
+        "additionalFields": {
+          "email": [
+            "={{ $json.output['E-Mail'] }}"
+          ],
+          "phone": [
+            "={{ $json.output.Phone }}"
+          ]
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "crm-deal-simple",
+      "name": "Create Deal (Simple Path)",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        2928,
+        -448
+      ],
+      "parameters": {
+        "title": "New Chatbot Lead",
+        "person_id": "={{ $json.id }}",
+        "associateWith": "person"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "set-stage",
+      "name": "Set Deal Stage",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        3184,
+        -432
+      ],
+      "parameters": {
+        "dealId": "={{ $json.id }}",
+        "operation": "update",
+        "updateFields": {
+          "stage_id": "YOUR_PIPELINE_STAGE_ID"
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "trigger-followup",
+      "name": "Trigger Follow-up Workflow",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "position": [
+        4448,
+        -48
+      ],
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_FOLLOWUP_WORKFLOW_ID"
+        },
+        "workflowInputs": {
+          "value": {
+            "name": "={{ $('Clean JSON Output').item.json.output.Name }}",
+            "email": "={{ $('Clean JSON Output').item.json.output['E-Mail'] }}",
+            "phone": "={{ $('Clean JSON Output').item.json.output.Phone }}",
+            "company_url": "={{ $('Clean JSON Output').item.json.output.CompanyURL }}",
+            "information": "={{ JSON.stringify($('Aggregate Conversation').item.json.chat_history) }}"
+          },
+          "mappingMode": "defineBelow"
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "incoming-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1936,
+        208
+      ],
+      "parameters": {
+        "path": "chatbot-webhook",
+        "options": {},
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2.1
+    },
+    {
+      "id": "send-response",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        -80,
+        48
+      ],
+      "parameters": {
+        "options": {},
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.output) }}"
+      },
+      "typeVersion": 1.4
+    },
+    {
+      "id": "crm-org",
+      "name": "Create Organization",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        2608,
+        -48
+      ],
+      "parameters": {
+        "name": "={{ $json.output.Unternehmensname }}",
+        "resource": "organization"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "crm-person",
+      "name": "Create Contact",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        3696,
+        -48
+      ],
+      "parameters": {
+        "name": "={{ $('Clean JSON Output').item.json.output.Name }}",
+        "resource": "person",
+        "additionalFields": {
+          "email": [
+            "={{ $('Clean JSON Output').item.json.output['E-Mail'] }}"
+          ],
+          "phone": [
+            "={{ $('Clean JSON Output').item.json.output.Phone }}"
+          ],
+          "org_id": "={{ $json.id }}"
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "crm-deal",
+      "name": "Create Deal",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        3952,
+        -48
+      ],
+      "parameters": {
+        "title": "={{ $json.org_id.name }} / Chatbot Lead",
+        "org_id": "={{ $('Create Organization').item.json.id }}",
+        "additionalFields": {
+          "person_id": "={{ $json.id }}"
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "crm-note",
+      "name": "Add Lead Note",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        4208,
+        -48
+      ],
+      "parameters": {
+        "content": "=# Chatbot Lead Summary\n\nCompany: {{ $('Clean JSON Output').item.json.output.Unternehmensname }}\nWebsite: {{ $('Clean JSON Output').item.json.output.CompanyURL }}\n\nContact: {{ $('Clean JSON Output').item.json.output.Name }}\nPhone: {{ $('Clean JSON Output').item.json.output.Phone }}\nEmail: {{ $('Clean JSON Output').item.json.output['E-Mail'] }}\n\nConversation Summary:\n{{ $('Clean JSON Output').item.json.output.Response }}",
+        "resource": "note",
+        "additionalFields": {
+          "deal_id": "={{ $json.id }}"
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "update-org-url",
+      "name": "Update Organization URL",
+      "type": "n8n-nodes-base.pipedrive",
+      "position": [
+        3072,
+        -48
+      ],
+      "parameters": {
+        "resource": "organization",
+        "operation": "update",
+        "updateFields": {
+          "customProperties": {
+            "property": [
+              {
+                "name": "website",
+                "value": "={{ $('Clean JSON Output').item.json.output.CompanyURL }}"
+              }
+            ]
+          }
+        },
+        "organizationId": "={{ $json.id }}"
+      },
+      "typeVersion": 1
+    }
+  ],
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Extract Contact Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Structured Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Deal": {
+      "main": [
+        [
+          {
+            "node": "Add Lead Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Files": {
+      "main": [
+        [
+          {
+            "node": "If Files Exist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Lead Note": {
+      "main": [
+        [
+          {
+            "node": "Trigger Follow-up Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Visitor": {
+      "main": [
+        [
+          {
+            "node": "Is New Visitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Files": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Contact": {
+      "main": [
+        [
+          {
+            "node": "Create Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Files Exist": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is New Visitor": {
+      "main": [
+        [
+          {
+            "node": "Create New Visitor",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Visitor Count",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Files": {
+      "main": [
+        [
+          {
+            "node": "Combine Files",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gemini Analyze File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Chat History": {
+      "main": [
+        [
+          {
+            "node": "Format Chat Messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Data Paths": {
+      "main": [
+        [
+          {
+            "node": "Early Contact Detection",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean JSON Output": {
+      "main": [
+        [
+          {
+            "node": "Check If Qualified Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Visitor": {
+      "main": [
+        [
+          {
+            "node": "Merge Data Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Search Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Visitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Lead Data": {
+      "main": [
+        [
+          {
+            "node": "Merge Data Paths",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Create Organization": {
+      "main": [
+        [
+          {
+            "node": "Update Organization URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Analyze File": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Files",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Lead Quality": {
+      "main": [
+        [
+          {
+            "node": "Clean JSON Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Contact Info": {
+      "main": [
+        [
+          {
+            "node": "Validate Lead Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Chat Messages": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Visitor Count": {
+      "main": [
+        [
+          {
+            "node": "Merge Data Paths",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Conversation": {
+      "main": [
+        [
+          {
+            "node": "Analyze Lead Quality",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Qualified Lead": {
+      "main": [
+        [
+          {
+            "node": "Create Organization",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Notify Team on Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Early Contact Detection": {
+      "main": [
+        [
+          {
+            "node": "Get Chat History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Pro for Analysis": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Analyze Lead Quality",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Organization URL": {
+      "main": [
+        [
+          {
+            "node": "Create Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Deal (Simple Path)": {
+      "main": [
+        [
+          {
+            "node": "Set Deal Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Structured Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Contact (Simple Path)": {
+      "main": [
+        [
+          {
+            "node": "Create Deal (Simple Path)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

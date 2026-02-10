@@ -1,0 +1,2099 @@
+{
+  "name": "Customer Support Youtube",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "event": "=messageReceived",
+        "simple": false,
+        "filters": {
+          "q": "to:yourbusiness@gmail.com  AND is:unread"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -2320,
+        940
+      ],
+      "id": "41ffcc41-ff16-4a36-b9c0-9a24dc391787",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "thread",
+        "operation": "get",
+        "threadId": "={{ $json.threadId }}",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -1980,
+        940
+      ],
+      "id": "15f2341b-8e10-41dd-bf95-7147154380e5",
+      "name": "Get thread",
+      "webhookId": "60b73b78-cbbd-48f2-918c-5586eccf7df5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "=Here is an email i want you to classify, this email may be a thread so it may contain previous responses from the customer as well as yourself. use previous responses for reference if needed but only classify the current/latest email: {{ $('Gmail Trigger').item.json.text }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "General Support",
+              "description": " general customer support questions.  Things like how thy can download the app, how it works. basic customer support questions. This can also be personal inquires"
+            },
+            {
+              "category": " Business Inquiries",
+              "description": "Emails that are inquiries on the business . Things like, are you hiring, are you looking for investors. Id like to contact the founder ceo, can we parther. This can include emails regarding day to day business operations as well."
+            },
+            {
+              "category": "Refund Questioner",
+              "description": " An email asking for a refund but with no given  justification or reason."
+            },
+            {
+              "category": "Refund Processor",
+              "description": "Emails that include reasons for a requested action like refunds. Do not include emails that are initial requests or users making first request for a refund. Emails will include text like customers reason for needing refunds. These emails will include wording like  i cancelled by class, i was unable to attend class etc"
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "Please classify the text provided by the user into one of the following categories: {categories}, and use the provided formatting instructions below. Don't explain, and only output the json. You will be classifying emails, some emails will be threads with previous replies. make sure you are only classifying the latest/current email"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        620
+      ],
+      "id": "925912ba-ec7a-4daa-9901-ed852b5e5ec8",
+      "name": "Text Classifier",
+      "retryOnFail": false,
+      "notesInFlow": false,
+      "executeOnce": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1040,
+        820
+      ],
+      "id": "5ed81f96-475e-4b6b-8582-354a31767509",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "={{ $json.output.response.replace(/\\n/g, '<br>').replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href=\"$2\">$1</a>')  }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        860,
+        20
+      ],
+      "id": "706f5045-b1e6-40e6-8843-258825edc3f6",
+      "name": "Gmail",
+      "webhookId": "5979249b-5e3c-458f-9abb-f47e5ee1c1b2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "0000000",
+        "text": "=Sent General Support Response to: {{ $('General Support').item.json.output.email }} ✅",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1380,
+        20
+      ],
+      "id": "e13f9daf-1f7b-49d1-a42b-32a6b3862291",
+      "name": "Telegram",
+      "webhookId": "34fd422c-e27c-4c04-a5db-9bc0331bc1f8",
+      "credentials": {
+        "telegramApi": {
+          "id": "zRbDKRPKOuK2p3Hh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -400,
+        260
+      ],
+      "id": "e2eca135-74b1-4aa2-b336-8efd335f2a97",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "parse the contents of the site and use for context when asked questions about the business.",
+        "url": "https://yourbusiness.com",
+        "optimizeResponse": true,
+        "responseType": "html"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -180,
+        260
+      ],
+      "id": "5e6e99fd-869f-41df-a297-65d0b57f19de",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"from\": \"John Doe\",\n     \"email\": \"johndoe@gmail.com\",\n     \"subject\": \"Hello\",\n    \"response\": \"Hey Matthew, glad your doing well. Lets schedule a meeting to further discuss....\" \n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        40,
+        360
+      ],
+      "id": "d206f28d-ee1f-4e87-8d69-2913162098f8",
+      "name": "Agent Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -340,
+        820
+      ],
+      "id": "5f9b684a-0311-44c9-bfaa-7de0784acaa1",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "memory",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -460,
+        1080
+      ],
+      "id": "e54f8373-127c-4cb3-aab5-427ae71bc447",
+      "name": "Simple Memory1"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "1653609829",
+        "message": "=***Refund Request***:\nShould i process a refund for {{ $('Gmail Trigger').item.json.from.value[0].address }} ? 🤔\n\n***Details***: \n\n{{ $('Gmail Trigger').item.json.text }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "Approve ✅ ",
+            "disapproveLabel": "Decline ❌"
+          }
+        },
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 3,
+              "resumeUnit": "days"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -460,
+        1340
+      ],
+      "id": "ae147a2a-5b02-4442-9371-c580c064c7d6",
+      "name": "Telegram1",
+      "webhookId": "dc2774e4-a35d-4a85-8432-f41bfd63b91e",
+      "credentials": {
+        "telegramApi": {
+          "id": "zRbDKRPKOuK2p3Hh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        60,
+        1740
+      ],
+      "id": "b93a6e64-a136-4141-9f3c-6deff12ca77a",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Always use this tool to Get the paymentIntents of a customer using their email ",
+        "url": "https://api.stripe.com/v1/payment_intents",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "limit",
+              "valueProvider": "modelOptional"
+            },
+            {
+              "name": "customer"
+            }
+          ]
+        },
+        "optimizeResponse": true,
+        "dataField": "data"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        160,
+        1660
+      ],
+      "id": "cdeb3da5-2127-4ea5-8156-85dc1f9c0004",
+      "name": "PaymentIntent1",
+      "credentials": {
+        "stripeApi": {
+          "id": "lGblwXw9eCbq8QOA",
+          "name": "Stripe account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Always use this tool. Used to issue a refund to the customer using their paymentIntent. When specifying the reason use these values: duplicate, fraudulent, and requested_by_customer.  ",
+        "url": "https://api.stripe.com/v1/refunds",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendBody": true,
+        "parametersBody": {
+          "values": [
+            {
+              "name": "payment_intent"
+            },
+            {
+              "name": "reason"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        300,
+        1680
+      ],
+      "id": "2d023fbe-198e-459f-bcb8-7498586d9e23",
+      "name": "Create Refund1",
+      "credentials": {
+        "stripeApi": {
+          "id": "lGblwXw9eCbq8QOA",
+          "name": "Stripe account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "0000000",
+        "text": "=***Refund Agent 🤖 ***\n\n***Refund proccessed for***: {{ $('Refunder').item.json.output.refunding_email }}\n***Refund Status***: {{ $('Refunder').item.json.output.refund_status }}\n\n***Customer ID***: {{ $('Refunder').item.json.output.customer_Id }}\n\n***Payment Intent***: \"{{ $('Refunder').item.json.output.payment_intent }}\"\n\n***Details***: \n{{ $('Refunder').item.json.output.ai_response }}\n\n",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1480,
+        1320
+      ],
+      "id": "9d9da0f4-02a4-43ef-88d5-ed5bb6e57739",
+      "name": "Telegram2",
+      "webhookId": "b16f7e1f-8d43-4dde-a3bc-84fb3e450ab7",
+      "credentials": {
+        "telegramApi": {
+          "id": "zRbDKRPKOuK2p3Hh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n     \"user_email\": \"johndoe@gmail.com\",\n  \"customer_id\": \"ci_hfy767877578 or unkown\",\n  \"ai_response\": \"i was unable to get customer id\",\n    \"response_draft\": \"Hey Matthew, glad your doing well. To further help you with this request. Can you please tell us why your requesting a refund....\" \n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        340,
+        920
+      ],
+      "id": "fd1d4384-c158-453b-9e55-4772075bd11c",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6c3d0a97-aca9-4bb9-986a-b23ee2bf5bc4",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -180,
+        1360
+      ],
+      "id": "80fd471b-d8ed-469b-8f34-edfc3665650a",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get the paymentIntents of a customer using their email ",
+        "url": "https://api.stripe.com/v1/payment_intents",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "limit",
+              "valueProvider": "modelOptional"
+            },
+            {
+              "name": "customer_Id"
+            }
+          ]
+        },
+        "optimizeResponse": true,
+        "dataField": "data"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -120,
+        880
+      ],
+      "id": "769d9862-0f21-4b8c-99a6-5d738b29b810",
+      "name": "PaymentIntent",
+      "credentials": {
+        "stripeApi": {
+          "id": "lGblwXw9eCbq8QOA",
+          "name": "Stripe account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a customer support agent who specializes in responding to customers questions about refunds. The email body is in html. parse it. Anylyze the users email and create a brief description of the request. When writing a reply, provide concise and accurate information. Maintain a welcoming tone and ensure users feels fully supported. Your response draft should always be in markdown and in email format sign off with \"Support Team\". Use previous emails to inform your current interaction but only respond to the current/latest email. If a tool is used summarize the success or failure in the ai response. This is not a response to the email just a summarization of the tool call.\n\n\nFollow this json schema strictly. it will make me sad if you dont. and dont start with \"json```\"\n{\n     \"user_email\": \"\",\n  \"customer_id\": \"ci_xxxxxxxx or unkown\",\n  \"ai_response\": \"\",\n    \"response_draft\": \"\" \n}\n\nVery IMPORTANT: When a user requests a refund you have to make sure customer gives a reason for the refund request. Customer must supply at leasst 1 valid reason before a refund can be proccessed. If the customers reason is not valid let them know a refund cannot be supplied because a requirement was not met. do not include extra detailes like the subject in the response. \n\nValid Reasons for refund: \n- Cancelled class prior to deadline.\n- Booked class by mistake.\n- The refund is support requested meaning a memeber of our support team asked the customer to initiate the refund. \n\ncontext:\nFrom:{{ $('Gmail Trigger').item.json.from.value[0].address }}\nSender Name:{{ $('Gmail Trigger').item.json.from.value[0].name }}\nSubject:{{ $('Gmail Trigger').item.json.subject }}\nBody: {{ $('Gmail Trigger').item.json.text }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -220,
+        640
+      ],
+      "id": "fd901fcd-1645-4166-ae05-6a0f88addc00",
+      "name": "Advanced Support",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a customer support agent who specializes in responding to emails for our business, a social fitness app that connects people through group workouts. Your role is to answer general questions about the app, website, and services in a clear, friendly, and professional manner using the given context. provide concise and accurate information about features, membership, booking sessions, partnerships, and general usage. Maintain a welcoming tone and ensure users feel informed and confident in using our business services. If needed, direct users to relevant resources or support channels for further assistance. Never take an action for the user. If the user is requestiong an action like a refund or transaction verification. nicely tell them you will have someone from the support team contact them. Your email response should always be in markdown and in email format sign off with \"Friendly Support Team\". \n\nFollow this json schema strictly. it will make me sad if you dont. and dont start with \"json```\"\n{\n\t\"from\": \"\",\n     \"email\": \"\",\n     \"subject\": \"\",\n    \"response\": \"\" \n}\n\n\ncontext:\nFrom:{{ $('Gmail Trigger').item.json.from.value[0].address }}\nSender Name:{{ $('Gmail Trigger').item.json.from.value[0].name }}\nSubject:{{ $('Gmail Trigger').item.json.subject }}\nBody: {{ $('Gmail Trigger').item.json.text }}\n\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -340,
+        20
+      ],
+      "id": "1acfc8f7-74d5-4640-9370-770205f703e0",
+      "name": "General Support"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a customer support agent in charge of proccessing refunds for our business using thr stripe account. Using the context create a refund for the user. Use tha availible tools to issue refunds. always include a reason. and come up with an email rsponse to send the user after issuing the refund. use tools avalible to you to find payment information. \n\nValid Reasons for refund: \n- Cancelled class prior to deadline.\n- Booked class by mistake.\n- The refund is support requested meaning a memeber of our support team asked the customer to initiate the refund. \n\nFollow this json schema strictly. it will make me sad if you dont. and dont start with \"json```\"\n{\n    \"user_email\": \"\",\n  \"refunding_email\": \"\",\n\t\"customer_Id\": \"ci_xxxxxxxxxxx or unknown\",\n    \"payment_intent\": \"pi_xxxxxxxxx\",\n    \"refund_status\": \"success\",\n\t\"ai_response\": \"we have proccessed the transaction using the customer id....\",\n    \"response_draft\": \"Hello, John we have ....\"\n}\ncontext:\nuser_email: {{ $('Gmail Trigger').item.json.from.value[0].address }}\nreason: {{ $('Gmail Trigger').item.json.text }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        140,
+        1320
+      ],
+      "id": "e4dcf115-5f96-4a9b-8ae4-65ebac369513",
+      "name": "Refunder"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "=We are unable to process a refund at this time. You do not meet the deadline requirements. ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        -340,
+        1640
+      ],
+      "id": "a4c23e8c-57c9-4159-845b-127d6b0fdca0",
+      "name": "Gmail3",
+      "webhookId": "61ce3f37-ae99-44c6-8ff6-9f5640bd3af4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "={{ $json.output.response_draft.replace(/\\n/g, '<br>').replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href=\"$2\">$1</a>') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        860,
+        640
+      ],
+      "id": "98ff976f-edae-4695-85d0-57ef883909a1",
+      "name": "Advanced GMAIL",
+      "webhookId": "3ddf18b7-56ea-4585-8b1f-af768aab4a1c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1160,
+        640
+      ],
+      "id": "5050bc5f-5480-4ab0-bfc9-a67598df677c",
+      "name": "Mark Read Advanced",
+      "webhookId": "5c8d30a7-06ff-4af1-a9fc-d7d2debef37a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1120,
+        20
+      ],
+      "id": "35c0a913-3088-4fb1-ae0e-b54cd48d34aa",
+      "name": "Mark Read Gen",
+      "webhookId": "f893d231-665b-4421-9680-92bd13605970",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "90000000",
+        "text": "=***Refund Request*** 💵\n\n{{ $('Advanced Support').item.json.output.user_email }} is requesting a refund\n\n***Gathering further information....***\n\n***Sent Response***: \n{{ $('Advanced Support').item.json.output.response_draft }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        640
+      ],
+      "id": "94d1ffcd-55ea-4ace-898c-861f35a61737",
+      "name": "Telegram4",
+      "webhookId": "bf588420-d1b1-43c5-9c2c-ec27e6a5ed77",
+      "credentials": {
+        "telegramApi": {
+          "id": "zRbDKRPKOuK2p3Hh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1180,
+        1320
+      ],
+      "id": "7cce9cf0-031d-4381-82bd-9cb431a6494e",
+      "name": "Mark Read Refund",
+      "webhookId": "8d0373c3-3894-4ae7-8242-0e519932fc0c",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "={{ $json.output.response_draft.replace(/\\n/g, '<br>').replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href=\"$2\">$1</a>') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        860,
+        1320
+      ],
+      "id": "e4606c77-877f-4b2d-b5a9-046d3bb8ff5d",
+      "name": "Gmail Refunder",
+      "webhookId": "e0ecf90f-8a1d-422c-bc56-e37756c5d2de",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "prompt": "Instructions:\n--------------\n{instructions}\n--------------\nCompletion:\n--------------\n{completion}\n--------------\n\nAbove, the Completion did not satisfy the constraints given in the Instructions.\nError:\n--------------\n{error}\n--------------\n\nPlease try again. Please only respond with an answer that satisfies the constraints laid out in the Instructions:"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        140,
+        800
+      ],
+      "id": "0ba2d8a5-0f37-49f7-afbd-d980de7a2922",
+      "name": "Auto-fixing Output Parser"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        180,
+        920
+      ],
+      "id": "78630850-bdde-4385-b7e4-2f9e13533d8f",
+      "name": "OpenAI Chat Model5",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get the customer ID of the user using their email. Always use this tool.",
+        "url": "https://api.stripe.com/v1/customers",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "limit",
+              "valueProvider": "modelOptional"
+            },
+            {
+              "name": "email"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        860
+      ],
+      "id": "47c129c7-6b26-4a0b-bd14-625074059644",
+      "name": "Get Customer ID",
+      "credentials": {
+        "stripeApi": {
+          "id": "lGblwXw9eCbq8QOA",
+          "name": "Stripe account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get the customer ID of the user using their email. Always use this tool.",
+        "url": "https://api.stripe.com/v1/customers",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "limit",
+              "valueProvider": "modelOptional"
+            },
+            {
+              "name": "email"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        420,
+        1680
+      ],
+      "id": "c57a68b2-ac16-4d7c-b12c-7395a08cf2ab",
+      "name": "Get Customer ID1",
+      "credentials": {
+        "stripeApi": {
+          "id": "lGblwXw9eCbq8QOA",
+          "name": "Stripe account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n    \"user_email\": \"john.doe@example.com\",\n  \"refunding_email\": \"john.doe@example.com\",\n\t\"customer_Id\": \"ci_74iefiehfi or unknown\",\n    \"payment_intent\": \"pi_hidhfidjfo\",\n    \"refund_status\": \"success\",\n\t\"ai_response\": \"we have proccessed the transaction using the customer id....\",\n    \"response_draft\": \"Hello, John we have ....\"\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        1900
+      ],
+      "id": "8fb835c2-4c61-4a24-94c8-e545ea9fc506",
+      "name": "Structured Output Parser1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        540,
+        1700
+      ],
+      "id": "bae9a6b9-1eef-443a-804b-0eec1923019b",
+      "name": "Auto-fixing Output Parser1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        520,
+        1900
+      ],
+      "id": "c2171774-022a-4d78-be52-2254455d4555",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "inputText": "=Here is an email i want you to classify, this email may be a thread so it may contain previous responses from the customer as well as yourself. use previous responses for reference if needed but only classify the current/latest email: {{ $('Gmail Trigger').item.json.html.replace(/<\\/?(html|head|body|meta|div|span)[^>]*>/g, '').replace(/<blockquote[^>]*>/g, '\\n> ').replace(/<\\/blockquote>/g, '\\n').replace(/<h1>(.*?)<\\/h1>/g, '# $1').replace(/<h2>(.*?)<\\/h2>/g, '## $1').replace(/<h3>(.*?)<\\/h3>/g, '### $1').replace(/<strong>(.*?)<\\/strong>/g, '**$1**').replace(/<b>(.*?)<\\/b>/g, '**$1**').replace(/<em>(.*?)<\\/em>/g, '*$1*').replace(/<i>(.*?)<\\/i>/g, '*$1*').replace(/<p>(.*?)<\\/p>/g, '$1\\n').replace(/<br\\s*\\/?>/g, '\\n').replace(/<ul>/g, '').replace(/<\\/ul>/g, '').replace(/<li>(.*?)<\\/li>/g, '- $1').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim(); }}",
+        "categories": {
+          "categories": [
+            {
+              "category": "General Support",
+              "description": " general customer support questions.  Things like how thy can download the app, how it works. basic customer support questions. This can also be personal inquires"
+            },
+            {
+              "category": " Business Inquiries",
+              "description": "Emails that are inquiries on the bussiness . Things like, are you hiring, are you lookking for investors. Id like to contact the founder ceo, can we parther. This can include emails regarding day to day bussiness operations as well."
+            },
+            {
+              "category": "Refund Questioner",
+              "description": " An email asking for a refund but with no given  justification or reason."
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "Please classify the text provided by the user into one of the following categories: {categories}, and use the provided formatting instructions below. Don't explain, and only output the json. You will be classifying emails, some emails will be threads with previous replies. make sure you are only classifying the latest/current email"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.textClassifier",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        1420
+      ],
+      "id": "022c6313-6440-458e-a7b8-85b1f92dda91",
+      "name": "Text Classifier1",
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1040,
+        1600
+      ],
+      "id": "99b2d680-329c-4bf2-b78e-443926376af0",
+      "name": "OpenAI Chat Model6",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "={{ $json.output.response.replace(/\\n/g, '<br>').replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href=\"$2\">$1</a>')  }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        900,
+        2000
+      ],
+      "id": "3cd9a56d-4640-4638-b94a-1bc1963f9532",
+      "name": "Gmail1",
+      "webhookId": "9975e013-6e0f-4e38-a890-49d2c81124e6",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "000000",
+        "text": "=Sent General Support Response to: {{ $('General Support1').item.json.output.email }} ✅",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1480,
+        2000
+      ],
+      "id": "edb5fca1-b4d3-4186-b8df-3bde23037737",
+      "name": "Telegram3",
+      "webhookId": "afb5ac17-4115-4c8c-9972-d0e5228753fb",
+      "credentials": {
+        "telegramApi": {
+          "id": "zRbDKRPKOuK2p3Hh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -340,
+        2240
+      ],
+      "id": "cedb32b8-84c7-4047-a979-92ef9fb34359",
+      "name": "OpenAI Chat Model7",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "parse the contents of the site and use for context when asked questions about the business.",
+        "url": "https://yourbusinss.com",
+        "optimizeResponse": true,
+        "responseType": "html"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        2240
+      ],
+      "id": "2f636572-2380-4a65-b03c-e7c84fa05121",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n\t\"from\": \"John Doe\",\n     \"email\": \"johndoe@gmail.com\",\n     \"subject\": \"RE: Hello\",\n    \"response\": \"Hey Matthew, glad your doing well. Lets schedule a meeting to further discuss....\" \n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        40,
+        2300
+      ],
+      "id": "e1bd1b3e-5d1c-46b6-9c54-7cf9bd07a28f",
+      "name": "Agent Parser1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -420,
+        2920
+      ],
+      "id": "3a7e447d-9507-48d6-a84e-fb5d691b3e18",
+      "name": "OpenAI Chat Model8",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "memory",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        -240,
+        2480
+      ],
+      "id": "fee08897-5ccd-4bad-a75e-03dbfdbcc889",
+      "name": "Simple Memory4"
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n     \"user_email\": \"johndoe@gmail.com\",\n  \"customer_id\": \"ci_hfy767877578 or unkown\",\n  \"ai_response\": \"i was unable to get customer id\",\n    \"response_draft\": \"Hey Matthew, glad your doing well. To further help you with this request. Can you please tell us why your requesting a refund....\" \n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        260,
+        3020
+      ],
+      "id": "192070aa-f1d3-4118-9a1a-86deb4620b23",
+      "name": "Structured Output Parser2"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get the paymentIntents of a customer using their email ",
+        "url": "https://api.stripe.com/v1/payment_intents",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "limit",
+              "valueProvider": "modelOptional"
+            },
+            {
+              "name": "customer_Id"
+            }
+          ]
+        },
+        "optimizeResponse": true,
+        "dataField": "data"
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -200,
+        3020
+      ],
+      "id": "d55aead2-721c-4366-aacd-66132aa7a8ed",
+      "name": "PaymentIntent3",
+      "credentials": {
+        "stripeApi": {
+          "id": "lGblwXw9eCbq8QOA",
+          "name": "Stripe account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a customer support agent who specializes in responding to customers questions about refunds. The email body is in html. parse it. Anylyze the users email and create a brief description of the request. When writing a reply, provide concise and accurate information. Maintain a welcoming tone and ensure users feels fully supported. Your response draft should always be in markdown and in email format sign off with \"Friendly Support Team\". Use previous emails to inform your current interaction but only respond to the current/latest email. If a tool is used summarize the success or failure in the ai response. This is not a response to the email just a summarization of the tool call. \n\n\nFollow this json schema strictly. it will make me sad if you dont. and dont start with \"json```\"\n{\n     \"user_email\": \"johndoe@gmail.com\",\n  \"customer_id\": \"ci_hfy767877578 or unkown\",\n  \"ai_response\": \"i was unable to get customer id\",\n    \"response_draft\": \"Hey Matthew, glad your doing well. To further help you with this request. Can you please tell us why your requesting a refund....\" \n}\n\nVery IMPORTANT: When a user requests a refund you have to make sure customer gives a reason for the refund request. Customer must supply at leasst 1 valid reason before a refund can be proccessed. If the customers reason is not valid let them know a refund cannot be supplied because a requirement was not met. do not include extra detailes like the subject in the response. \n\nValid Reasons for refund: \n- Cancelled class prior to deadline.\n- Booked class by mistake.\n- The refund is support requested meaning a memeber of our support team asked the customer to initiate the refund. \n\ncontext:\nFrom:{{ $('Gmail Trigger').item.json.from.value[0].address }}\nSender Name:{{ $('Gmail Trigger').item.json.from.value[0].name }}\nSubject:{{ $('Gmail Trigger').item.json.subject }}\nBody: {{ $('Gmail Trigger').item.json.html.replace(/<\\/?(html|head|body|meta|div|span)[^>]*>/g, '').replace(/<blockquote[^>]*>/g, '\\n> ').replace(/<\\/blockquote>/g, '\\n').replace(/<h1>(.*?)<\\/h1>/g, '# $1').replace(/<h2>(.*?)<\\/h2>/g, '## $1').replace(/<h3>(.*?)<\\/h3>/g, '### $1').replace(/<strong>(.*?)<\\/strong>/g, '**$1**').replace(/<b>(.*?)<\\/b>/g, '**$1**').replace(/<em>(.*?)<\\/em>/g, '*$1*').replace(/<i>(.*?)<\\/i>/g, '*$1*').replace(/<p>(.*?)<\\/p>/g, '$1\\n').replace(/<br\\s*\\/?>/g, '\\n').replace(/<ul>/g, '').replace(/<\\/ul>/g, '').replace(/<li>(.*?)<\\/li>/g, '- $1').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim(); }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -300,
+        2740
+      ],
+      "id": "4833b52f-910e-4ce7-bd50-dd7063aefa4a",
+      "name": "Advanced Support1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a customer support agent who specializes in responding to emails for our business. Your role is to answer general questions about the app, website, and services in a clear, friendly, and professional manner using the given context. provide concise and accurate information about features, membership, booking sessions, partnerships, and general usage. Maintain a welcoming tone and ensure users feel informed and confident in using our services. If needed, direct users to relevant resources or support channels for further assistance. Never take an action for the user. If the user is requestiong an action like a refund or transaction verification. nicely tell them you will have someone from the support team contact them. Your email response should always be in markdown and in email format sign off with \"Friendly Support Team\". \n\n\nFollow this json schema strictly. it will make me sad if you dont. and dont start with \"json```\"\n{\n\t\"from\": \"John Doe\",\n     \"email\": \"johndoe@gmail.com\",\n     \"subject\": \"RE: Hello\",\n    \"response\": \"Hey Matthew, glad your doing well. Lets schedule a meeting to further discuss....\" \n}\n\ncontext:\nFrom:{{ $('Gmail Trigger').item.json.from.value[0].address }}\nSender Name:{{ $('Gmail Trigger').item.json.from.value[0].name }}\nSubject:{{ $('Gmail Trigger').item.json.subject }}\nBody: {{ $('Gmail Trigger').item.json.html.replace(/<\\/?(html|head|body|meta|div|span)[^>]*>/g, '').replace(/<blockquote[^>]*>/g, '\\n> ').replace(/<\\/blockquote>/g, '\\n').replace(/<h1>(.*?)<\\/h1>/g, '# $1').replace(/<h2>(.*?)<\\/h2>/g, '## $1').replace(/<h3>(.*?)<\\/h3>/g, '### $1').replace(/<strong>(.*?)<\\/strong>/g, '**$1**').replace(/<b>(.*?)<\\/b>/g, '**$1**').replace(/<em>(.*?)<\\/em>/g, '*$1*').replace(/<i>(.*?)<\\/i>/g, '*$1*').replace(/<p>(.*?)<\\/p>/g, '$1\\n').replace(/<br\\s*\\/?>/g, '\\n').replace(/<ul>/g, '').replace(/<\\/ul>/g, '').replace(/<li>(.*?)<\\/li>/g, '- $1').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&').trim(); }}",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.8,
+      "position": [
+        -240,
+        2000
+      ],
+      "id": "978c089f-d535-4219-b314-28a10a455bba",
+      "name": "General Support1"
+    },
+    {
+      "parameters": {
+        "operation": "reply",
+        "messageId": "={{ $('Gmail Trigger').item.json.id }}",
+        "message": "={{ $json.output.response_draft.replace(/\\n/g, '<br>').replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '<a href=\"$2\">$1</a>') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        2740
+      ],
+      "id": "84c771f0-11e1-4dd5-b300-c2296a8e1f16",
+      "name": "Advanced GMAIL1",
+      "webhookId": "3f142085-7f99-48d9-b4fe-459de7973d29",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1240,
+        2740
+      ],
+      "id": "52e6caf2-e28f-4908-b435-45358d47158f",
+      "name": "Mark Read Advanced1",
+      "webhookId": "ad2e0276-22d3-4499-8831-4d4cc2b57132",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "markAsRead",
+        "messageId": "={{ $json.id }}"
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1200,
+        2000
+      ],
+      "id": "9fcf8300-0712-4957-9cfc-aec7501ca358",
+      "name": "Mark Read Gen1",
+      "webhookId": "d8b83009-0615-45f8-8854-5e0f29057a5b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "BNHcb1qao5bb6A4q",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "1653609829",
+        "text": "=***Refund Request*** 💵\n\n{{ $('Advanced Support1').item.json.output.user_email }} is requesting a refund\n\n***Gathering further information....***\n\n***Sent Response***: \n{{ $('Advanced Support1').item.json.output.response_draft }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1480,
+        2740
+      ],
+      "id": "15da5201-65ba-40cd-9885-9d99a0a91c1e",
+      "name": "Telegram6",
+      "webhookId": "20d1a55f-9790-480a-8425-fc9eeb843924",
+      "credentials": {
+        "telegramApi": {
+          "id": "zRbDKRPKOuK2p3Hh",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "prompt": "Instructions:\n--------------\n{instructions}\n--------------\nCompletion:\n--------------\n{completion}\n--------------\n\nAbove, the Completion did not satisfy the constraints given in the Instructions.\nError:\n--------------\n{error}\n--------------\n\nPlease try again. Please only respond with an answer that satisfies the constraints laid out in the Instructions:"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        60,
+        2900
+      ],
+      "id": "868dd367-472c-405d-8a88-32a0ec608e77",
+      "name": "Auto-fixing Output Parser2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        100,
+        3020
+      ],
+      "id": "73647b9c-1c66-461d-ac3e-e25f5af85f1a",
+      "name": "OpenAI Chat Model10",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get the customer ID of the user using their email. Always use this tool.",
+        "url": "https://api.stripe.com/v1/customers",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "stripeApi",
+        "sendQuery": true,
+        "parametersQuery": {
+          "values": [
+            {
+              "name": "limit",
+              "valueProvider": "modelOptional"
+            },
+            {
+              "name": "email"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "typeVersion": 1.1,
+      "position": [
+        -80,
+        2960
+      ],
+      "id": "0dbc0e5e-3d01-4073-bd00-d505d15a9ff3",
+      "name": "Get Customer ID2",
+      "credentials": {
+        "stripeApi": {
+          "id": "lGblwXw9eCbq8QOA",
+          "name": "Stripe account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserAutofixing",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        280
+      ],
+      "id": "9920edc3-9fc9-457f-91eb-295b58767ae5",
+      "name": "Auto-fixing Output Parser4"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "gpt-4o"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -20,
+        420
+      ],
+      "id": "5160c55e-4f24-4b8b-91d2-2b60b20b3af1",
+      "name": "OpenAI Chat Model12",
+      "credentials": {
+        "openAiApi": {
+          "id": "2GwkgEELDZ4ZfeK3",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Trigger\n",
+        "height": 440,
+        "width": 940
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2360,
+        780
+      ],
+      "typeVersion": 1,
+      "id": "5d47dc97-55bf-45f0-832d-39806f864fdc",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Process",
+        "height": 3320,
+        "width": 1340,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -540,
+        -140
+      ],
+      "typeVersion": 1,
+      "id": "59f5ae26-667d-47fd-8657-f006a23c5db0",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Delivery",
+        "height": 3320,
+        "width": 980,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        800,
+        -140
+      ],
+      "typeVersion": 1,
+      "id": "76fbfbbb-c256-43aa-ab9c-850fbc4403fa",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Classify",
+        "height": 1320,
+        "width": 500,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1140,
+        500
+      ],
+      "typeVersion": 1,
+      "id": "81bf11b9-ba0b-4bac-bbda-e6cc694be947",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b309f6d3-c4f3-4965-a79d-ab94b4c61779",
+              "leftValue": "={{ $('Gmail Trigger').item.json.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1640,
+        940
+      ],
+      "id": "b130638a-2729-4e11-ba6e-3c941a4d9cde",
+      "name": "if not reply"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get thread",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get thread": {
+      "main": [
+        [
+          {
+            "node": "if not reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier": {
+      "main": [
+        [
+          {
+            "node": "General Support",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "Advanced Support",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail": {
+      "main": [
+        [
+          {
+            "node": "Mark Read Gen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General Support",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "ai_tool": [
+        [
+          {
+            "node": "General Support",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser4",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Advanced Support",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Advanced Support",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "Refunder",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "General Support",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Refunder",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PaymentIntent1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Refunder",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Refund1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Refunder",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Refunder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PaymentIntent": {
+      "ai_tool": [
+        [
+          {
+            "node": "Advanced Support",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advanced Support": {
+      "main": [
+        [
+          {
+            "node": "Advanced GMAIL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Support": {
+      "main": [
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refunder": {
+      "main": [
+        [
+          {
+            "node": "Gmail Refunder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advanced GMAIL": {
+      "main": [
+        [
+          {
+            "node": "Mark Read Advanced",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Read Advanced": {
+      "main": [
+        [
+          {
+            "node": "Telegram4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Read Gen": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Read Refund": {
+      "main": [
+        [
+          {
+            "node": "Telegram2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Refunder": {
+      "main": [
+        [
+          {
+            "node": "Mark Read Refund",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-fixing Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Advanced Support",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto-fixing Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Customer ID": {
+      "ai_tool": [
+        [
+          {
+            "node": "Advanced Support",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Customer ID1": {
+      "ai_tool": [
+        [
+          {
+            "node": "Refunder",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-fixing Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Refunder",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto-fixing Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Classifier1": {
+      "main": [
+        [
+          {
+            "node": "General Support1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "Advanced Support1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Text Classifier1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail1": {
+      "main": [
+        [
+          {
+            "node": "Mark Read Gen1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model7": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General Support1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "ai_tool": [
+        [
+          {
+            "node": "General Support1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "General Support1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Advanced Support1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory4": {
+      "ai_memory": [
+        [
+          {
+            "node": "Advanced Support1",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "General Support1",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Auto-fixing Output Parser2",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PaymentIntent3": {
+      "ai_tool": [
+        [
+          {
+            "node": "Advanced Support1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advanced Support1": {
+      "main": [
+        [
+          {
+            "node": "Advanced GMAIL1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Support1": {
+      "main": [
+        [
+          {
+            "node": "Gmail1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Advanced GMAIL1": {
+      "main": [
+        [
+          {
+            "node": "Mark Read Advanced1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Read Advanced1": {
+      "main": [
+        [
+          {
+            "node": "Telegram6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Read Gen1": {
+      "main": [
+        [
+          {
+            "node": "Telegram3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-fixing Output Parser2": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Advanced Support1",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model10": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto-fixing Output Parser2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Customer ID2": {
+      "ai_tool": [
+        [
+          {
+            "node": "Advanced Support1",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-fixing Output Parser4": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "General Support",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model12": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Auto-fixing Output Parser4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "if not reply": {
+      "main": [
+        [
+          {
+            "node": "Text Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Text Classifier1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "61dff7c2-0ebf-49ec-abde-1a516b6ef956",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3a2886c58b2e169d1ae4cdcd54e85368f6c374d274223d43993925b73118a46"
+  },
+  "id": "X6QwfVrX4cvfIV3I",
+  "tags": []
+}

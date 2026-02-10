@@ -1,0 +1,738 @@
+{
+  "name": "Assistente de Vendas - WhatsApp",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-sales",
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000001",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1280,
+        96
+      ],
+      "webhookId": "wa-sales-0001-0001-0001-aaaaaaaaaaaa"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body;\nconst entry = body && body.entry;\n\nif (!entry || !entry[0] || !entry[0].changes || !entry[0].changes[0]) {\n  return [];\n}\n\nconst change = entry[0].changes[0];\nconst value = change.value;\n\n// Skip non-message events (status updates, delivery receipts, etc.)\nif (!value.messages || value.messages.length === 0) {\n  return [];\n}\n\n// Process first message only\nconst message = value.messages[0];\nconst contact = (value.contacts && value.contacts[0]) || {};\nconst metadata = value.metadata || {};\n\nreturn [{\n  json: {\n    from: message.from,\n    messageId: message.id,\n    messageType: message.type,\n    text: message.type === 'text' ? message.text.body : '',\n    contactName: (contact.profile && contact.profile.name) || '',\n    phoneNumberId: metadata.phone_number_id,\n    timestamp: message.timestamp\n  }\n}];"
+      },
+      "id": "wa-sales-0001-0001-0001-000000000002",
+      "name": "Extract Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1120,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $json.phoneNumberId }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: $json.messageId, typing_indicator: { type: 'text' } }) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "wa-sales-0001-0001-0001-000000000017",
+      "name": "Mark Read & Typing",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -960,
+        -32
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "text-check",
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "text",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000018",
+      "name": "Is Text Message",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -960,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $('Extract Message').first().json.phoneNumberId }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('Extract Message').first().json.from, type: 'text', text: { body: 'Ol\\u00e1! De momento, apenas consigo processar mensagens de texto. Por favor, envie a sua quest\\u00e3o por escrito.' } }) }}",
+        "options": {
+          "timeout": 5000
+        }
+      },
+      "id": "wa-sales-0001-0001-0001-000000000019",
+      "name": "Reply Non-Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -816,
+        256
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst message = input.text || '';\nconst sessionId = 'wa-' + input.from;\n\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\n\nreturn [{\n  json: {\n    message: sanitizedMessage || 'hello',\n    session_id: sessionId,\n    from: input.from,\n    contactName: input.contactName || '',\n    phoneNumberId: input.phoneNumberId,\n    messageId: input.messageId\n  }\n}];"
+      },
+      "id": "wa-sales-0001-0001-0001-000000000003",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -768,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// RAG Retrieval: Generate embedding + Query Pinecone + Build context\nconst userMessage = $('Validate Input').first().json.message;\nconst sessionId = $('Validate Input').first().json.session_id;\n\nlet contextText = '';\ntry {\n  // Step 1: Generate embedding via Google API\n  const embeddingResponse = await fetch(\n    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${$env.GOOGLE_API_KEY}`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        model: 'models/gemini-embedding-001',\n        content: { parts: [{ text: userMessage }] },\n        taskType: 'RETRIEVAL_QUERY'\n      })\n    }\n  );\n  const embeddingData = await embeddingResponse.json();\n  const vector = embeddingData?.embedding?.values;\n\n  if (vector && vector.length > 0) {\n    // Step 2: Query Pinecone (index: borjareis, all namespaces)\n    const pineconeResponse = await fetch(\n      `${$env.PINECONE_HOST_BORJAREIS}/query`,\n      {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Api-Key': $env.PINECONE_API_KEY\n        },\n        body: JSON.stringify({\n          vector: vector,\n          topK: 5,\n          includeMetadata: true\n        })\n      }\n    );\n    const pineconeData = await pineconeResponse.json();\n    const matches = pineconeData?.matches || [];\n\n    // Step 3: Build context from matches\n    const contextParts = matches\n      .filter(m => m.score >= 0.7)\n      .map(m => m.metadata?.text || m.metadata?.content || m.metadata?.chunk || '')\n      .filter(t => t.length > 0);\n\n    if (contextParts.length > 0) {\n      contextText = '[CONTEXT]\\n' + contextParts.join('\\n---\\n') + '\\n[/CONTEXT]\\n\\n';\n    }\n  }\n} catch (err) {\n  // RAG failure is non-blocking — continue without context\n}\n\n// Add current date/time in Lisbon timezone\nconst lisbonTime = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'long', hour12: false }).format(new Date());\nconst enrichedMessage = `[Data atual: ${lisbonTime}] ` + contextText + userMessage;\n\nreturn {\n  json: {\n    message: enrichedMessage,\n    original_message: userMessage,\n    session_id: sessionId,\n    has_context: contextText.length > 0\n  }\n};"
+      },
+      "id": "wa-sales-0001-0001-0001-000000000004",
+      "name": "RAG Retrieval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_BORJAREIS }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.FLOWISE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: $json.message, overrideConfig: { sessionId: $json.session_id } }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "wa-sales-0001-0001-0001-000000000005",
+      "name": "Flowise API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -240,
+        256
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\nconst flowiseResponse = inputData.text || inputData.output || '';\nconst isFallback = !flowiseResponse || flowiseResponse.trim() === '';\n\nlet sessionId = 'unknown';\nlet customerMessage = '';\ntry {\n  const validateData = $('Validate Input').first().json;\n  sessionId = validateData.session_id || 'unknown';\n  customerMessage = validateData.message || '';\n} catch (e) {}\n\nlet output = flowiseResponse;\nif (isFallback) {\n  output = '[INTENT:error] Pe\\u00e7o desculpa, mas n\\u00e3o consegui processar o seu pedido neste momento. Por favor, tente novamente ou entre em contacto connosco atrav\\u00e9s de borjareis@megaloja.pt ou +351 295 218 222 / +351 912 177 200.';\n}\n\n// Extract [INTENT:xxx] tag\nlet llmIntent = null;\nconst intentMatch = output.match(/\\[INTENT:(\\w+)\\]/);\nif (intentMatch) {\n  llmIntent = intentMatch[1].toLowerCase();\n  output = output.replace(/\\[INTENT:\\w+\\]\\s*/g, '');\n}\n\n// Check for QUOTE_DATA\nlet quoteData = null;\nlet hasQuote = false;\nconst quoteMatch = output.match(/\\[QUOTE_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/QUOTE_DATA\\]/);\nif (quoteMatch) {\n  try {\n    quoteData = JSON.parse(quoteMatch[1].trim());\n    if (!quoteData.customer_name || !quoteData.customer_email || !quoteData.products_description) {\n      quoteData = null;\n    } else {\n      if (quoteData.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(quoteData.customer_email)) {\n        quoteData = null;\n      } else {\n        quoteData.reference_id = 'QUOTE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n        quoteData.session_id = sessionId;\n        quoteData.created_at = new Date().toISOString();\n        for (const key of Object.keys(quoteData)) {\n          if (typeof quoteData[key] === 'string') {\n            quoteData[key] = quoteData[key].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n          }\n        }\n        hasQuote = true;\n      }\n    }\n  } catch (e) { quoteData = null; }\n}\n\n// Check for ORDER_DATA\nlet orderData = null;\nlet hasOrder = false;\nconst orderMatch = output.match(/\\[ORDER_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/ORDER_DATA\\]/);\nif (orderMatch) {\n  try {\n    orderData = JSON.parse(orderMatch[1].trim());\n    if (!orderData.customer_name || !orderData.customer_email || !orderData.issue_description) {\n      orderData = null;\n    } else {\n      if (orderData.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(orderData.customer_email)) {\n        orderData = null;\n      } else {\n        orderData.reference_id = 'SUPPORT-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n        orderData.session_id = sessionId;\n        orderData.created_at = new Date().toISOString();\n        for (const key of Object.keys(orderData)) {\n          if (typeof orderData[key] === 'string') {\n            orderData[key] = orderData[key].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n          }\n        }\n        hasOrder = true;\n      }\n    }\n  } catch (e) { orderData = null; }\n}\n\n// Clean response\nlet cleanResponse = output\n  .replace(/\\[QUOTE_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/QUOTE_DATA\\]/, '')\n  .replace(/\\[ORDER_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/ORDER_DATA\\]/, '')\n  .trim();\n\nif (hasQuote && quoteData) {\n  cleanResponse = cleanResponse.replace(/QUOTE-X+/g, quoteData.reference_id);\n}\nif (hasOrder && orderData) {\n  cleanResponse = cleanResponse.replace(/ORDER-X+/g, orderData.reference_id);\n  cleanResponse = cleanResponse.replace(/SUPPORT-X+/g, orderData.reference_id);\n}\n\n// WhatsApp formatting: convert markdown bold to WA bold, clean links\ncleanResponse = cleanResponse.replace(/\\*\\*([^*]+)\\*\\*/g, '*$1*');\ncleanResponse = cleanResponse.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g, '$1 ($2)');\ncleanResponse = cleanResponse.replace(/<[^>]*>/g, '');\n\n// Final safety: remove any remaining structured tags\ncleanResponse = cleanResponse.replace(/\\[INTENT:\\w+\\]\\s*/g, '');\ncleanResponse = cleanResponse.replace(/\\[\\/?(?:QUOTE_DATA|ORDER_DATA|CONTEXT)\\][^\\[]*/g, '');\ncleanResponse = cleanResponse.trim();\n\nlet classifiedIntent = 'general';\nif (hasQuote) classifiedIntent = 'quote_request';\nelse if (hasOrder) classifiedIntent = 'support_request';\nelse if (llmIntent) classifiedIntent = llmIntent;\n\nreturn [{\n  json: {\n    output: cleanResponse,\n    hasQuote,\n    hasOrder,\n    quoteData,\n    orderData,\n    referenceId: hasQuote ? quoteData?.reference_id : (hasOrder ? orderData?.reference_id : null),\n    sessionId,\n    originalMessage: customerMessage,\n    classifiedIntent,\n    isFallback\n  }\n}];"
+      },
+      "id": "wa-sales-0001-0001-0001-000000000006",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        256
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.hasQuote }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "hasQuote"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.hasOrder }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "hasOrder"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "wa-sales-0001-0001-0001-000000000007",
+      "name": "Route Response",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        144,
+        64
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
+        "subject": "=Novo Pedido de Orcamento (WhatsApp) - {{ $json.quoteData.reference_id }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.products{background-color:#f9fafb;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Orcamento<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.quoteData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.quoteData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.quoteData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Telefone:</span> <span class=\"value\">{{ $json.quoteData.customer_phone || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"products\"><div class=\"info-row\"><span class=\"label\">Produtos:</span> <span class=\"value\">{{ $json.quoteData.products_description }}</span></div><div class=\"info-row\"><span class=\"label\">Quantidades:</span> <span class=\"value\">{{ $json.quoteData.quantities || 'Nao especificado' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Informacoes do Projeto</div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.quoteData.project_description || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo:</span> <span class=\"value\">{{ $json.quoteData.timeline || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Requisitos Especiais:</span> <span class=\"value\">{{ $json.quoteData.special_requirements || 'Nenhum' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.quoteData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000008",
+      "name": "Email Quote",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        -64
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "webhookId": "a1d2ccc7-01e7-4c0f-90f0-5aebbb3bac0b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
+        "subject": "=Novo Pedido de Suporte (WhatsApp) - {{ $json.orderData.reference_id }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.issue-box{background-color:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #dc2626}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Suporte<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.orderData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.orderData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.orderData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Referencia:</span> <span class=\"value\">{{ $json.orderData.order_id || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Problema</div><div class=\"issue-box\"><div class=\"info-row\"><span class=\"label\">Tipo de Problema:</span> <span class=\"value\">{{ $json.orderData.issue_type || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.orderData.issue_description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.orderData.created_at }}</span></div><div class=\"info-row\"><span class=\"label\">Estado:</span> <span class=\"value\">{{ $json.orderData.status }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000009",
+      "name": "Email Order",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        224
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "webhookId": "91a38a0b-ceb3-4338-b8da-90f5a15c8b6b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v22.0/{{ $('Validate Input').first().json.phoneNumberId }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ messaging_product: 'whatsapp', to: $('Validate Input').first().json.from, type: 'text', text: { body: ($('Process Response').first().json.output?.trim() || 'Peco desculpa, ocorreu um erro. Por favor, tente novamente ou entre em contacto connosco atraves de borjareis@megaloja.pt ou +351 295 218 222.').substring(0, 4096) } }) }}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "wa-sales-0001-0001-0001-000000000010",
+      "name": "Send WA Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        544,
+        112
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wa_messages",
+          "cachedResultName": "wa_messages"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "phone_number": "={{ $json.from }}",
+            "contact_name": "={{ $json.contactName }}",
+            "direction": "in",
+            "message_text": "={{ $json.message }}",
+            "session_id": "={{ $json.session_id }}",
+            "wa_message_id": "={{ $json.messageId }}",
+            "created_at": "={{ new Date($('Extract Message').first().json.timestamp * 1000).toISOString() }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000011",
+      "name": "Log Incoming",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -608,
+        256
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wa_messages",
+          "cachedResultName": "wa_messages"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "phone_number": "={{ $('Validate Input').first().json.from }}",
+            "direction": "out",
+            "message_text": "={{ $('Process Response').first().json.output }}",
+            "intent": "={{ $('Process Response').first().json.classifiedIntent }}",
+            "session_id": "={{ $('Validate Input').first().json.session_id }}",
+            "wa_message_id": "={{ $input.first().json.messages && $input.first().json.messages[0] ? $input.first().json.messages[0].id : '' }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000012",
+      "name": "Log Outgoing",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        704,
+        112
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT enabled, schedule FROM wa_bot_config WHERE id = 1",
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000015",
+      "name": "Check Bot Config",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -576,
+        80
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $input.first().json;\n\n// Check if bot is globally disabled\nif (!config.enabled) return [];\n\n// Check schedule\nconst schedule = config.schedule || [];\nif (schedule.length === 0) return [{ json: { active: true } }];\n\n// Get current time in Lisbon\nconst now = new Date();\nconst lisbonOptions = { timeZone: 'Atlantic/Azores', hour: '2-digit', minute: '2-digit', hour12: false };\nconst lisbonTime = new Intl.DateTimeFormat('en-GB', lisbonOptions).format(now);\nconst [h, m] = lisbonTime.split(':').map(Number);\nconst currentMinutes = h * 60 + m;\n\nconst lisbonDayOptions = { timeZone: 'Atlantic/Azores', weekday: 'short' };\nconst dayName = new Intl.DateTimeFormat('en-GB', lisbonDayOptions).format(now);\nconst dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };\nconst currentDay = dayMap[dayName];\n\n// Check if current time falls within any schedule window\nconst inSchedule = schedule.some(rule => {\n  if (!rule.days || !rule.days.includes(currentDay)) return false;\n  const [sh, sm] = rule.start.split(':').map(Number);\n  const [eh, em] = rule.end.split(':').map(Number);\n  const startMin = sh * 60 + sm;\n  const endMin = eh * 60 + em;\n  if (endMin > startMin) {\n    return currentMinutes >= startMin && currentMinutes < endMin;\n  } else {\n    return currentMinutes >= startMin || currentMinutes < endMin;\n  }\n});\n\nif (!inSchedule) return [];\nreturn [{ json: { active: true } }];"
+      },
+      "id": "wa-sales-0001-0001-0001-000000000016",
+      "name": "Evaluate Active",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT COUNT(*) AS paused_count FROM wa_paused_conversations WHERE phone_number = $1 AND paused_until > NOW()",
+        "options": {
+          "queryReplacement": "={{ $('Validate Input').first().json.from }}"
+        }
+      },
+      "id": "wa-sales-0001-0001-0001-000000000013",
+      "name": "Check Pause",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -240,
+        80
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "id": "pause-check",
+              "leftValue": "={{ $json.paused_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "wa-sales-0001-0001-0001-000000000014",
+      "name": "Is Paused",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        80
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          {
+            "node": "Mark Read & Typing",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Is Text Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Text Message": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reply Non-Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Check Bot Config",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Incoming",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Bot Config": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Active",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Active": {
+      "main": [
+        [
+          {
+            "node": "Check Pause",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Pause": {
+      "main": [
+        [
+          {
+            "node": "Is Paused",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Paused": {
+      "main": [
+        [
+          {
+            "node": "RAG Retrieval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "RAG Retrieval": {
+      "main": [
+        [
+          {
+            "node": "Flowise API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flowise API": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          {
+            "node": "Route Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Response": {
+      "main": [
+        [
+          {
+            "node": "Email Quote",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send WA Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Quote": {
+      "main": [
+        [
+          {
+            "node": "Send WA Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Order": {
+      "main": [
+        [
+          {
+            "node": "Send WA Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WA Reply": {
+      "main": [
+        [
+          {
+            "node": "Log Outgoing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "versionId": "5cb5bb30-9a6c-4d69-bcf1-437aa85e5ea9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "egu23cPoHpVByWwk",
+  "tags": []
+}

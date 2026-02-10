@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "WebFetch(domain:docs.crawl4ai.com)",
+      "WebFetch(domain:docs.n8n.io)",
+      "Bash(node -e:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker network ls:*)",
+      "Bash(docker inspect:*)",
+      "Bash(docker network connect:*)",
+      "Bash(docker exec:*)",
+      "Bash(node:*)",
+      "Bash(del \"C:\\\\Users\\\\andre\\\\Desktop\\\\Apps\\\\descomplica-demos\\\\Ferramentas\\\\test_links.js\")",
+      "Bash(del \"C:\\\\Users\\\\andre\\\\Desktop\\\\Apps\\\\descomplica-demos\\\\Ferramentas\\\\pinecone_sample_batch1.json\" \"C:\\\\Users\\\\andre\\\\Desktop\\\\Apps\\\\descomplica-demos\\\\Ferramentas\\\\pinecone_sample_batch2.json\" \"C:\\\\Users\\\\andre\\\\Desktop\\\\Apps\\\\descomplica-demos\\\\Ferramentas\\\\pinecone_sample_batch3.json\")",
+      "Bash(echo:*)"
+    ]
+  }
+}

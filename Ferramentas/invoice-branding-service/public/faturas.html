@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversor de Faturas — descomplica</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green: #b5e04e;
+            --green-dark: #9bc73e;
+            --black: #000000;
+            --white: #ffffff;
+            --gray-100: #f7f7f7;
+            --gray-200: #e5e5e5;
+            --gray-300: #d4d4d4;
+            --gray-400: #a3a3a3;
+            --gray-500: #737373;
+            --gray-600: #525252;
+            --gray-800: #262626;
+            --gray-900: #171717;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.5;
+        }
+
+        /* ── App Header ── */
+        .app-header {
+            background: var(--black);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .app-header img { height: 28px; width: auto; }
+        .app-header span {
+            color: var(--gray-500);
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 1px solid var(--gray-600);
+            padding-left: 16px;
+        }
+
+        /* ── Layout ── */
+        .app-layout {
+            display: grid;
+            grid-template-columns: 420px 1fr;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* ── Upload Panel ── */
+        .upload-panel {
+            background: var(--white);
+            border-right: 1px solid var(--gray-200);
+            padding: 28px 24px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+        }
+
+        .panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray-500);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        /* ── Drop Zone ── */
+        .drop-zone {
+            border: 2px dashed var(--gray-300);
+            border-radius: 12px;
+            padding: 48px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 20px;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--green);
+            background: rgba(181, 224, 78, 0.05);
+        }
+        .drop-zone.has-file {
+            border-color: var(--green);
+            border-style: solid;
+            background: rgba(181, 224, 78, 0.04);
+            padding: 20px 24px;
+        }
+        .drop-zone-icon {
+            font-size: 48px;
+            color: var(--gray-300);
+            margin-bottom: 12px;
+            line-height: 1;
+        }
+        .drop-zone-text {
+            font-size: 14px;
+            color: var(--gray-500);
+            margin-bottom: 4px;
+        }
+        .drop-zone-hint {
+            font-size: 12px;
+            color: var(--gray-400);
+        }
+        .drop-zone .file-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .drop-zone .file-icon { font-size: 28px; color: var(--green-dark); flex-shrink: 0; }
+        .drop-zone .file-details { text-align: left; flex: 1; min-width: 0; }
+        .drop-zone .file-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-800);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .drop-zone .file-size { font-size: 12px; color: var(--gray-500); }
+        .drop-zone .btn-change {
+            padding: 6px 12px;
+            border: 1px solid var(--gray-200);
+            background: var(--white);
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--gray-600);
+            cursor: pointer;
+            flex-shrink: 0;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .drop-zone .btn-change:hover { border-color: var(--gray-400); }
+
+        /* ── Parsed Data Summary ── */
+        .parsed-summary {
+            display: none;
+            margin-bottom: 20px;
+        }
+        .parsed-summary.visible { display: block; }
+
+        .summary-card {
+            background: var(--gray-100);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .summary-card h4 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            padding: 3px 0;
+        }
+        .summary-row .label { color: var(--gray-500); }
+        .summary-row .value { font-weight: 600; color: var(--gray-800); text-align: right; max-width: 60%; }
+
+        /* ── Page Selector ── */
+        .page-selector {
+            display: none;
+            margin-bottom: 16px;
+        }
+        .page-selector.visible { display: block; }
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border: 1px solid var(--gray-200);
+            background: var(--white);
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--gray-600);
+            cursor: pointer;
+            font-family: inherit;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            transition: all 0.15s;
+        }
+        .page-btn.active {
+            border-color: var(--green);
+            background: rgba(181, 224, 78, 0.08);
+            color: var(--gray-800);
+            font-weight: 600;
+        }
+        .page-btn:hover { border-color: var(--green); }
+
+        /* ── Status Messages ── */
+        .status-msg {
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+        .status-msg.visible { display: block; }
+        .status-msg.info { background: #eff6ff; color: #1d4ed8; }
+        .status-msg.success { background: #f0fdf4; color: #15803d; }
+        .status-msg.error { background: #fef2f2; color: #dc2626; }
+        .status-msg.loading { background: #fefce8; color: #a16207; }
+
+        /* ── Generate Button ── */
+        .btn-generate {
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--green);
+            color: var(--black);
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s;
+            display: none;
+        }
+        .btn-generate.visible { display: block; }
+        .btn-generate:hover { background: var(--green-dark); }
+        .btn-generate:active { transform: scale(0.98); }
+        .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Preview Panel ── */
+        .preview-panel {
+            padding: 32px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+        .preview-placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            color: var(--gray-400);
+            text-align: center;
+        }
+        .preview-placeholder .icon { font-size: 64px; margin-bottom: 16px; }
+        .preview-placeholder p { font-size: 15px; }
+
+        .preview-wrapper {
+            width: 210mm;
+            background: var(--white);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+            border-radius: 4px;
+            overflow: hidden;
+            flex-shrink: 0;
+            display: none;
+        }
+        .preview-wrapper.visible { display: block; }
+
+        .preview-label {
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gray-400);
+            margin-bottom: -16px;
+        }
+
+        /* ════════════════════════════════════════════
+           PDF CONTENT STYLES (branded invoice)
+           ════════════════════════════════════════════ */
+        .pdf-content {
+            font-family: 'Inter', Arial, Helvetica, sans-serif;
+            color: var(--gray-800);
+            font-size: 12px;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 297mm;
+        }
+
+        .pdf-header {
+            background: var(--black);
+            padding: 24px 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pdf-header img { height: 28px; width: auto; }
+        .pdf-header .doc-type {
+            color: var(--green);
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        .pdf-body { padding: 28px 36px 20px; flex: 1; }
+
+        /* Copy badge */
+        .pdf-copy-badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 16px;
+        }
+        .pdf-copy-badge.original { background: #dcfce7; color: #15803d; }
+        .pdf-copy-badge.duplicado { background: #dbeafe; color: #1d4ed8; }
+        .pdf-copy-badge.triplicado { background: #fef3c7; color: #a16207; }
+
+        /* Meta bar */
+        .pdf-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 10px 14px;
+            background: var(--gray-100);
+            border-radius: 6px;
+        }
+        .pdf-meta-item { font-size: 11px; color: var(--gray-600); }
+        .pdf-meta-item strong {
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-left: 3px;
+        }
+
+        /* Two-column info */
+        .pdf-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            gap: 32px;
+        }
+        .pdf-info-block { flex: 1; }
+        .pdf-info-block h3 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gray-500);
+            margin-bottom: 6px;
+        }
+        .pdf-info-block p {
+            font-size: 12px;
+            color: var(--gray-800);
+            margin-bottom: 1px;
+        }
+        .pdf-info-block p strong { font-weight: 700; }
+        .pdf-info-block .nif-label { font-size: 11px; color: var(--gray-500); }
+
+        /* Document note */
+        .pdf-doc-note {
+            padding: 10px 14px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 3px solid var(--green);
+            font-size: 11px;
+            color: var(--gray-600);
+        }
+        .pdf-doc-note strong { color: var(--gray-800); }
+
+        /* Tables */
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+        }
+        .pdf-table thead th {
+            background: var(--gray-900);
+            color: var(--green);
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        .pdf-table thead th.r { text-align: right; }
+        .pdf-table thead th.c { text-align: center; }
+
+        .pdf-table tbody td {
+            padding: 8px 10px;
+            font-size: 11px;
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: top;
+        }
+        .pdf-table tbody tr:nth-child(even) td {
+            background: var(--gray-100);
+        }
+        .pdf-table tbody td.r {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .pdf-table tbody td.c { text-align: center; }
+        .pdf-table tbody td.desc-multi {
+            white-space: pre-line;
+            line-height: 1.3;
+        }
+
+        /* Section labels */
+        .pdf-section-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray-500);
+            margin-bottom: 6px;
+            margin-top: 4px;
+        }
+
+        /* Small tax tables */
+        .pdf-tax-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 10px;
+        }
+        .pdf-tax-table thead th {
+            background: var(--gray-200);
+            color: var(--gray-600);
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 6px 10px;
+            text-align: left;
+        }
+        .pdf-tax-table thead th.r { text-align: right; }
+        .pdf-tax-table tbody td {
+            padding: 6px 10px;
+            font-size: 10px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .pdf-tax-table tbody td.r {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* Totals */
+        .pdf-totals {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+        }
+        .pdf-totals-box { width: 220px; }
+        .pdf-totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 11px;
+        }
+        .pdf-totals-row .label { color: var(--gray-500); }
+        .pdf-totals-row .value {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .pdf-totals-row.grand-total {
+            border-top: 2px solid var(--black);
+            margin-top: 4px;
+            padding-top: 8px;
+            font-size: 16px;
+            font-weight: 800;
+        }
+        .pdf-totals-row.grand-total .label { color: var(--black); font-weight: 800; }
+        .pdf-totals-row.grand-total .value { color: var(--black); }
+
+        /* QR + Legal section */
+        .pdf-legal {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+            padding: 14px 16px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            margin-top: auto;
+        }
+        .pdf-legal .qr-img {
+            width: 110px;
+            height: 110px;
+            flex-shrink: 0;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            border: 1px solid var(--gray-200);
+            border-radius: 4px;
+        }
+        .pdf-legal .legal-text {
+            font-size: 9px;
+            color: var(--gray-500);
+            line-height: 1.4;
+        }
+        .pdf-legal .legal-text strong {
+            color: var(--gray-600);
+            font-weight: 600;
+        }
+
+        /* Footer */
+        .pdf-footer {
+            background: var(--black);
+            padding: 14px 36px;
+            text-align: center;
+        }
+        .pdf-footer p {
+            font-size: 10px;
+            color: var(--gray-500);
+            margin-bottom: 1px;
+        }
+        .pdf-footer p.tagline {
+            font-style: italic;
+            color: var(--white);
+            margin-bottom: 4px;
+        }
+        .pdf-footer a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 1100px) {
+            .app-layout { grid-template-columns: 1fr; }
+            .upload-panel {
+                max-height: none;
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+            }
+            .preview-panel { max-height: none; padding: 24px 16px; }
+            .preview-wrapper { width: 100%; min-height: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- App Header -->
+    <div class="app-header">
+        <img src="https://descomplicador.pt/images/logo-footer.png" alt="descomplica">
+        <span>Conversor de Faturas</span>
+    </div>
+
+    <div class="app-layout">
+
+        <!-- ── UPLOAD PANEL ── -->
+        <div class="upload-panel">
+
+            <div class="panel-title">Carregar Fatura</div>
+
+            <div class="drop-zone" id="drop-zone">
+                <div class="drop-zone-icon">&#128196;</div>
+                <div class="drop-zone-text">Arraste uma fatura PDF aqui</div>
+                <div class="drop-zone-hint">ou clique para selecionar</div>
+            </div>
+            <input type="file" id="file-input" accept=".pdf" style="display:none">
+
+            <div class="status-msg" id="status-msg"></div>
+
+            <div class="parsed-summary" id="parsed-summary">
+                <div class="panel-title">Dados Extraidos</div>
+                <div class="summary-card" id="summary-doc"></div>
+                <div class="summary-card" id="summary-parties"></div>
+                <div class="summary-card" id="summary-totals"></div>
+            </div>
+
+            <div class="page-selector" id="page-selector">
+                <div class="panel-title">Paginas a Gerar</div>
+            </div>
+
+            <button class="btn-generate" id="btn-generate">Gerar PDF Branded</button>
+        </div>
+
+        <!-- ── PREVIEW PANEL ── -->
+        <div class="preview-panel" id="preview-panel">
+            <div class="preview-placeholder" id="preview-placeholder">
+                <div class="icon">&#128203;</div>
+                <p>Carregue uma fatura AT para ver a pre-visualizacao branded</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // ── Configure pdf.js worker ──
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // ── Logo (will be loaded on init) ──
+        let LOGO_DATA_URL = '';
+
+        // ── DOM Elements ──
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const statusMsg = document.getElementById('status-msg');
+        const parsedSummary = document.getElementById('parsed-summary');
+        const summaryDoc = document.getElementById('summary-doc');
+        const summaryParties = document.getElementById('summary-parties');
+        const summaryTotals = document.getElementById('summary-totals');
+        const pageSelector = document.getElementById('page-selector');
+        const btnGenerate = document.getElementById('btn-generate');
+        const previewPanel = document.getElementById('preview-panel');
+        const previewPlaceholder = document.getElementById('preview-placeholder');
+
+        // ── State ──
+        let pagesData = []; // Array of { data, qrDataUrl, copyType }
+
+        // ── Utility ──
+        function setStatus(type, text) {
+            statusMsg.className = 'status-msg visible ' + type;
+            statusMsg.textContent = text;
+        }
+        function clearStatus() {
+            statusMsg.className = 'status-msg';
+        }
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // ── Load logo as data URL ──
+        async function loadLogo() {
+            return new Promise(function(resolve) {
+                var img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    var c = document.createElement('canvas');
+                    c.width = img.naturalWidth;
+                    c.height = img.naturalHeight;
+                    var ctx = c.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    try {
+                        LOGO_DATA_URL = c.toDataURL('image/png');
+                    } catch (e) {
+                        LOGO_DATA_URL = img.src; // fallback to URL
+                    }
+                    resolve();
+                };
+                img.onerror = function() {
+                    LOGO_DATA_URL = 'https://descomplicador.pt/images/logo-footer.png';
+                    resolve();
+                };
+                img.src = 'https://descomplicador.pt/images/logo-footer.png';
+            });
+        }
+
+        // ════════════════════════════════════════════
+        //  PDF TEXT EXTRACTION & PARSING
+        // ════════════════════════════════════════════
+
+        async function extractPageData(page) {
+            var textContent = await page.getTextContent();
+            var items = textContent.items
+                .filter(function(item) { return item.str.trim().length > 0; })
+                .map(function(item) {
+                    return {
+                        text: item.str,
+                        x: Math.round(item.transform[4]),
+                        y: Math.round(item.transform[5]),
+                        w: Math.round(item.width),
+                        h: Math.round(item.height || 10)
+                    };
+                });
+
+            // Sort top-to-bottom (PDF y is bottom-up), then left-to-right
+            items.sort(function(a, b) {
+                if (Math.abs(a.y - b.y) > 4) return b.y - a.y;
+                return a.x - b.x;
+            });
+
+            // Group into rows
+            var rows = [];
+            var currentRow = [];
+            var lastY = null;
+            for (var i = 0; i < items.length; i++) {
+                var item = items[i];
+                if (lastY !== null && Math.abs(item.y - lastY) > 4) {
+                    if (currentRow.length) rows.push(currentRow.slice());
+                    currentRow = [];
+                }
+                currentRow.push(item);
+                lastY = item.y;
+            }
+            if (currentRow.length) rows.push(currentRow);
+
+            // Build full text (one string per row)
+            var rowTexts = rows.map(function(row) {
+                return row.map(function(it) { return it.text; }).join(' ');
+            });
+            var fullText = rowTexts.join('\n');
+
+            return parseInvoiceFromText(fullText, rows, rowTexts);
+        }
+
+        function parseInvoiceFromText(fullText, rows, rowTexts) {
+            var data = {
+                documentType: '',
+                documentNumber: '',
+                issueDate: '',
+                copyType: '',
+                atcud: '',
+                documentTitle: '',
+                serviceDate: '',
+                transmitter: { name: '', address: '', nif: '' },
+                acquirer: { name: '', address: '', nifLabel: '', nif: '' },
+                items: [],
+                iva: [],
+                irs: null,
+                totals: {}
+            };
+
+            // ── Document type & number ──
+            var docMatch = fullText.match(/(Fatura[\s-]*Recibo|Fatura|Recibo|Nota de Cr[eé]dito)\s*[<]([^>]+)[>]/i);
+            if (docMatch) {
+                data.documentType = docMatch[1].replace(/\s+/g, '-');
+                data.documentNumber = docMatch[2].trim();
+            }
+
+            // ── Issue date ──
+            var dateMatch = fullText.match(/emitida?\s+em\s+(\d{1,2}\/\d{1,2}\/\d{4})/i);
+            if (dateMatch) data.issueDate = dateMatch[1];
+
+            // ── Copy type ──
+            var copyMatch = fullText.match(/\b(Original|Duplicado|Triplicado)\b/);
+            if (copyMatch) data.copyType = copyMatch[1];
+
+            // ── ATCUD ──
+            var atcudMatch = fullText.match(/ATCUD\s*:\s*([A-Z0-9]+-\d+)/i);
+            if (atcudMatch) data.atcud = atcudMatch[1];
+
+            // ── Document title ──
+            var titleMatch = fullText.match(/Documento emitido a t[ií]tulo de:\s*(.+)/i);
+            if (titleMatch) data.documentTitle = titleMatch[1].trim();
+
+            // ── Service date ──
+            var svcDateMatch = fullText.match(/Data da coloca[cç][aã]o [àa] disposi[cç][aã]o.*?:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+            if (svcDateMatch) data.serviceDate = svcDateMatch[1];
+
+            // ── Find section boundaries by row index ──
+            var sectionIndices = { transmitter: -1, acquirer: -1, service: -1, totals: -1 };
+            for (var ri = 0; ri < rowTexts.length; ri++) {
+                var rt = rowTexts[ri].toUpperCase();
+                if (rt.indexOf('DADOS DO TRANSMITENTE') >= 0) sectionIndices.transmitter = ri;
+                else if (rt.indexOf('DADOS DO ADQUIRENTE') >= 0) sectionIndices.acquirer = ri;
+                else if (rt.indexOf('DADOS DA TRANSMISS') >= 0) sectionIndices.service = ri;
+                else if (rt.indexOf('TOTAIS DO DOCUMENTO') >= 0) sectionIndices.totals = ri;
+            }
+
+            // ── Parse Transmitter ──
+            if (sectionIndices.transmitter >= 0) {
+                var tEnd = sectionIndices.acquirer >= 0 ? sectionIndices.acquirer : sectionIndices.service;
+                var tRows = rowTexts.slice(sectionIndices.transmitter + 1, tEnd >= 0 ? tEnd : undefined);
+                for (var ti = 0; ti < tRows.length; ti++) {
+                    var tLine = tRows[ti].trim();
+                    if (tLine.match(/^NOME\b/i) && !data.transmitter.name) {
+                        // Name might be on same line or next
+                        var nameVal = tLine.replace(/^NOME\s*/i, '').trim();
+                        if (nameVal) data.transmitter.name = nameVal;
+                        else if (ti + 1 < tRows.length) data.transmitter.name = tRows[++ti].trim();
+                    }
+                    else if (tLine.match(/^DOM[IÍ]C[IÍ]LIO\b/i) && !data.transmitter.address) {
+                        var addrVal = tLine.replace(/^DOM[IÍ]C[IÍ]LIO\s*/i, '').trim();
+                        if (addrVal) data.transmitter.address = addrVal;
+                        else if (ti + 1 < tRows.length) data.transmitter.address = tRows[++ti].trim();
+                    }
+                    else if (tLine.match(/N[UÚ]MERO DE IDENTIFICA/i) && !data.transmitter.nif) {
+                        var nifMatch = tLine.match(/(\d{9})/);
+                        if (nifMatch) data.transmitter.nif = nifMatch[1];
+                        else if (ti + 1 < tRows.length) {
+                            var nextNif = tRows[++ti].trim().match(/(\d{9})/);
+                            if (nextNif) data.transmitter.nif = nextNif[1];
+                        }
+                    }
+                }
+                // Fallback: scan the section for patterns
+                var tText = tRows.join('\n');
+                if (!data.transmitter.nif) {
+                    var nifFallback = tText.match(/\b(\d{9})\b/);
+                    if (nifFallback) data.transmitter.nif = nifFallback[1];
+                }
+            }
+
+            // ── Parse Acquirer ──
+            if (sectionIndices.acquirer >= 0) {
+                var aEnd = sectionIndices.service >= 0 ? sectionIndices.service : sectionIndices.totals;
+                var aRows = rowTexts.slice(sectionIndices.acquirer + 1, aEnd >= 0 ? aEnd : undefined);
+                for (var ai = 0; ai < aRows.length; ai++) {
+                    var aLine = aRows[ai].trim();
+                    if (aLine.match(/^NOME\b/i) && !data.acquirer.name) {
+                        var aNameVal = aLine.replace(/^NOME\s*/i, '').trim();
+                        if (aNameVal) data.acquirer.name = aNameVal;
+                        else if (ai + 1 < aRows.length) data.acquirer.name = aRows[++ai].trim();
+                    }
+                    else if (aLine.match(/^SEDE\s+(OU\s+)?DOM[IÍ]C[IÍ]LIO\b/i) && !data.acquirer.address) {
+                        var aAddrVal = aLine.replace(/^SEDE\s+(OU\s+)?DOM[IÍ]C[IÍ]LIO\s*/i, '').trim();
+                        if (aAddrVal) data.acquirer.address = aAddrVal;
+                        else if (ai + 1 < aRows.length) data.acquirer.address = aRows[++ai].trim();
+                    }
+                    else if (aLine.match(/NIF\s+Estrangeiro/i)) {
+                        data.acquirer.nifLabel = 'NIF Estrangeiro';
+                        var nifEstMatch = aLine.match(/(?:Ident\.\s*-?\s*)([A-Z0-9]+)\s*$/i);
+                        if (nifEstMatch) data.acquirer.nif = nifEstMatch[1];
+                    }
+                    else if (aLine.match(/N[UÚ]MERO DE IDENTIFICA/i)) {
+                        data.acquirer.nifLabel = 'NIF';
+                        var aNifMatch = aLine.match(/(\d{9})/);
+                        if (aNifMatch) data.acquirer.nif = aNifMatch[1];
+                    }
+                }
+            }
+
+            // ── Parse Items ──
+            // Find header row with DESCRIÇÃO
+            var itemHeaderIdx = -1;
+            for (var ih = 0; ih < rowTexts.length; ih++) {
+                if (rowTexts[ih].match(/DESCRI[CÇ][AÃ]O/) && rowTexts[ih].match(/QTD/) && rowTexts[ih].match(/TOTAL/)) {
+                    itemHeaderIdx = ih;
+                    break;
+                }
+            }
+            if (itemHeaderIdx >= 0) {
+                // Find where items end (IVA section header or similar)
+                var itemEndIdx = rowTexts.length;
+                for (var ie = itemHeaderIdx + 1; ie < rowTexts.length; ie++) {
+                    var ieText = rowTexts[ie].trim();
+                    if (ieText === 'IVA' || ieText.match(/^Taxa\s*\|\s*Motivo/i)) {
+                        itemEndIdx = ie;
+                        break;
+                    }
+                }
+
+                // Parse item rows using the raw rows (position-based)
+                var itemRows = rows.slice(itemHeaderIdx + 1, itemEndIdx);
+                // Merge into items based on heuristics
+                var currentItem = null;
+                for (var ir = 0; ir < itemRows.length; ir++) {
+                    var rowItems = itemRows[ir];
+                    var rowText = rowItems.map(function(it) { return it.text; }).join(' ').trim();
+
+                    // Check if this row has a currency value (indicates item data line)
+                    var hasCurrency = rowText.match(/\d+[.,]\d{2}\s*€/);
+                    // Check if it has quantity
+                    var hasQty = rowText.match(/\d+\s*(Unidade|Servi[çc]o|Un\.|Hora|Dia|M[eê]s)/i);
+
+                    if (hasCurrency && hasQty) {
+                        // This is a main item line with values
+                        if (currentItem) data.items.push(currentItem);
+
+                        // Parse values from right-aligned items
+                        var values = [];
+                        var descParts = [];
+                        for (var ii = 0; ii < rowItems.length; ii++) {
+                            var txt = rowItems[ii].text.trim();
+                            if (txt.match(/\d+[.,]\d{2}\s*€/) || txt.match(/^(C\/IVA|S\/IVA|IVA)\b/) || txt.match(/^\d+\s*%$/) || txt === '-') {
+                                values.push(txt);
+                            } else if (txt.match(/^\d+\s*(Unidade|Servi[çc]o|Un\.|Hora|Dia|M[eê]s)/i)) {
+                                values.unshift(txt); // qty goes first
+                            } else {
+                                descParts.push(txt);
+                            }
+                        }
+
+                        currentItem = {
+                            description: descParts.join(' '),
+                            qty: '',
+                            unitPrice: '',
+                            discount: '-',
+                            taxRate: '',
+                            total: ''
+                        };
+
+                        // Assign values: qty, unitPrice (with C/IVA or S/IVA), discount, taxRate, total
+                        var currencyVals = values.filter(function(v) { return v.match(/\d+[.,]\d{2}\s*€/); });
+                        var priceType = values.filter(function(v) { return v.match(/^(C\/IVA|S\/IVA)\b/); });
+                        var taxParts = values.filter(function(v) { return v.match(/^IVA$/) || v.match(/^\d+\s*%$/); });
+                        var qtyVal = values.filter(function(v) { return v.match(/^\d+\s*(Unidade|Servi[çc]o|Un\.|Hora|Dia|M[eê]s)/i); });
+                        var discountVal = values.filter(function(v) { return v === '-'; });
+
+                        if (qtyVal.length) currentItem.qty = qtyVal[0];
+                        if (currencyVals.length >= 2) {
+                            currentItem.unitPrice = (priceType.length ? priceType[0] + ' ' : '') + currencyVals[0];
+                            currentItem.total = currencyVals[currencyVals.length - 1];
+                        } else if (currencyVals.length === 1) {
+                            currentItem.unitPrice = (priceType.length ? priceType[0] + ' ' : '') + currencyVals[0];
+                            currentItem.total = currencyVals[0];
+                        }
+                        if (discountVal.length) currentItem.discount = '-';
+                        if (taxParts.length) currentItem.taxRate = taxParts.join(' ');
+
+                    } else if (currentItem && !hasCurrency) {
+                        // Continuation of description
+                        if (rowText && !rowText.match(/^(DESCRI|QTD|VALOR|DESCONTO|TAXA|TOTAL)/)) {
+                            currentItem.description += '\n' + rowText;
+                        }
+                    } else if (!currentItem && !hasCurrency) {
+                        // Description-only line before first value line
+                        currentItem = {
+                            description: rowText,
+                            qty: '', unitPrice: '', discount: '-', taxRate: '', total: ''
+                        };
+                    }
+                }
+                if (currentItem && (currentItem.total || currentItem.description)) {
+                    data.items.push(currentItem);
+                }
+            }
+
+            // ── Parse IVA ──
+            var ivaHeaderIdx = -1;
+            for (var iv = 0; iv < rowTexts.length; iv++) {
+                if (rowTexts[iv].match(/Taxa\s*\|\s*Motivo/i)) {
+                    ivaHeaderIdx = iv;
+                    break;
+                }
+            }
+            if (ivaHeaderIdx >= 0) {
+                var ivaEndIdx = rowTexts.length;
+                for (var ive = ivaHeaderIdx + 1; ive < rowTexts.length; ive++) {
+                    var iveText = rowTexts[ive].trim();
+                    if (iveText === 'IRS' || iveText.match(/^Base de incid/i) || iveText.match(/^TOTAIS/i)) {
+                        ivaEndIdx = ive;
+                        break;
+                    }
+                }
+                var ivaRows = rowTexts.slice(ivaHeaderIdx + 1, ivaEndIdx);
+                for (var ivr = 0; ivr < ivaRows.length; ivr++) {
+                    var ivaLine = ivaRows[ivr].trim();
+                    if (!ivaLine || ivaLine === 'IVA') continue;
+                    // Try to parse: rate% - description value€ value€
+                    var ivaMatch = ivaLine.match(/(\d+[.,]\d+%)\s*[-–]\s*(.+?)\s+(\d+[.,]\d{2}\s*€)\s+(\d+[.,]\d{2}\s*€)/);
+                    if (ivaMatch) {
+                        data.iva.push({
+                            rate: ivaMatch[1],
+                            description: ivaMatch[2].trim(),
+                            taxable: ivaMatch[3],
+                            tax: ivaMatch[4]
+                        });
+                    }
+                }
+            }
+
+            // ── Parse IRS ──
+            var irsHeaderIdx = -1;
+            for (var irs = 0; irs < rowTexts.length; irs++) {
+                if (rowTexts[irs].trim() === 'IRS' || rowTexts[irs].match(/^Base de incid[eê]ncia/i)) {
+                    irsHeaderIdx = irs;
+                    break;
+                }
+            }
+            if (irsHeaderIdx >= 0) {
+                var irsEndIdx = sectionIndices.totals >= 0 ? sectionIndices.totals : rowTexts.length;
+                var irsRows = rowTexts.slice(irsHeaderIdx, irsEndIdx);
+                var irsText = irsRows.join(' ');
+                var irsDescMatch = irsText.match(/(Sem reten[cç][aã]o[^€]*?)(?=\d|(?:- - -))/i);
+                var irsVals = irsText.match(/(\d+[.,]\d{2}\s*€)/g);
+                if (irsDescMatch || irsVals) {
+                    data.irs = {
+                        description: irsDescMatch ? irsDescMatch[1].trim().replace(/\s+/g, ' ') : '',
+                        withholding: irsText.match(/(- - -)/) ? '- - -' : '',
+                        income: irsVals && irsVals.length >= 1 ? irsVals[0] : '',
+                        irsValue: irsVals && irsVals.length >= 2 ? irsVals[1] : ''
+                    };
+                }
+            }
+
+            // ── Parse Totals ──
+            if (sectionIndices.totals >= 0) {
+                var tRows = rowTexts.slice(sectionIndices.totals + 1);
+                var totalsText = tRows.join('\n');
+
+                var totLabels = [
+                    { key: 'subtotal', pattern: /Valor il[ií]quido\s*(\d+[.,]\d{2}\s*€)/i },
+                    { key: 'iva', pattern: /\bIVA\s+(\d+[.,]\d{2}\s*€)/i },
+                    { key: 'stampTax', pattern: /Imposto do Selo\s*(\d+[.,]\d{2}\s*€)/i },
+                    { key: 'total', pattern: /TOTAL DO DOCUMENTO\s*(\d+[.,]\d{2}\s*€)/i },
+                    { key: 'irsWithholding', pattern: /Reten[cç][aã]o na fonte IRS\s*(\d+[.,]\d{2}\s*€)/i },
+                    { key: 'totalPayable', pattern: /TOTAL A PAGAR\s*(\d+[.,]\d{2}\s*€)/i }
+                ];
+                for (var tl = 0; tl < totLabels.length; tl++) {
+                    var tlMatch = totalsText.match(totLabels[tl].pattern);
+                    if (tlMatch) data.totals[totLabels[tl].key] = tlMatch[1];
+                }
+            }
+
+            return data;
+        }
+
+        // ════════════════════════════════════════════
+        //  QR CODE EXTRACTION
+        // ════════════════════════════════════════════
+
+        async function extractQRCode(page) {
+
+            // Render page at high res with image smoothing DISABLED.
+            // By default canvas uses bilinear interpolation which blurs
+            // the sharp black/white QR modules — making them unscannable.
+            // See: https://github.com/mozilla/pdf.js/issues/7838
+            var scale = 6;
+            var viewport = page.getViewport({ scale: scale });
+            var canvas = document.createElement('canvas');
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            var ctx = canvas.getContext('2d');
+
+            // CRITICAL: disable smoothing BEFORE pdf.js renders
+            ctx.imageSmoothingEnabled = false;
+            ctx.mozImageSmoothingEnabled = false;
+            ctx.webkitImageSmoothingEnabled = false;
+            ctx.msImageSmoothingEnabled = false;
+
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+            // ── Use jsQR to detect the QR code and get exact bounds ──
+            // Scan the top-right quadrant where AT invoices place the QR.
+            var searchLeft = Math.floor(canvas.width * 0.60);
+            var searchTop = 0;
+            var searchW = canvas.width - searchLeft;
+            var searchH = Math.floor(canvas.height * 0.20);
+
+            var regionData = ctx.getImageData(searchLeft, searchTop, searchW, searchH);
+            var qrResult = jsQR(regionData.data, regionData.width, regionData.height, {
+                inversionAttempts: 'attemptBoth'
+            });
+
+            if (qrResult && qrResult.location) {
+                // jsQR found it — use its exact corner coordinates
+                var loc = qrResult.location;
+                var minX = Math.floor(Math.min(loc.topLeftCorner.x, loc.bottomLeftCorner.x));
+                var maxX = Math.ceil(Math.max(loc.topRightCorner.x, loc.bottomRightCorner.x));
+                var minY = Math.floor(Math.min(loc.topLeftCorner.y, loc.topRightCorner.y));
+                var maxY = Math.ceil(Math.max(loc.bottomLeftCorner.y, loc.bottomRightCorner.y));
+
+                var qrW = maxX - minX;
+                var qrH = maxY - minY;
+                var qrSize = Math.max(qrW, qrH);
+
+                // Center the smaller axis
+                var cropX = searchLeft + minX - Math.floor((qrSize - qrW) / 2);
+                var cropY = searchTop + minY - Math.floor((qrSize - qrH) / 2);
+                cropX = Math.max(0, cropX);
+                cropY = Math.max(0, cropY);
+                if (cropX + qrSize > canvas.width) qrSize = canvas.width - cropX;
+                if (cropY + qrSize > canvas.height) qrSize = canvas.height - cropY;
+
+                // Crop with quiet zone — no smoothing on the output canvas either
+                var quietZone = Math.max(14, Math.floor(qrSize * 0.14));
+                var outCanvas = document.createElement('canvas');
+                outCanvas.width = qrSize + quietZone * 2;
+                outCanvas.height = qrSize + quietZone * 2;
+                var outCtx = outCanvas.getContext('2d');
+                outCtx.imageSmoothingEnabled = false;
+                outCtx.fillStyle = '#ffffff';
+                outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+                outCtx.drawImage(canvas,
+                    cropX, cropY, qrSize, qrSize,
+                    quietZone, quietZone, qrSize, qrSize
+                );
+
+                return outCanvas.toDataURL('image/png');
+            }
+
+            // ── Fallback: try jsQR on the full page ──
+            var fullData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            var fullResult = jsQR(fullData.data, fullData.width, fullData.height, {
+                inversionAttempts: 'attemptBoth'
+            });
+
+            if (fullResult && fullResult.location) {
+                var loc = fullResult.location;
+                var minX = Math.floor(Math.min(loc.topLeftCorner.x, loc.bottomLeftCorner.x));
+                var maxX = Math.ceil(Math.max(loc.topRightCorner.x, loc.bottomRightCorner.x));
+                var minY = Math.floor(Math.min(loc.topLeftCorner.y, loc.topRightCorner.y));
+                var maxY = Math.ceil(Math.max(loc.bottomLeftCorner.y, loc.bottomRightCorner.y));
+
+                var qrW = maxX - minX;
+                var qrH = maxY - minY;
+                var qrSize = Math.max(qrW, qrH);
+                var cropX = Math.max(0, minX - Math.floor((qrSize - qrW) / 2));
+                var cropY = Math.max(0, minY - Math.floor((qrSize - qrH) / 2));
+
+                var quietZone = Math.max(14, Math.floor(qrSize * 0.14));
+                var outCanvas = document.createElement('canvas');
+                outCanvas.width = qrSize + quietZone * 2;
+                outCanvas.height = qrSize + quietZone * 2;
+                var outCtx = outCanvas.getContext('2d');
+                outCtx.imageSmoothingEnabled = false;
+                outCtx.fillStyle = '#ffffff';
+                outCtx.fillRect(0, 0, outCanvas.width, outCanvas.height);
+                outCtx.drawImage(canvas,
+                    cropX, cropY, qrSize, qrSize,
+                    quietZone, quietZone, qrSize, qrSize
+                );
+
+                return outCanvas.toDataURL('image/png');
+            }
+
+            // ── Last resort: generous crop of top-right corner ──
+            console.warn('jsQR could not detect QR code — using blind crop fallback');
+            var fbSize = Math.floor(Math.min(canvas.width, canvas.height) * 0.13);
+            var fbX = canvas.width - fbSize - Math.floor(canvas.width * 0.015);
+            var fbY = Math.floor(canvas.height * 0.008);
+            var quietZone = Math.floor(fbSize * 0.15);
+
+            var fbCanvas = document.createElement('canvas');
+            fbCanvas.width = fbSize + quietZone * 2;
+            fbCanvas.height = fbSize + quietZone * 2;
+            var fbCtx = fbCanvas.getContext('2d');
+            fbCtx.imageSmoothingEnabled = false;
+            fbCtx.fillStyle = '#ffffff';
+            fbCtx.fillRect(0, 0, fbCanvas.width, fbCanvas.height);
+            fbCtx.drawImage(canvas,
+                fbX, fbY, fbSize, fbSize,
+                quietZone, quietZone, fbSize, fbSize
+            );
+            return fbCanvas.toDataURL('image/png');
+        }
+
+        // ════════════════════════════════════════════
+        //  PREVIEW RENDERING
+        // ════════════════════════════════════════════
+
+        function buildPreviewHTML(data, qrDataUrl) {
+            var copyClass = (data.copyType || 'original').toLowerCase();
+            var logoSrc = LOGO_DATA_URL || 'https://descomplicador.pt/images/logo-footer.png';
+
+            var html = '';
+            html += '<div class="pdf-content">';
+
+            // ── Header ──
+            html += '<div class="pdf-header">';
+            html += '<img src="' + logoSrc + '" alt="descomplica">';
+            html += '<span class="doc-type">' + escapeHtml(data.documentType || 'Fatura-Recibo') + '</span>';
+            html += '</div>';
+
+            // ── Body ──
+            html += '<div class="pdf-body">';
+
+            // Copy badge
+            html += '<span class="pdf-copy-badge ' + copyClass + '">' + escapeHtml(data.copyType || 'Original') + '</span>';
+
+            // Meta bar
+            html += '<div class="pdf-meta">';
+            if (data.documentNumber) {
+                html += '<div class="pdf-meta-item">N.&ordm;:<strong>' + escapeHtml(data.documentNumber) + '</strong></div>';
+            }
+            if (data.issueDate) {
+                html += '<div class="pdf-meta-item">Emitida:<strong>' + escapeHtml(data.issueDate) + '</strong></div>';
+            }
+            if (data.atcud) {
+                html += '<div class="pdf-meta-item">ATCUD:<strong>' + escapeHtml(data.atcud) + '</strong></div>';
+            }
+            if (data.serviceDate) {
+                html += '<div class="pdf-meta-item">Data Servi&ccedil;o:<strong>' + escapeHtml(data.serviceDate) + '</strong></div>';
+            }
+            html += '</div>';
+
+            // Two-column info
+            html += '<div class="pdf-info">';
+
+            // Transmitter
+            html += '<div class="pdf-info-block">';
+            html += '<h3>Prestador de Servi&ccedil;os</h3>';
+            if (data.transmitter.name) html += '<p><strong>' + escapeHtml(data.transmitter.name) + '</strong></p>';
+            if (data.transmitter.address) html += '<p>' + escapeHtml(data.transmitter.address) + '</p>';
+            if (data.transmitter.nif) html += '<p class="nif-label">NIF: <strong>' + escapeHtml(data.transmitter.nif) + '</strong></p>';
+            html += '</div>';
+
+            // Acquirer
+            html += '<div class="pdf-info-block" style="text-align:right;">';
+            html += '<h3>Cliente</h3>';
+            if (data.acquirer.name) html += '<p><strong>' + escapeHtml(data.acquirer.name) + '</strong></p>';
+            if (data.acquirer.address) html += '<p>' + escapeHtml(data.acquirer.address) + '</p>';
+            if (data.acquirer.nif) {
+                var nifLbl = data.acquirer.nifLabel || 'NIF';
+                html += '<p class="nif-label">' + escapeHtml(nifLbl) + ': <strong>' + escapeHtml(data.acquirer.nif) + '</strong></p>';
+            }
+            html += '</div>';
+            html += '</div>';
+
+            // Document note
+            if (data.documentTitle) {
+                html += '<div class="pdf-doc-note">';
+                html += '<strong>Documento emitido a t&iacute;tulo de:</strong> ' + escapeHtml(data.documentTitle);
+                html += '</div>';
+            }
+
+            // Items table
+            if (data.items.length > 0) {
+                html += '<table class="pdf-table">';
+                html += '<thead><tr>';
+                html += '<th>Descri&ccedil;&atilde;o</th>';
+                html += '<th class="c">Qtd</th>';
+                html += '<th class="r">Valor Unit&aacute;rio</th>';
+                html += '<th class="c">Desconto</th>';
+                html += '<th class="c">Taxa IVA</th>';
+                html += '<th class="r">Total c/ Imposto</th>';
+                html += '</tr></thead><tbody>';
+                for (var i = 0; i < data.items.length; i++) {
+                    var item = data.items[i];
+                    html += '<tr>';
+                    html += '<td class="desc-multi">' + escapeHtml(item.description) + '</td>';
+                    html += '<td class="c">' + escapeHtml(item.qty) + '</td>';
+                    html += '<td class="r">' + escapeHtml(item.unitPrice) + '</td>';
+                    html += '<td class="c">' + escapeHtml(item.discount) + '</td>';
+                    html += '<td class="c">' + escapeHtml(item.taxRate) + '</td>';
+                    html += '<td class="r">' + escapeHtml(item.total) + '</td>';
+                    html += '</tr>';
+                }
+                html += '</tbody></table>';
+            }
+
+            // IVA breakdown
+            if (data.iva.length > 0) {
+                html += '<div class="pdf-section-label">IVA</div>';
+                html += '<table class="pdf-tax-table">';
+                html += '<thead><tr>';
+                html += '<th>Taxa</th><th>Motivo</th><th class="r">Valor Tribut&aacute;vel</th><th class="r">Valor IVA</th>';
+                html += '</tr></thead><tbody>';
+                for (var iv = 0; iv < data.iva.length; iv++) {
+                    html += '<tr>';
+                    html += '<td>' + escapeHtml(data.iva[iv].rate) + '</td>';
+                    html += '<td>' + escapeHtml(data.iva[iv].description) + '</td>';
+                    html += '<td class="r">' + escapeHtml(data.iva[iv].taxable) + '</td>';
+                    html += '<td class="r">' + escapeHtml(data.iva[iv].tax) + '</td>';
+                    html += '</tr>';
+                }
+                html += '</tbody></table>';
+            }
+
+            // IRS
+            if (data.irs) {
+                html += '<div class="pdf-section-label">IRS</div>';
+                html += '<table class="pdf-tax-table">';
+                html += '<thead><tr>';
+                html += '<th>Base de Incid&ecirc;ncia</th><th>Reten&ccedil;&atilde;o</th><th class="r">Rendimento</th><th class="r">Valor IRS</th>';
+                html += '</tr></thead><tbody>';
+                html += '<tr>';
+                html += '<td>' + escapeHtml(data.irs.description) + '</td>';
+                html += '<td>' + escapeHtml(data.irs.withholding) + '</td>';
+                html += '<td class="r">' + escapeHtml(data.irs.income) + '</td>';
+                html += '<td class="r">' + escapeHtml(data.irs.irsValue) + '</td>';
+                html += '</tr>';
+                html += '</tbody></table>';
+            }
+
+            // Totals
+            html += '<div class="pdf-totals"><div class="pdf-totals-box">';
+            var totRows = [
+                { key: 'subtotal', label: 'Valor il\u00edquido' },
+                { key: 'iva', label: 'IVA' },
+                { key: 'stampTax', label: 'Imposto do Selo' }
+            ];
+            for (var tr = 0; tr < totRows.length; tr++) {
+                if (data.totals[totRows[tr].key]) {
+                    html += '<div class="pdf-totals-row">';
+                    html += '<span class="label">' + totRows[tr].label + '</span>';
+                    html += '<span class="value">' + escapeHtml(data.totals[totRows[tr].key]) + '</span>';
+                    html += '</div>';
+                }
+            }
+            if (data.totals.total) {
+                html += '<div class="pdf-totals-row grand-total">';
+                html += '<span class="label">Total</span>';
+                html += '<span class="value">' + escapeHtml(data.totals.total) + '</span>';
+                html += '</div>';
+            }
+            if (data.totals.irsWithholding && data.totals.irsWithholding !== '0,00 €') {
+                html += '<div class="pdf-totals-row">';
+                html += '<span class="label">Reten&ccedil;&atilde;o IRS</span>';
+                html += '<span class="value">' + escapeHtml(data.totals.irsWithholding) + '</span>';
+                html += '</div>';
+            }
+            if (data.totals.totalPayable) {
+                html += '<div class="pdf-totals-row" style="border-top:1px solid var(--gray-200);padding-top:6px;margin-top:4px;">';
+                html += '<span class="label" style="font-weight:700;color:var(--gray-800);">Total a Pagar</span>';
+                html += '<span class="value" style="font-weight:800;">' + escapeHtml(data.totals.totalPayable) + '</span>';
+                html += '</div>';
+            }
+            html += '</div></div>';
+
+            // QR + Legal
+            html += '<div class="pdf-legal">';
+            if (qrDataUrl) {
+                html += '<img class="qr-img" src="' + qrDataUrl + '" alt="QR Code Fiscal">';
+            }
+            html += '<div class="legal-text">';
+            if (data.atcud) html += '<strong>ATCUD: ' + escapeHtml(data.atcud) + '</strong><br>';
+            html += 'Documento emitido eletronicamente. Dispon&iacute;vel para consulta no Portal das Finan&ccedil;as ';
+            html += '(https://www.portaldasfinancas.gov.pt).';
+            html += '</div>';
+            html += '</div>';
+
+            html += '</div>'; // end pdf-body
+
+            // ── Footer ──
+            html += '<div class="pdf-footer">';
+            html += '<p class="tagline">trabalho a fluir, neg&oacute;cio a crescer</p>';
+            html += '<p><a href="https://descomplicador.pt">descomplicador.pt</a> &bull; 926 874 141</p>';
+            html += '</div>';
+
+            html += '</div>'; // end pdf-content
+
+            return html;
+        }
+
+        function renderPreviews() {
+            // Remove existing previews
+            var existing = previewPanel.querySelectorAll('.preview-wrapper, .preview-label');
+            for (var i = 0; i < existing.length; i++) existing[i].remove();
+
+            previewPlaceholder.style.display = 'none';
+
+            for (var p = 0; p < pagesData.length; p++) {
+                var pg = pagesData[p];
+
+                var label = document.createElement('div');
+                label.className = 'preview-label';
+                label.textContent = 'Pagina ' + (p + 1) + ' — ' + (pg.data.copyType || 'Original');
+                previewPanel.appendChild(label);
+
+                var wrapper = document.createElement('div');
+                wrapper.className = 'preview-wrapper visible';
+                wrapper.id = 'preview-page-' + p;
+                wrapper.innerHTML = buildPreviewHTML(pg.data, pg.qrDataUrl);
+                previewPanel.appendChild(wrapper);
+            }
+        }
+
+        function updateSummary() {
+            if (!pagesData.length) return;
+            var d = pagesData[0].data;
+
+            summaryDoc.innerHTML =
+                '<h4>Documento</h4>' +
+                '<div class="summary-row"><span class="label">Tipo</span><span class="value">' + escapeHtml(d.documentType) + '</span></div>' +
+                '<div class="summary-row"><span class="label">N.&ordm;</span><span class="value">' + escapeHtml(d.documentNumber) + '</span></div>' +
+                '<div class="summary-row"><span class="label">Data</span><span class="value">' + escapeHtml(d.issueDate) + '</span></div>' +
+                '<div class="summary-row"><span class="label">ATCUD</span><span class="value">' + escapeHtml(d.atcud) + '</span></div>';
+
+            summaryParties.innerHTML =
+                '<h4>Partes</h4>' +
+                '<div class="summary-row"><span class="label">Prestador</span><span class="value">' + escapeHtml(d.transmitter.name) + '</span></div>' +
+                '<div class="summary-row"><span class="label">NIF</span><span class="value">' + escapeHtml(d.transmitter.nif) + '</span></div>' +
+                '<div class="summary-row"><span class="label">Cliente</span><span class="value">' + escapeHtml(d.acquirer.name) + '</span></div>';
+
+            summaryTotals.innerHTML =
+                '<h4>Valores</h4>' +
+                (d.totals.subtotal ? '<div class="summary-row"><span class="label">Subtotal</span><span class="value">' + escapeHtml(d.totals.subtotal) + '</span></div>' : '') +
+                (d.totals.iva ? '<div class="summary-row"><span class="label">IVA</span><span class="value">' + escapeHtml(d.totals.iva) + '</span></div>' : '') +
+                (d.totals.totalPayable ? '<div class="summary-row"><span class="label">Total a Pagar</span><span class="value" style="font-size:16px;font-weight:800;">' + escapeHtml(d.totals.totalPayable) + '</span></div>' : '');
+
+            parsedSummary.classList.add('visible');
+        }
+
+        // ════════════════════════════════════════════
+        //  PDF GENERATION
+        // ════════════════════════════════════════════
+
+        async function generatePDF() {
+            btnGenerate.textContent = 'A gerar...';
+            btnGenerate.disabled = true;
+
+            try {
+                var pdf = new jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                var pw = 210;
+                var ph = 297;
+
+                for (var p = 0; p < pagesData.length; p++) {
+                    if (p > 0) pdf.addPage();
+
+                    var wrapper = document.getElementById('preview-page-' + p);
+                    if (!wrapper) continue;
+
+                    var headerEl = wrapper.querySelector('.pdf-header');
+                    var bodyEl = wrapper.querySelector('.pdf-body');
+                    var footerEl = wrapper.querySelector('.pdf-footer');
+
+                    var originalFlex = bodyEl.style.flex;
+                    var pdfContent = wrapper.querySelector('.pdf-content');
+                    var originalMinHeight = pdfContent.style.minHeight;
+                    bodyEl.style.flex = 'none';
+                    pdfContent.style.minHeight = 'auto';
+
+                    var h2cOpt = { scale: 2, letterRendering: true, scrollY: 0, scrollX: 0, useCORS: true };
+
+                    // ── QR bypass: hide QR from html2canvas, place directly on PDF ──
+                    // html2canvas destroys QR codes via bilinear interpolation + any
+                    // canvas scaling at non-integer ratios drops QR modules.
+                    // Solution: hide QR during capture, then place original PNG on PDF.
+                    var pg = pagesData[p];
+                    var qrImgEl = wrapper.querySelector('.qr-img');
+                    var qrPosMm = null;
+
+                    if (pg.qrDataUrl && qrImgEl) {
+                        // Measure position BEFORE hiding (while layout is in capture mode)
+                        var bodyRect = bodyEl.getBoundingClientRect();
+                        var qrRect = qrImgEl.getBoundingClientRect();
+                        qrPosMm = {
+                            leftPct: (qrRect.left - bodyRect.left) / bodyRect.width,
+                            topPct: (qrRect.top - bodyRect.top) / bodyRect.height,
+                            widthPct: qrRect.width / bodyRect.width,
+                            heightPct: qrRect.height / bodyRect.height
+                        };
+                        // Hide QR so html2canvas renders blank space there
+                        qrImgEl.style.visibility = 'hidden';
+                    }
+
+                    var canvases = await Promise.all([
+                        html2canvas(headerEl, h2cOpt),
+                        html2canvas(bodyEl, h2cOpt),
+                        html2canvas(footerEl, h2cOpt)
+                    ]);
+
+                    // Restore QR visibility
+                    if (qrImgEl) qrImgEl.style.visibility = '';
+
+                    bodyEl.style.flex = originalFlex;
+                    pdfContent.style.minHeight = originalMinHeight;
+
+                    var headerCanvas = canvases[0];
+                    var bodyCanvas = canvases[1];
+                    var footerCanvas = canvases[2];
+
+                    var scale = pw / bodyCanvas.width;
+                    var headerH = headerCanvas.height * scale;
+                    var footerH = footerCanvas.height * scale;
+                    var footerPadding = 6;
+                    var bodyAvailH = ph - headerH - footerH - footerPadding;
+                    var bodyTotalH = bodyCanvas.height * scale;
+
+                    var totalSubPages = Math.max(1, Math.ceil(bodyTotalH / bodyAvailH));
+                    var bodySlicePx = Math.floor(bodyAvailH / scale);
+
+                    for (var sp = 0; sp < totalSubPages; sp++) {
+                        if (sp > 0) pdf.addPage();
+
+                        var hImg = headerCanvas.toDataURL('image/jpeg', 0.98);
+                        pdf.addImage(hImg, 'JPEG', 0, 0, pw, headerH);
+
+                        var srcY = sp * bodySlicePx;
+                        var srcH = Math.min(bodySlicePx, bodyCanvas.height - srcY);
+
+                        var sliceCanvas = document.createElement('canvas');
+                        sliceCanvas.width = bodyCanvas.width;
+                        sliceCanvas.height = srcH;
+                        var ctx = sliceCanvas.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                        ctx.drawImage(bodyCanvas,
+                            0, srcY, bodyCanvas.width, srcH,
+                            0, 0, bodyCanvas.width, srcH
+                        );
+                        var bImg = sliceCanvas.toDataURL('image/jpeg', 0.98);
+                        var actualBodyH = srcH * scale;
+                        pdf.addImage(bImg, 'JPEG', 0, headerH, pw, actualBodyH);
+
+                        var fImg = footerCanvas.toDataURL('image/jpeg', 0.98);
+                        pdf.addImage(fImg, 'JPEG', 0, ph - footerH, pw, footerH);
+
+                        // ── Place QR directly on PDF (bypasses canvas entirely) ──
+                        if (qrPosMm && pg.qrDataUrl) {
+                            var qrTopInBody = qrPosMm.topPct * bodyTotalH;
+                            var sliceTopMm = sp * bodyAvailH;
+                            var sliceBottomMm = sliceTopMm + bodyAvailH;
+
+                            // Check if QR falls on this sub-page
+                            if (qrTopInBody >= sliceTopMm && qrTopInBody < sliceBottomMm) {
+                                var qrPdfX = qrPosMm.leftPct * pw;
+                                var qrPdfY = headerH + (qrTopInBody - sliceTopMm);
+                                var qrPdfW = qrPosMm.widthPct * pw;
+                                var qrPdfH = qrPosMm.heightPct * bodyTotalH;
+                                pdf.addImage(pg.qrDataUrl, 'PNG', qrPdfX, qrPdfY, qrPdfW, qrPdfH);
+                            }
+                        }
+                    }
+                }
+
+                // Generate filename
+                var d = pagesData[0].data;
+                var clientSlug = (d.acquirer.name || 'cliente')
+                    .toLowerCase()
+                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/(^-|-$)/g, '');
+                var dateSlug = (d.issueDate || '').replace(/\//g, '-') || 'sem-data';
+                var typeSlug = (d.documentType || 'fatura').toLowerCase().replace(/\s+/g, '-');
+                var filename = typeSlug + '-' + clientSlug + '-' + dateSlug + '.pdf';
+
+                pdf.save(filename);
+
+            } catch (err) {
+                console.error('PDF generation error:', err);
+                setStatus('error', 'Erro ao gerar PDF: ' + (err.message || err));
+            }
+
+            btnGenerate.textContent = 'Gerar PDF Branded';
+            btnGenerate.disabled = false;
+        }
+
+        // ════════════════════════════════════════════
+        //  FILE HANDLING
+        // ════════════════════════════════════════════
+
+        async function handleFile(file) {
+            if (!file || file.type !== 'application/pdf') {
+                setStatus('error', 'Por favor selecione um ficheiro PDF.');
+                return;
+            }
+
+            // Update drop zone
+            var sizeKB = (file.size / 1024).toFixed(1);
+            dropZone.className = 'drop-zone has-file';
+            dropZone.innerHTML =
+                '<div class="file-info">' +
+                '<div class="file-icon">&#128196;</div>' +
+                '<div class="file-details">' +
+                '<div class="file-name">' + escapeHtml(file.name) + '</div>' +
+                '<div class="file-size">' + sizeKB + ' KB</div>' +
+                '</div>' +
+                '<button class="btn-change" onclick="document.getElementById(\'file-input\').click()">Alterar</button>' +
+                '</div>';
+
+            setStatus('loading', 'A processar fatura...');
+
+            try {
+                var arrayBuffer = await file.arrayBuffer();
+                var pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+                pagesData = [];
+                var sharedQrDataUrl = null;
+
+                for (var p = 1; p <= pdf.numPages; p++) {
+                    var page = await pdf.getPage(p);
+
+                    var data = await extractPageData(page);
+
+                    // Extract QR only from page 1, reuse for all pages
+                    if (!sharedQrDataUrl) {
+                        sharedQrDataUrl = await extractQRCode(page);
+                    }
+
+                    pagesData.push({
+                        data: data,
+                        qrDataUrl: sharedQrDataUrl
+                    });
+                }
+
+                // Validate we got meaningful data
+                if (!pagesData[0].data.documentType && !pagesData[0].data.atcud) {
+                    setStatus('error', 'Nao foi possivel identificar uma fatura AT neste PDF. Verifique se e uma fatura da Autoridade Tributaria.');
+                    return;
+                }
+
+                setStatus('success', pagesData.length + ' pagina(s) processada(s) com sucesso.');
+                updateSummary();
+                renderPreviews();
+                btnGenerate.classList.add('visible');
+
+            } catch (err) {
+                console.error('PDF processing error:', err);
+                setStatus('error', 'Erro ao processar PDF: ' + (err.message || err));
+            }
+        }
+
+        // ── Event Listeners ──
+
+        // Drag & drop
+        dropZone.addEventListener('click', function(e) {
+            if (e.target.classList.contains('btn-change')) return;
+            fileInput.click();
+        });
+
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+
+        // Generate
+        btnGenerate.addEventListener('click', generatePDF);
+
+        // ── Init ──
+        loadLogo();
+
+    })();
+    </script>
+
+</body>
+</html>

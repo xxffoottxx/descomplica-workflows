@@ -1,0 +1,675 @@
+{
+  "name": "Assistente de vendas",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cart-event",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -976,
+        192
+      ],
+      "id": "b7c594c6-da15-42ce-a617-2de9a71bc8f9",
+      "name": "\"Item adicionado\"",
+      "webhookId": "f256f33b-a7fc-4a5d-8400-9c62b2a820f5"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a5b98b64-d0b1-4cb2-bca0-2d31cc4f01fd",
+              "name": "cart_id",
+              "value": "={{$json.body.cart_id}}",
+              "type": "string"
+            },
+            {
+              "id": "fd7addee-de0b-4f09-8242-7a0e08447209",
+              "name": "event",
+              "value": "={{$json.body.event}}",
+              "type": "string"
+            },
+            {
+              "id": "43dbe8bf-0fe4-42af-b6ef-6073c0892745",
+              "name": "items",
+              "value": "={{$json.body.items}}",
+              "type": "array"
+            },
+            {
+              "id": "36d15842-8395-4dae-ab5e-e5c8c39ead34",
+              "name": "received_at",
+              "value": "={{$now}}",
+              "type": "string"
+            },
+            {
+              "id": "f33b5807-d6de-462e-a342-96b3dd4a2dbb",
+              "name": "source",
+              "value": "web",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -752,
+        192
+      ],
+      "id": "1735d66d-674a-4377-8f1f-f5683399855c",
+      "name": "Normaliza dados"
+    },
+    {
+      "parameters": {
+        "jsCode": "// deterministic string of items\nconst itemsStr = JSON.stringify($json.items.sort((a,b) => a.sku.localeCompare(b.sku)));\n\n// simple hash function\nfunction simpleHash(str) {\n  let hash = 0;\n  for (let i = 0; i < str.length; i++) {\n    hash = ((hash << 5) - hash) + str.charCodeAt(i);\n    hash |= 0; // convert to 32-bit integer\n  }\n  return hash.toString();\n}\n\nconst fingerprint = simpleHash($json.cart_id + '|' + itemsStr);\n\nreturn [{\n  json: {\n    ...$json,\n    fingerprint: fingerprint\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -528,
+        192
+      ],
+      "id": "ec16a180-09a2-4272-b028-1344967f2520",
+      "name": "Impressão digital"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"ready\",\n  \"suggestion\": {{$json.cachedSuggestion.suggestion}}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        368,
+        288
+      ],
+      "id": "3c9eb3ee-623e-4cd8-813a-93491b190218",
+      "name": "Pronto!"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"pending\",\n  \"job_id\": \"{{ $('Impressão digital').item.json.fingerprint }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1264,
+        0
+      ],
+      "id": "aadde572-92d9-43e0-aca9-80b9c39b9cba",
+      "name": "Pendente"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"pending\",\n  \"job_id\": \"{{ $('Impressão digital').item.json.fingerprint }}\",\n  \"deduplicated\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1040,
+        192
+      ],
+      "id": "d6fd4bd8-5142-4ed9-be54-b4f34a03b3a5",
+      "name": "Pendente (dedup)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get cached suggestion and parse it\nconst cachedValue = $json.value;\nlet cachedSuggestion = null;\n\nif (cachedValue) {\n  try {\n    cachedSuggestion = JSON.parse(cachedValue);\n  } catch (e) {\n    cachedSuggestion = cachedValue;\n  }\n}\n\nreturn [{\n  json: {\n    ...$json,\n    cachedSuggestion: cachedSuggestion\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -80,
+        192
+      ],
+      "id": "9f636c37-1569-48d6-9276-a3fb524711a2",
+      "name": "Parse cache"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "value",
+        "key": "=cart:suggestion:{{$json.fingerprint}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        192
+      ],
+      "id": "15e9ba5d-477c-484d-9c0b-b041c768efed",
+      "name": "cache",
+      "credentials": {
+        "redis": {
+          "id": "PuDXgM78th5rsxW9",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"phi3.5:latest\",\n  \"stream\": false,\n  \"messages\": [\n    {\n      \"role\": \"system\",\n      \"content\": \"You are a sales assistant. Suggest additional products based on the cart items. Be concise and helpful.\"\n    },\n    {\n      \"role\": \"user\",\n      \"content\": \"Cart ID: {{ $json.cart_id }}, Items: {{ JSON.stringify($json.items) }}\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        368,
+        512
+      ],
+      "id": "a7b0901b-28cb-4b5c-b67d-ce49525d7a31",
+      "name": "Ollama"
+    },
+    {
+      "parameters": {
+        "operation": "push",
+        "list": "cart:queue",
+        "messageData": "={{ $json.fingerprint }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        0
+      ],
+      "id": "06faa394-0473-413a-8ccb-afc7c62ebc5d",
+      "name": "Adicionar à fila",
+      "credentials": {
+        "redis": {
+          "id": "PuDXgM78th5rsxW9",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pop",
+        "list": "cart:queue",
+        "propertyName": "fingerprint",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        512
+      ],
+      "id": "410d60af-7490-450d-ae78-5e403c58434b",
+      "name": "Pop da fila",
+      "credentials": {
+        "redis": {
+          "id": "PuDXgM78th5rsxW9",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-f5a6-7b8c-9d0e-1f2a3b4c5d6e",
+              "leftValue": "={{ $json.fingerprint }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -304,
+        512
+      ],
+      "id": "9913cf79-d49a-499e-a69f-51106fab0e1f",
+      "name": "Tem job?",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "propertyName": "cartDataStr",
+        "key": "=cart:data:{{ $json.fingerprint }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        512
+      ],
+      "id": "7ae1155e-ce4a-4586-ad26-6e98b7a91722",
+      "name": "Buscar dados do carrinho",
+      "credentials": {
+        "redis": {
+          "id": "PuDXgM78th5rsxW9",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse cart data from Redis\nconst cartDataStr = $json.cartDataStr;\nconst fingerprint = $json.fingerprint;\n\nif (!cartDataStr) {\n  return []; // Skip if no cart data found\n}\n\nlet cartData;\ntry {\n  cartData = JSON.parse(cartDataStr);\n} catch (e) {\n  return []; // Skip if parse fails\n}\n\nreturn [{\n  json: {\n    fingerprint: fingerprint,\n    cart_id: cartData.cart_id,\n    items: cartData.items\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        512
+      ],
+      "id": "befba0fc-2071-47af-84a5-03bb13f1dead",
+      "name": "Parse dados do carrinho"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=cart:suggestion:{{ $json.fingerprint }}",
+        "value": "={{ JSON.stringify({ suggestion: $json.message.content, updated_at: $now.toISO() }) }}"
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        592,
+        512
+      ],
+      "id": "e84184ef-bc8d-412b-af3c-a42dcec589df",
+      "name": "Salvar sugestão",
+      "credentials": {
+        "redis": {
+          "id": "PuDXgM78th5rsxW9",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -976,
+        512
+      ],
+      "id": "8914cc7e-8db0-447a-8bd1-d4f84267506d",
+      "name": "5 secs"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate array of 10 iterations for batch processing\nconst iterations = [];\nfor (let i = 0; i < 10; i++) {\n  iterations.push({ json: { iteration: i } });\n}\nreturn iterations;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        512
+      ],
+      "id": "42764ec5-f875-4932-ab8e-425df7803063",
+      "name": "Batch 10"
+    },
+    {
+      "parameters": {
+        "operation": "set",
+        "key": "=cart:data:{{ $json.fingerprint }}",
+        "value": "={{ JSON.stringify({ cart_id: $json.cart_id, items: $json.items }) }}",
+        "expire": true,
+        "ttl": 3600
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        368,
+        96
+      ],
+      "id": "a3ea18b1-7e90-4cd5-89ba-2e75d6847142",
+      "name": "Salvar dados do carrinho",
+      "credentials": {
+        "redis": {
+          "id": "PuDXgM78th5rsxW9",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "incr",
+        "key": "=cart:dedup:{{ $json.fingerprint }}",
+        "expire": true
+      },
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        592,
+        96
+      ],
+      "id": "f36a10f0-428f-4773-9714-725e416337b9",
+      "name": "Dedup counter",
+      "credentials": {
+        "redis": {
+          "id": "PuDXgM78th5rsxW9",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c8d9e0f1-2a3b-4c5d-6e7f-8a9b0c1d2e3f",
+              "leftValue": "={{ $json.value }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        96
+      ],
+      "id": "f3edf4f7-0a55-42b8-b1a4-019a08f24fd9",
+      "name": "Primeiro evento?",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "100f1c19-1cb1-435e-8809-c5ccd10c23d0",
+              "leftValue": "={{ $json.cachedSuggestion }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        144,
+        192
+      ],
+      "id": "b4768802-9962-4eef-a0a2-d6b9f84c5dbc",
+      "name": "Já há sugestão?",
+      "alwaysOutputData": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "\"Item adicionado\"": {
+      "main": [
+        [
+          {
+            "node": "Normaliza dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliza dados": {
+      "main": [
+        [
+          {
+            "node": "Impressão digital",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Impressão digital": {
+      "main": [
+        [
+          {
+            "node": "cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "cache": {
+      "main": [
+        [
+          {
+            "node": "Parse cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse cache": {
+      "main": [
+        [
+          {
+            "node": "Já há sugestão?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar dados do carrinho": {
+      "main": [
+        [
+          {
+            "node": "Dedup counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedup counter": {
+      "main": [
+        [
+          {
+            "node": "Primeiro evento?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Primeiro evento?": {
+      "main": [
+        [
+          {
+            "node": "Adicionar à fila",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Pendente (dedup)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adicionar à fila": {
+      "main": [
+        [
+          {
+            "node": "Pendente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5 secs": {
+      "main": [
+        [
+          {
+            "node": "Batch 10",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch 10": {
+      "main": [
+        [
+          {
+            "node": "Pop da fila",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pop da fila": {
+      "main": [
+        [
+          {
+            "node": "Tem job?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tem job?": {
+      "main": [
+        [
+          {
+            "node": "Buscar dados do carrinho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar dados do carrinho": {
+      "main": [
+        [
+          {
+            "node": "Parse dados do carrinho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse dados do carrinho": {
+      "main": [
+        [
+          {
+            "node": "Ollama",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama": {
+      "main": [
+        [
+          {
+            "node": "Salvar sugestão",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Já há sugestão?": {
+      "main": [
+        [
+          {
+            "node": "Pronto!",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Salvar dados do carrinho",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "06d9e0ef-c0b8-44aa-978c-27e532b5e41b",
+  "meta": {
+    "instanceId": "0ad473ca5f04731bc02a819377b7037140df61c07ce29e449d14e76e6e995ec1"
+  },
+  "id": "cHLWrZ0kt6tJJfLuGwZdj",
+  "tags": []
+}

@@ -1,0 +1,248 @@
+{
+  "name": "Invoice OCR Demo - Public Webhook",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invoice-demo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        240,
+        304
+      ],
+      "webhookId": "invoice-demo-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate uploaded file from JSON payload\nconst item = $input.first();\nconst body = item.json.body || item.json;\n\nconst fileData = body.fileData;\nconst fileName = body.fileName || 'unknown';\nconst mimeType = body.mimeType || '';\nconst fileSize = body.fileSize || 0;\n\n// Check if file data exists\nif (!fileData) {\n  return [{\n    json: {\n      error: 'no_file',\n      message: 'Nenhum ficheiro carregado. Anexe uma imagem ou PDF de fatura.'\n    }\n  }];\n}\n\n// Check file size (max 5MB for demo)\nconst maxSize = 5 * 1024 * 1024;\nif (fileSize > maxSize) {\n  return [{\n    json: {\n      error: 'file_too_large',\n      message: 'O ficheiro excede o limite de 5MB. Use um ficheiro mais pequeno.'\n    }\n  }];\n}\n\n// Check file type\nconst allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp'];\nif (!allowedTypes.some(type => mimeType.toLowerCase().includes(type))) {\n  return [{\n    json: {\n      error: 'invalid_file_type',\n      message: 'Tipo de ficheiro inválido. Carregue PDF, JPG, PNG ou WEBP.'\n    }\n  }];\n}\n\n// Validation passed - pass data through\nreturn [{\n  json: {\n    fileData: fileData,\n    fileName: fileName,\n    mimeType: mimeType,\n    fileSize: fileSize\n  }\n}];"
+      },
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b",
+      "name": "Validate File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.error }}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "id": "f6a7b8c9-d0e1-4f2a-3b4c-5d6e7f8a9b0c",
+      "name": "Check Validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        688,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  success: false,\n  error: $json.error,\n  message: $json.message\n}) }}",
+        "options": {
+          "responseCode": 400,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f8a9b0c1d",
+      "name": "Respond - Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        912,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar pedido para Gemini Vision API a partir do payload JSON\nconst item = $input.first();\nconst base64Data = item.json.fileData;\nconst mimeType = item.json.mimeType || 'image/jpeg';\n\nconst requestBody = {\n  contents: [\n    {\n      parts: [\n        {\n          text: 'Extrai os seguintes dados desta fatura e devolve APENAS um objeto JSON:\\n1. vendor: O nome da empresa que emitiu a fatura\\n2. date: A data da fatura no formato AAAA-MM-DD\\n3. amount: O valor total como número\\n4. currency: O código da moeda (padrão EUR)\\n5. category: Uma categoria breve (ex: \"Alojamento\", \"Material de Escritório\", \"Software\", \"Serviços Públicos\", \"Alimentação\", \"Serviços Profissionais\", \"Transporte\", \"Outro\")\\n\\nDevolve APENAS JSON válido, sem markdown.'\n        },\n        {\n          inline_data: {\n            mime_type: mimeType,\n            data: base64Data\n          }\n        }\n      ]\n    }\n  ],\n  generationConfig: {\n    temperature: 0.1,\n    topK: 32,\n    topP: 1,\n    maxOutputTokens: 2048\n  }\n};\n\nreturn [{\n  json: {\n    requestBody: requestBody,\n    fileName: item.json.fileName || 'invoice'\n  }\n}];"
+      },
+      "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8a9b0c1d2e",
+      "name": "Prepare Gemini Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        912,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "c9d0e1f2-a3b4-4c5d-6e7f-8a9b0c1d2e3f",
+      "name": "Call Gemini Vision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        432
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gemini response and extract invoice data\nconst item = $input.first();\n\n// Check for HTTP request errors\nif (item.json.error) {\n  return [{\n    json: {\n      success: false,\n      error: 'api_error',\n      message: 'Não foi possível processar a fatura',\n      details: item.json.error.message || 'Unknown error'\n    }\n  }];\n}\n\n// Validate response structure\nconst response = item.json;\nif (!response.candidates || !response.candidates[0]) {\n  return [{\n    json: {\n      success: false,\n      error: 'invalid_response',\n      message: 'Resposta inválida da API'\n    }\n  }];\n}\n\nconst candidate = response.candidates[0];\nif (!candidate.content || !candidate.content.parts || !candidate.content.parts[0]) {\n  return [{\n    json: {\n      success: false,\n      error: 'no_content',\n      message: 'A API não devolveu conteúdo'\n    }\n  }];\n}\n\n// Extract text response\nlet textResponse = candidate.content.parts[0].text || '';\n\n// Clean up markdown code blocks if present\ntextResponse = textResponse.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\n// Parse JSON\nlet extractedData;\ntry {\n  extractedData = JSON.parse(textResponse);\n} catch (e) {\n  return [{\n    json: {\n      success: false,\n      error: 'parse_error',\n      message: 'Não foi possível interpretar os dados extraídos',\n      rawResponse: textResponse.substring(0, 500)\n    }\n  }];\n}\n\n// Validate required fields\nconst required = ['vendor', 'date', 'amount', 'currency', 'category'];\nconst missing = required.filter(field => !extractedData[field]);\n\nif (missing.length > 0) {\n  return [{\n    json: {\n      success: false,\n      error: 'incomplete_data',\n      message: `Campos em falta: ${missing.join(', ')}`,\n      extractedData: extractedData\n    }\n  }];\n}\n\n// Return successful result\nreturn [{\n  json: {\n    success: true,\n    data: {\n      vendor: extractedData.vendor,\n      date: extractedData.date,\n      amount: parseFloat(extractedData.amount),\n      currency: extractedData.currency,\n      category: extractedData.category\n    },\n    demo: true,\n    message: 'Processado pelo Descomplicador.pt'\n  }\n}];"
+      },
+      "id": "d0e1f2a3-b4c5-4d6e-7f8a-9b0c1d2e3f4a",
+      "name": "Parse Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "e1f2a3b4-c5d6-4e7f-8a9b-0c1d2e3f4a5b",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        432
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate File": {
+      "main": [
+        [
+          {
+            "node": "Check Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Validation": {
+      "main": [
+        [
+          {
+            "node": "Respond - Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Gemini Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Gemini Request": {
+      "main": [
+        [
+          {
+            "node": "Call Gemini Vision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Gemini Vision": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "versionId": "dce666b8-2b43-4846-a1cb-b980fb85e738",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "W573Z6GiIW4iB0gB",
+  "tags": []
+}

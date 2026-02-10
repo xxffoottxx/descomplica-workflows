@@ -1,0 +1,147 @@
+{
+  "name": "Error Monitor (with Rate Limiting)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "6c66c7db-2642-48a6-ade2-0ae2f0b18370",
+      "name": "Error Trigger",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -608,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rate limiting logic: send first error immediately, suppress duplicates, batch at window end\nconst item = $input.first();\nconst staticData = this.getWorkflowStaticData('global');\n\n// Extract basic error info\nconst workflowName = item.json.workflow?.name || 'Unknown Workflow';\nconst workflowId = item.json.workflow?.id || 'unknown';\nconst failedNode = item.json.execution?.lastNodeExecuted || 'Unknown Node';\n\n// Create a unique key for this workflow+node combination\nconst errorKey = `${workflowId}_${failedNode}`;\nconst now = Date.now();\nconst rateLimitWindow = 5 * 60 * 1000; // 5 minutes\nconst maxStoredErrors = 50; // Cap stored errors to prevent unbounded growth\n\n// Initialize error tracking structure\nif (!staticData.errorTracking) {\n  staticData.errorTracking = {};\n}\n\n// Prune stale keys older than 2x the window\nfor (const key of Object.keys(staticData.errorTracking)) {\n  if (now - staticData.errorTracking[key].firstSeen > rateLimitWindow * 2) {\n    delete staticData.errorTracking[key];\n  }\n}\n\n// Get or create tracking entry for this error key\nif (!staticData.errorTracking[errorKey]) {\n  staticData.errorTracking[errorKey] = {\n    count: 0,\n    firstSeen: now,\n    lastSent: 0,\n    errors: []\n  };\n}\n\nconst tracking = staticData.errorTracking[errorKey];\n\n// Check if we're outside the rate limit window - send batch summary then reset\nif (now - tracking.firstSeen > rateLimitWindow) {\n  // Window expired: if there were suppressed errors, send a batch summary\n  if (tracking.count > 1) {\n    const batchErrors = tracking.errors.slice(-10);\n    const batchCount = tracking.count;\n    // Reset tracking for new window\n    tracking.count = 1;\n    tracking.firstSeen = now;\n    tracking.lastSent = now;\n    tracking.errors = [{\n      executionId: item.json.execution?.id || 'unknown',\n      errorMessage: item.json.execution?.error?.message || 'No error message',\n      timestamp: now\n    }];\n    return {\n      ...item.json,\n      rateLimiting: {\n        shouldSend: true,\n        emailType: 'batch',\n        errorCount: batchCount,\n        errorKey: errorKey,\n        errors: batchErrors\n      }\n    };\n  }\n  // Window expired with no suppressed errors, reset and treat as first\n  tracking.count = 0;\n  tracking.firstSeen = now;\n  tracking.errors = [];\n}\n\n// Add this error to the tracking (cap the array)\ntracking.count++;\nif (tracking.errors.length < maxStoredErrors) {\n  tracking.errors.push({\n    executionId: item.json.execution?.id || 'unknown',\n    errorMessage: item.json.execution?.error?.message || 'No error message',\n    timestamp: now\n  });\n}\n\n// Determine if we should send email\nlet shouldSend = false;\nlet emailType = 'single';\n\nif (tracking.count === 1) {\n  // First error in window - always send immediately\n  shouldSend = true;\n  emailType = 'single';\n  tracking.lastSent = now;\n} else {\n  // Subsequent errors within window - suppress (will be batched when window expires)\n  shouldSend = false;\n}\n\n// Pass through the original data plus rate limit info\nreturn {\n  ...item.json,\n  rateLimiting: {\n    shouldSend: shouldSend,\n    emailType: emailType,\n    errorCount: tracking.count,\n    errorKey: errorKey,\n    errors: tracking.errors\n  }\n};"
+      },
+      "id": "4865f936-d871-4640-8eb6-3c79f9d950c1",
+      "name": "Rate Limit Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.rateLimiting.shouldSend }}",
+              "value2": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "34ae5a53-598a-43cb-9456-b3f9c8232e36",
+      "name": "Should Send Email?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format error details for email\nconst item = $input.first();\nconst rateLimiting = item.json.rateLimiting;\nconst emailType = rateLimiting.emailType;\n\n// Extract data with fallbacks\nconst workflowName = item.json.workflow?.name || 'Unknown Workflow';\nconst workflowId = item.json.workflow?.id || 'unknown';\nconst executionId = item.json.execution?.id || 'unknown';\nconst failedNode = item.json.execution?.lastNodeExecuted || 'Unknown Node';\nconst errorMessage = item.json.execution?.error?.message || 'No error message available';\nconst errorName = item.json.execution?.error?.name || 'Error';\n\n// Generate timestamp in Europe/Lisbon timezone\nconst now = new Date();\nconst timestamp = now.toLocaleString('pt-PT', {\n  timeZone: 'Atlantic/Azores',\n  year: 'numeric',\n  month: '2-digit',\n  day: '2-digit',\n  hour: '2-digit',\n  minute: '2-digit',\n  second: '2-digit'\n});\n\n// Build execution link\nconst executionLink = `https://n8n.descomplicador.pt/workflow/${workflowId}/executions/${executionId}`;\n\nlet subject, htmlBody;\n\nif (emailType === 'batch') {\n  // Batch email with multiple errors\n  const errorCount = rateLimiting.errorCount;\n  subject = `[ERRO n8n] ${workflowName} — ${errorCount} erros em ${failedNode}`;\n  \n  // Build error list\n  const errorList = rateLimiting.errors.slice(-10).map(err => {\n    const errTime = new Date(err.timestamp).toLocaleString('pt-PT', {\n      timeZone: 'Atlantic/Azores',\n      hour: '2-digit',\n      minute: '2-digit',\n      second: '2-digit'\n    });\n    return `<li><strong>${errTime}</strong>: ${err.errorMessage.substring(0, 150)}${err.errorMessage.length > 150 ? '...' : ''}</li>`;\n  }).join('\\n');\n  \n  htmlBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .alert-header { background-color: #dc3545; color: white; padding: 15px; border-radius: 5px 5px 0 0; }\n    .alert-header h2 { margin: 0; font-size: 20px; }\n    .batch-notice { background-color: #ffc107; color: #000; padding: 10px; font-weight: bold; text-align: center; }\n    .content { background-color: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 5px 5px; }\n    .field { margin-bottom: 15px; }\n    .field-label { font-weight: bold; color: #495057; margin-bottom: 5px; }\n    .field-value { background-color: white; padding: 10px; border-radius: 3px; border: 1px solid #dee2e6; word-wrap: break-word; }\n    .error-list { background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; }\n    .error-list ul { margin: 10px 0; padding-left: 20px; }\n    .error-list li { margin-bottom: 10px; font-size: 13px; }\n    .btn { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px; }\n    .btn:hover { background-color: #0056b3; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"alert-header\">\n      <h2>🚨 Múltiplos erros detectados em n8n</h2>\n    </div>\n    <div class=\"batch-notice\">\n      ⚠️ Este workflow falhou ${errorCount} vezes nos últimos 5 minutos\n    </div>\n    <div class=\"content\">\n      <div class=\"field\">\n        <div class=\"field-label\">Workflow:</div>\n        <div class=\"field-value\">${workflowName}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">Nó que falhou:</div>\n        <div class=\"field-value\">${failedNode}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">Resumo dos últimos erros:</div>\n        <div class=\"error-list\">\n          <ul>\n            ${errorList}\n          </ul>\n        </div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">Última execução:</div>\n        <div class=\"field-value\">${timestamp}</div>\n      </div>\n      \n      <a href=\"${executionLink}\" class=\"btn\">Ver última execução no n8n</a>\n    </div>\n  </div>\n</body>\n</html>\n`;\n} else {\n  // Single error email\n  subject = `[ERRO n8n] ${workflowName} — ${failedNode} falhou`;\n  \n  htmlBody = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"utf-8\">\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .alert-header { background-color: #dc3545; color: white; padding: 15px; border-radius: 5px 5px 0 0; }\n    .alert-header h2 { margin: 0; font-size: 20px; }\n    .content { background-color: #f8f9fa; padding: 20px; border: 1px solid #dee2e6; border-top: none; border-radius: 0 0 5px 5px; }\n    .field { margin-bottom: 15px; }\n    .field-label { font-weight: bold; color: #495057; margin-bottom: 5px; }\n    .field-value { background-color: white; padding: 10px; border-radius: 3px; border: 1px solid #dee2e6; word-wrap: break-word; }\n    .error-message { background-color: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; font-family: monospace; font-size: 12px; }\n    .btn { display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px; }\n    .btn:hover { background-color: #0056b3; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"alert-header\">\n      <h2>🚨 Erro detectado em n8n</h2>\n    </div>\n    <div class=\"content\">\n      <div class=\"field\">\n        <div class=\"field-label\">Workflow:</div>\n        <div class=\"field-value\">${workflowName}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">Nó que falhou:</div>\n        <div class=\"field-value\">${failedNode}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">Data/Hora:</div>\n        <div class=\"field-value\">${timestamp}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">Tipo de erro:</div>\n        <div class=\"field-value\">${errorName}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">Mensagem de erro:</div>\n        <div class=\"error-message\">${errorMessage}</div>\n      </div>\n      \n      <div class=\"field\">\n        <div class=\"field-label\">ID da Execução:</div>\n        <div class=\"field-value\">${executionId}</div>\n      </div>\n      \n      <a href=\"${executionLink}\" class=\"btn\">Ver execução no n8n</a>\n    </div>\n  </div>\n</body>\n</html>\n`;\n}\n\n// Return formatted data for email node\nreturn {\n  subject: subject,\n  htmlBody: htmlBody,\n  workflowName: workflowName,\n  failedNode: failedNode,\n  executionLink: executionLink\n};"
+      },
+      "id": "e393ce18-1e8f-43e1-a300-ed497bc8d06f",
+      "name": "Format Error Details",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "apoio@descomplicador.pt",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.htmlBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "678c4624-ddef-4362-8cfd-90bc33e79944",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        0
+      ],
+      "webhookId": "daea9084-e2e6-47aa-b4c8-eb843fc5fca0",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Rate Limit Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rate Limit Check": {
+      "main": [
+        [
+          {
+            "node": "Should Send Email?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should Send Email?": {
+      "main": [
+        [
+          {
+            "node": "Format Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Error Details": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "d0130b31-2e31-494d-ad79-8356059c58c2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "b4IQu91K2SgoJT4uM5B7z",
+  "tags": []
+}

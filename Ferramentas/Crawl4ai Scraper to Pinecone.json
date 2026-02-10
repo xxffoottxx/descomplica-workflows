@@ -1,0 +1,482 @@
+{
+  "name": "Crawl4ai Scraper to Pinecone",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Crawl4ai Website Scraper → Pinecone",
+        "formDescription": "Scrape website content using Crawl4ai and upload to Pinecone vector database",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Seed URL",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Links must contain",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Max Pages",
+              "fieldType": "number",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Pinecone Index Host",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c442ede9-7ba5-4957-bdbc-07b9a3cc46de",
+      "name": "Scraper Input",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        736,
+        96
+      ],
+      "webhookId": "e2d0d595-779c-4b15-9d86-5f9c513b4fed"
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const staticData = $getWorkflowStaticData('global');\nconst seedUrl = $('Scraper Input').first().json['Seed URL'];\nconst linksFilter = $('Scraper Input').first().json['Links must contain'];\nconst maxPages = Number($('Scraper Input').first().json['Max Pages']) || 50;\n\nif (!staticData.initialized || staticData.pagesProcessed === undefined) {\n  staticData.initialized = true;\n  staticData.queue = [seedUrl];\n  staticData.visited = [];\n  staticData.pagesProcessed = 0;\n  staticData.totalIterations = 0;\n  staticData.startTime = Date.now();\n  console.log('[INIT] Seed: ' + seedUrl + ', Max: ' + maxPages + ', Filter: ' + linksFilter);\n}\n\nconsole.log('[STATE] Queue: ' + staticData.queue.length + ', Visited: ' + staticData.visited.length + ', Processed: ' + staticData.pagesProcessed);\n\n// String-based URL helpers (no new URL() - n8n sandbox may not support it)\nfunction getOrigin(u) {\n  var m = u.match(/^(https?:\\/\\/[^\\/]+)/);\n  return m ? m[1] : '';\n}\n\nfunction normalizeUrl(u) {\n  var s = (u || '').toLowerCase();\n  s = s.replace(/^https?:\\/\\//, '');\n  s = s.replace(/^www\\./, '');\n  s = s.replace(/\\/index\\.php$/, '/');\n  s = s.replace(/\\/psub\\//, '/p/');\n  s = s.replace(/\\/+$/, '');\n  return s;\n}\n\nfunction resolveUrl(href, baseUrl) {\n  if (!href) return '';\n  if (href.startsWith('http://') || href.startsWith('https://')) return href;\n  if (href.startsWith('//')) return 'https:' + href;\n  if (href.startsWith('/')) {\n    var origin = getOrigin(baseUrl);\n    return origin ? origin + href : '';\n  }\n  return '';\n}\n\nvar skipExts = /\\.(pdf|jpg|jpeg|png|gif|svg|css|js|zip|mp4|mp3|ico|woff|woff2|ttf|eot)$/i;\n\nwhile (staticData.queue.length > 0 && staticData.pagesProcessed < maxPages) {\n  staticData.totalIterations++;\n  if (staticData.totalIterations > maxPages * 3) {\n    console.log('[ABORT] Safety limit reached (' + staticData.totalIterations + ' iterations)');\n    staticData.initialized = false;\n    return { json: { _done: true, pagesProcessed: staticData.pagesProcessed, reason: 'safety_limit' } };\n  }\n  var elapsed = Date.now() - (staticData.startTime || Date.now());\n  if (elapsed > 3600000) {\n    console.log('[TIMEOUT] Exceeded 1 hour runtime');\n    staticData.initialized = false;\n    return { json: { _done: true, pagesProcessed: staticData.pagesProcessed, reason: 'timeout' } };\n  }\n  var url = staticData.queue.shift();\n  var normUrl = normalizeUrl(url);\n  if (staticData.visited.indexOf(normUrl) !== -1) {\n    console.log('[SKIP] Already visited: ' + url);\n    continue;\n  }\n  staticData.visited.push(normUrl);\n  staticData.pagesProcessed++;\n  console.log('[CRAWL] #' + staticData.pagesProcessed + ' - ' + url);\n\n  var markdown = '';\n  var internalLinks = [];\n  try {\n    var response = await this.helpers.httpRequest({\n      method: 'POST',\n      url: 'http://crawl4ai:11235/crawl',\n      body: {\n        urls: [url],\n        browser_config: { type: 'BrowserConfig', params: { headless: true } },\n        crawler_config: { type: 'CrawlerRunConfig', params: { cache_mode: 'bypass' } }\n      },\n      headers: { 'Content-Type': 'application/json' },\n      timeout: 60000,\n    });\n\n    var parsed = typeof response === 'string' ? JSON.parse(response) : response;\n    console.log('[RESPONSE] success: ' + parsed.success + ', has results: ' + (!!parsed.results));\n    var result = parsed.results ? parsed.results[0] : (parsed.result || parsed);\n\n    if (result.markdown) {\n      markdown = typeof result.markdown === 'string' ? result.markdown :\n        (result.markdown.raw_markdown || result.markdown.fit_markdown || result.markdown.markdown_with_citations || '');\n    }\n    console.log('[CONTENT] Markdown length: ' + markdown.length);\n\n    var links = result.links || {};\n    var rawLinks = links.internal || [];\n    internalLinks = rawLinks.map(function(l) { return typeof l === 'string' ? l : (l.href || ''); }).filter(function(x) { return x !== ''; });\n    console.log('[LINKS] Found ' + internalLinks.length + ' internal links');\n  } catch (e) {\n    console.log('[ERROR] Crawl4ai failed for ' + url + ': ' + e.message);\n    continue;\n  }\n\n  // Queue new links\n  var visitedSet = {};\n  for (var vi = 0; vi < staticData.visited.length; vi++) {\n    visitedSet[staticData.visited[vi]] = true;\n  }\n  var queueNorms = {};\n  for (var qi = 0; qi < staticData.queue.length; qi++) {\n    queueNorms[normalizeUrl(staticData.queue[qi])] = true;\n  }\n  var newLinksAdded = 0;\n  for (var li = 0; li < internalLinks.length; li++) {\n    var rawLink = internalLinks[li];\n    var resolved = resolveUrl(rawLink, url);\n    if (!resolved) continue;\n    var clean = resolved.split('?')[0].split('#')[0];\n    if (skipExts.test(clean)) continue;\n    if (linksFilter && clean.indexOf(linksFilter) === -1) continue;\n    var norm = normalizeUrl(clean);\n    if (!visitedSet[norm] && !queueNorms[norm]) {\n      staticData.queue.push(clean);\n      queueNorms[norm] = true;\n      newLinksAdded++;\n    }\n  }\n  console.log('[QUEUE] Added ' + newLinksAdded + ' new links. Queue size: ' + staticData.queue.length);\n\n  if (markdown && markdown.trim().length > 50) {\n    var truncated = markdown.substring(0, 15000);\n    await new Promise(resolve => setTimeout(resolve, 1000));\n    return {\n      json: {\n        url: url,\n        markdown: truncated,\n        word_count: truncated.split(/\\s+/).filter(function(w) { return w.length > 0; }).length,\n        links_found: internalLinks.length,\n        links_queued: staticData.queue.length,\n        pages_processed: staticData.pagesProcessed,\n        _done: false\n      }\n    };\n  }\n  console.log('[SKIP] Content too short for ' + url + ' (' + markdown.length + ' chars)');\n}\n\nconsole.log('[DONE] Finished. Processed ' + staticData.pagesProcessed + ' pages.');\nstaticData.initialized = false;\nreturn { json: { _done: true, pagesProcessed: staticData.pagesProcessed } };"
+      },
+      "id": "fb38100b-a358-474d-bec0-9753acf0dc4f",
+      "name": "Crawl Manager",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2816,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1d2e3f4-a5b6-7890-cdef-123456789012",
+              "leftValue": "={{ $json._done }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2a6ebda9-0b3d-4e89-9312-1e3e6e9e1024",
+      "name": "Has Content?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        528,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Analisa o conteúdo desta página web e categoriza-o para uma base de conhecimento de chatbot.\n\nURL: {{ $json.url }}\nConteúdo: {{ $json.markdown.substring(0, 4000) }}\n\nIMPORTANTE: Analisa a URL e o conteúdo com cuidado. A URL é um sinal forte para determinar a categoria. Escolhe SEMPRE a categoria mais específica possível. Só usa 'other' se o conteúdo for genuinamente inclassificável.\n\nCategorias disponíveis:\n- products: Páginas de produtos específicos, catálogo, preços, fichas técnicas, loja online\n- services: Descrição de serviços, capacidades técnicas, portfólio de trabalhos, equipamentos, áreas de atuação (ex: serralharia, soldadura, mecânica, CNC, hidráulica, aluguer)\n- policies: Política de privacidade, proteção de dados, RGPD, termos de serviço, termos legais\n- about: Sobre nós, história da empresa, equipa, missão, valores, página inicial/homepage\n- faq: Perguntas frequentes, páginas de ajuda, suporte\n- resources: Blog, guias, tutoriais, documentação, artigos, notícias\n- contact: Informação de contacto, moradas, localizações, horários, telefones, emails, formulários de contacto, mapas\n- other: APENAS para conteúdo que genuinamente NÃO se enquadra em NENHUMA categoria acima\n\nResponde APENAS com JSON válido, sem formatação markdown:\n{\n  \"primary_category\": \"nome_da_categoria\",\n  \"subcategory\": \"tipo específico\",\n  \"content_type\": \"informational|transactional|navigational\",\n  \"title\": \"Título descritivo da página\",\n  \"summary\": \"Resumo informativo de 2-3 frases em português\",\n  \"key_topics\": [\"tópico1\", \"tópico2\", \"tópico3\"],\n  \"confidence\": 0.95\n}",
+        "options": {
+          "systemMessage": "You are a content categorization expert. Analyze web page content and categorize it for chatbot knowledge bases. CRITICAL: Always respond with ONLY valid JSON. Never wrap in markdown code blocks. Never use ``` formatting. All descriptive fields should be in Portuguese (pt-pt). When in doubt between categories, choose the most specific one. Never default to 'other' unless the content is genuinely uncategorizable."
+        }
+      },
+      "id": "afa12ca7-3fb6-493f-8c3b-c4eff92a4597",
+      "name": "AI Categorize",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        752,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "eb825b8a-005c-4b6d-89ed-6b4745c2eb6e",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        752,
+        -80
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "q0V5UjcoTRBcA9Hk",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const crawlData = $('Crawl Manager').first().json;\nconst aiOutput = $('AI Categorize').first().json.output;\n\nlet category;\ntry {\n  const cleaned = aiOutput.replace(/```json\\s*/g, '').replace(/```\\s*/g, '').trim();\n  category = JSON.parse(cleaned);\n} catch (e) {\n  category = {\n    primary_category: 'other',\n    subcategory: 'uncategorized',\n    content_type: 'informational',\n    title: crawlData.url.split('/').filter(Boolean).pop() || 'Page',\n    summary: crawlData.markdown.substring(0, 300),\n    key_topics: [],\n    confidence: 0.5\n  };\n}\n\n// URL-based category override when AI defaults to 'other'\nif (category.primary_category === 'other') {\n  var urlLower = crawlData.url.toLowerCase();\n  if (/contato|contacto|contact/.test(urlLower)) {\n    category.primary_category = 'contact';\n  } else if (/dados|privacy|privacidade|termos|terms|legal|rgpd|gdpr/.test(urlLower)) {\n    category.primary_category = 'policies';\n  }\n}\n\nconst title = (category.title || crawlData.url.split('/').filter(Boolean).pop() || 'Page').substring(0, 200);\nconst pageSummary = (category.summary || crawlData.markdown.substring(0, 300)).substring(0, 500);\nlet content = crawlData.markdown || '';\n\n// === PHASE 1: NAV STRIP ===\n// Strategy A: strip everything before first markdown header\nconst firstHeaderIdx = content.search(/^#{1,4}\\s+/m);\nif (firstHeaderIdx > 0) {\n  content = content.substring(firstHeaderIdx);\n}\n\n// Strategy B: detect nav menu blocks (Menu keyword + 5+ bullet items)\nvar navLines = content.split('\\n');\nvar navEnd = -1;\nvar navBullets = 0;\nvar hasMenu = false;\nfor (var nli = 0; nli < Math.min(navLines.length, 40); nli++) {\n  var navLine = navLines[nli].trim();\n  if (navLine.length === 0) continue;\n  if (/^Menu$/i.test(navLine)) {\n    hasMenu = true;\n    continue;\n  }\n  if (/^\\*\\s+/.test(navLine) && navLine.length < 60) {\n    navBullets++;\n    navEnd = nli;\n  } else if (navBullets >= 5 && hasMenu) {\n    break;\n  }\n}\nif (hasMenu && navBullets >= 5 && navEnd >= 0) {\n  content = navLines.slice(navEnd + 1).join('\\n').trim();\n}\n\n// Strategy C: detect dense short-bullet navigation without \"Menu\" keyword\nif (!(hasMenu && navBullets >= 5)) {\n  var navCheckLines = content.split('\\n');\n  var shortBullets = 0;\n  var navCEnd = -1;\n  for (var nci = 0; nci < Math.min(navCheckLines.length, 35); nci++) {\n    var ncLine = navCheckLines[nci].trim();\n    if (/^\\*\\s+/.test(ncLine) && ncLine.length < 50) {\n      shortBullets++;\n      navCEnd = nci;\n    }\n  }\n  if (shortBullets >= 8 && navCEnd >= 0) {\n    content = navCheckLines.slice(navCEnd + 1).join('\\n').trim();\n  }\n}\n\n// === PHASE 2: FOOTER (raw text markers) ===\nvar bottomMatch = content.search(/^(bottom of page|back to top)\\s*$/im);\nif (bottomMatch > 0 && bottomMatch > content.length * 0.5) {\n  content = content.substring(0, bottomMatch).trim();\n}\n\nvar copyrightPattern = /(Copyright\\s+\\d{4}|\\u00a9\\s*\\d{4})/i;\nvar copyrightMatch = content.match(copyrightPattern);\nif (copyrightMatch) {\n  var copyrightIdx = content.lastIndexOf(copyrightMatch[0]);\n  if (copyrightIdx > content.length * 0.8) {\n    content = content.substring(0, copyrightIdx).trim();\n  }\n}\n\n// === PHASE 2B: MISSION STATEMENT BOILERPLATE === [FIX 1]\n// The company mission tagline appears as footer boilerplate on every page.\n// Strip it and everything after it when found in the latter portion of content.\nvar missionMarker = 'A nossa miss\\u00e3o ao longo de mais de 20 anos';\nvar lastMissionIdx = content.lastIndexOf(missionMarker);\nif (lastMissionIdx > 0 && lastMissionIdx > content.length * 0.3) {\n  content = content.substring(0, lastMissionIdx).trim();\n}\n\n// === PHASE 3: IMAGE CLEANING ===\n// Strip image-link combos: [![alt](img-url)](link-url)\ncontent = content.replace(/\\[!\\[[^\\]]*\\]\\([^)]+\\)\\]\\([^)]+\\)/g, '');\n\n// Strip image markdown: ![alt](url)\ncontent = content.replace(/!\\[[^\\]]*\\]\\([^)]+\\)/g, '');\n\n// Strip broken image reference fragments: .jpg), .png), etc.\ncontent = content.replace(/\\.(?:jpg|jpeg|png|gif|svg|webp)\\)/gi, '');\n\n// Strip gallery list items that are just image links with no text\ncontent = content.replace(/^\\s*\\*\\s*\\[?\\s*\\]?\\s*(?:\\([^)]*\\))?\\s*$/gm, '');\n\n// Strip residual image URL fragments (encoded URLs with image extensions)\ncontent = content.replace(/[^\\s)]*\\.(?:jpg|jpeg|png|gif|svg|webp)(?:\\?[^\\s)]*)?/gi, '');\n// Strip incomplete gallery links with no closing paren\ncontent = content.replace(/\\[\\s*\\]\\s*\\(https?:\\/\\/[^\\s)\\n]+/g, '');\n// Strip empty bracket-paren link combos\ncontent = content.replace(/\\[\\s*\\]\\s*\\([^)]*\\)/g, '');\n// Strip orphaned list items with just numbers or single chars (image badges/residuals)\ncontent = content.replace(/^\\s*\\*\\s*_?\\d+\\s*$/gm, '');\ncontent = content.replace(/^\\s*\\*\\s*[a-z]\\s*$/gm, '');\n\n// === PHASE 4: SOCIAL MEDIA FOOTER (post-image) ===\nvar socialPattern = /(\\s*\\*\\s*\\n){3,}/g;\nvar lastSocialIdx = -1;\nvar sm;\nwhile ((sm = socialPattern.exec(content)) !== null) {\n  lastSocialIdx = sm.index;\n}\nif (lastSocialIdx > 0 && lastSocialIdx > content.length * 0.5) {\n  content = content.substring(0, lastSocialIdx).trim();\n}\n\n// === PHASE 5: LINK CLEANUP ===\n// Strip markdown links but keep display text: [text](url) -> text\ncontent = content.replace(/\\[([^\\]]*)\\]\\([^)]+\\)/g, '$1');\n\n// Strip horizontal rules\ncontent = content.replace(/^\\s*(\\*\\s*\\*\\s*\\*|---+|\\*\\*\\*+)\\s*$/gm, '');\n\n// Strip orphaned empty bullet lines\ncontent = content.replace(/^\\s*\\*\\s*$/gm, '');\n\n// === PHASE 6: CONTACT FOOTER BLOCK DETECTION === [FIX 4]\n// Detect repeating company footer using phone labels AND known address/marker patterns\nvar footerPhoneRe = /(?:Tel|Tlm|Fax|Phone|Telefone)[.:]/gi;\nvar footerPhones = [];\nvar fpm;\nwhile ((fpm = footerPhoneRe.exec(content)) !== null) {\n  footerPhones.push(fpm.index);\n}\n\n// Known footer markers specific to this site\nvar footerMarkers = [\n  /Angra do Hero[i\\u00ed]smo/i,\n  /Zona [Ii]ndustrial/i,\n  /rede fixa nacional/i,\n  /rede m[o\\u00f3]vel nacional/i,\n  /295\\s*628\\s*298/,\n  /915\\s*032\\s*185/,\n  /geral@estragaferro/i\n];\n\n// Find the earliest footer signal in the latter portion of content\nvar footerSignalIdx = -1;\n\n// Use phone cluster positions if available\nif (footerPhones.length >= 1) {\n  var lastPhone = footerPhones[footerPhones.length - 1];\n  var clusterStart = lastPhone;\n  for (var fi = footerPhones.length - 2; fi >= 0; fi--) {\n    if (lastPhone - footerPhones[fi] < 1500) {\n      clusterStart = footerPhones[fi];\n    }\n  }\n  if (clusterStart > content.length * 0.4) {\n    footerSignalIdx = clusterStart;\n  }\n}\n\n// Also check known markers even with only 1 phone or 0 phones\nfor (var fmi = 0; fmi < footerMarkers.length; fmi++) {\n  var fmMatch = footerMarkers[fmi].exec(content);\n  if (fmMatch && fmMatch.index > content.length * 0.4) {\n    if (footerSignalIdx < 0 || fmMatch.index < footerSignalIdx) {\n      footerSignalIdx = fmMatch.index;\n    }\n  }\n}\n\nif (footerSignalIdx > 0) {\n  var nearestBreak = content.lastIndexOf('\\n\\n', footerSignalIdx);\n  var nearestHeading = content.lastIndexOf('\\n#', footerSignalIdx);\n  var footerCut = Math.max(nearestBreak, nearestHeading);\n\n  // Go back one more paragraph to capture tagline above addresses\n  if (footerCut > 0) {\n    var prevBreak = content.lastIndexOf('\\n\\n', footerCut - 1);\n    if (prevBreak > 0) {\n      var between = content.substring(prevBreak, footerCut).trim();\n      if (between.length < 400 && !/^#{1,4}\\s+/m.test(between)) {\n        footerCut = prevBreak;\n      }\n    }\n  }\n\n  if (footerCut >= 30) {\n    content = content.substring(0, footerCut).trim();\n  }\n}\n\n// === PHASE 7: UI & CTA CLEANUP ===\ncontent = content.replace(/^(RESERVAR|SABER MAIS|BOOK NOW|READ MORE|top of page|VER MAIS|CONTACTE-NOS|Previous|Next|Todos)\\s*$/gim, '');\ncontent = content.replace(/^\\s*(Detalhes|Ver mais|Ver Mais|Enviar|Submit|Saiba mais|Saiba Mais|Learn more|Learn More)\\s*$/gim, '');\n\n// Collapse 3+ consecutive blank lines into 2\ncontent = content.replace(/\\n{3,}/g, '\\n\\n');\n\ncontent = content.trim();\n\n// Detect page language from URL\nvar isEnglishPage = /\\/en(\\/|$)/i.test(crawlData.url);\n\n// === CHUNKING ===\nconst MAX_CHUNK = 800;\nconst MIN_CHARS = 200;\nconst MIN_WORDS = 45; // Raised from 30 to filter thin/gallery chunks\nconst OVERLAP = 150;\n\nfunction splitText(text, maxLen, overlap) {\n  const paras = text.split(/\\n\\s*\\n/).filter(p => p.trim().length > 0);\n  const chunks = [];\n  let cur = '';\n  for (const p of paras) {\n    var isTable = /\\|.*---|---/.test(p) || /\\|.*---|---/.test(cur);\n    var effectiveMax = isTable ? maxLen * 1.5 : maxLen;\n    if (cur.length > 0 && (cur.length + p.length + 2) > effectiveMax) {\n      chunks.push(cur.trim());\n      var effectiveOverlap = /\\|.*---|---/.test(cur) ? Math.min(overlap, 50) : overlap;\n      cur = cur.slice(-effectiveOverlap) + '\\n\\n' + p;\n    } else {\n      cur = cur ? cur + '\\n\\n' + p : p;\n    }\n  }\n  if (cur.trim().length > 0) chunks.push(cur.trim());\n  return chunks;\n}\n\nconst headerPattern = /^#{1,4}\\s+.+$/gm;\nconst headers = [];\nlet match;\nwhile ((match = headerPattern.exec(content)) !== null) {\n  headers.push(match.index);\n}\n\nlet rawChunks = [];\nif (headers.length > 1) {\n  const preHeader = content.substring(0, headers[0]).trim();\n  if (preHeader.length >= MIN_CHARS) {\n    rawChunks.push(...(preHeader.length > MAX_CHUNK ? splitText(preHeader, MAX_CHUNK, OVERLAP) : [preHeader]));\n  }\n  for (let i = 0; i < headers.length; i++) {\n    const start = headers[i];\n    const end = i + 1 < headers.length ? headers[i + 1] : content.length;\n    const section = content.substring(start, end).trim();\n    if (section.length < MIN_CHARS) continue;\n    if (section.length > MAX_CHUNK) {\n      rawChunks.push(...splitText(section, MAX_CHUNK, OVERLAP));\n    } else {\n      rawChunks.push(section);\n    }\n  }\n} else {\n  rawChunks = splitText(content, MAX_CHUNK, OVERLAP);\n}\n\nlet chunks = rawChunks.filter(function(c) {\n  const text = c.trim();\n  const words = text.split(/\\s+/).filter(function(w) { return w.length > 0; }).length;\n  return text.length >= MIN_CHARS && words >= MIN_WORDS;\n});\n\n// === POST-CHUNK CLEANUP === [FIX 5]\n// Filter out chunks that are mostly footer/contact boilerplate on non-contact pages\nvar isContactPage = (category.primary_category === 'contact');\nif (!isContactPage) {\n  chunks = chunks.filter(function(c) {\n    var contactSignals = 0;\n    if (/Tel[.:]/i.test(c)) contactSignals++;\n    if (/Tlm[.:]/i.test(c)) contactSignals++;\n    if (/Fax[.:]/i.test(c)) contactSignals++;\n    if (/295\\s*628\\s*298/.test(c)) contactSignals++;\n    if (/915\\s*032\\s*185/.test(c)) contactSignals++;\n    if (/rede fixa nacional/i.test(c)) contactSignals++;\n    if (/rede m[o\\u00f3]vel nacional/i.test(c)) contactSignals++;\n    if (/Angra do Hero[i\\u00ed]smo/i.test(c)) contactSignals++;\n    // Skip chunks with 3+ contact/footer signals\n    if (contactSignals >= 3) return false;\n    return true;\n  });\n}\n\nif (chunks.length === 0 && content.trim().length >= MIN_CHARS) {\n  chunks.push(content.trim().substring(0, MAX_CHUNK * 2));\n}\n\nlet norm = crawlData.url.toLowerCase().replace(/^https?:\\/\\//, '').replace(/^www\\./, '').replace(/\\/+$/, '');\nlet hash = 0;\nfor (let i = 0; i < norm.length; i++) {\n  hash = ((hash << 5) - hash) + norm.charCodeAt(i);\n  hash |= 0;\n}\nconst pageId = 'page-' + Math.abs(hash).toString(36);\n\nconst pineconeHost = $('Scraper Input').first().json['Pinecone Index Host'].replace(/\\/+$/, '');\n\n// [FIX 3] Enhanced heading extraction with robust link and formatting cleanup\nfunction extractChunkHeading(chunkText) {\n  const m = chunkText.match(/^#{1,4}\\s+(.+)$/m);\n  if (!m) return '';\n  return m[1]\n    .replace(/\\[([^\\]]*)\\]\\([^)]*\\)/g, '$1')  // strip markdown links\n    .replace(/\\*\\*/g, '')                         // strip bold markers\n    .replace(/\\*([^*]+)\\*/g, '$1')                // strip italic markers\n    .trim();\n}\n\nconst chunkData = chunks.map((chunk, i) => ({\n  vector_id: pageId + '-' + i,\n  embedding_text: ('Titulo: ' + title + '\\n\\n' + chunk).substring(0, 8000),\n  metadata: {\n    url: crawlData.url,\n    title: title,\n    page_id: pageId,\n    category: category.primary_category || 'other',\n    subcategory: category.subcategory || '',\n    content_type: category.content_type || 'informational',\n    page_summary: pageSummary,\n    chunk_heading: extractChunkHeading(chunk),\n    keywords: (category.key_topics || []).join(', '),\n    chunk_index: i,\n    chunk_total: chunks.length,\n    chunk_text: chunk.substring(0, 2000),\n    word_count: chunk.split(/\\s+/).filter(w => w.length > 0).length,\n    confidence: category.confidence || 0,\n    language: isEnglishPage ? 'en' : 'pt',\n    scraped_at: new Date().toISOString()\n  }\n}));\n\nconst embedRequests = chunkData.map(c => ({\n  model: 'models/text-embedding-004',\n  content: { parts: [{ text: c.embedding_text }] }\n}));\n\nreturn {\n  json: {\n    chunks: chunkData,\n    embed_body: { requests: embedRequests },\n    page_id: pageId,\n    pinecone_host: pineconeHost\n  }\n};"
+      },
+      "id": "238314f8-52f0-4ef3-b4fc-a866dbd796ed",
+      "name": "Chunk & Prepare",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "check-chunks-condition-id",
+              "leftValue": "={{ $json.chunks.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "93631d91-cde1-4ff5-b104-f14b2118690e",
+      "name": "Check Chunks",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1328,
+        -112
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/text-embedding-004:batchEmbedContents",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.embed_body }}",
+        "options": {}
+      },
+      "id": "388f47da-d126-4860-8b45-6589e32cb00e",
+      "name": "Batch Embed",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1536,
+        -224
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KhqgAMIOVb6glj8J",
+          "name": "Header Auth account 2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const chunkData = $('Chunk & Prepare').first().json;\nconst response = $json;\n\nif (!response.embeddings || !Array.isArray(response.embeddings)) {\n  console.log('[ERROR] Embedding failed: ' + JSON.stringify(response).substring(0, 500));\n  return { json: { _skip: true, error: 'embedding_failed' } };\n}\n\nif (response.embeddings.length !== chunkData.chunks.length) {\n  console.log('[ERROR] Count mismatch: ' + response.embeddings.length + ' vs ' + chunkData.chunks.length);\n  return { json: { _skip: true, error: 'count_mismatch' } };\n}\n\nfor (var i = 0; i < response.embeddings.length; i++) {\n  if (!response.embeddings[i].values || !Array.isArray(response.embeddings[i].values)) {\n    console.log('[ERROR] Embedding ' + i + ' missing values');\n    return { json: { _skip: true, error: 'missing_values' } };\n  }\n}\n\nconsole.log('[EMBED OK] ' + response.embeddings.length + ' embeddings validated (' + response.embeddings[0].values.length + '-dim)');\nreturn { json: response };"
+      },
+      "id": "e2fdbe53-4a3a-49cc-a5f3-3e0a3235c08f",
+      "name": "Validate Embeddings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "embed-ok-condition-id",
+              "leftValue": "={{ $json._skip }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "96545c93-48e3-4cb7-96c5-2e20a7fcada2",
+      "name": "Embed OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1904,
+        -224
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const chunkData = $('Chunk & Prepare').first().json;\nconst embeddings = $json.embeddings;\n\nconst vectors = chunkData.chunks.map((chunk, i) => ({\n  id: chunk.vector_id,\n  values: embeddings[i].values,\n  metadata: chunk.metadata\n}));\n\nreturn {\n  json: {\n    vectors: vectors,\n    page_id: chunkData.page_id,\n    namespace: (function() {\n      var cat = (chunkData.chunks[0] && chunkData.chunks[0].metadata) ? chunkData.chunks[0].metadata.category : 'other';\n      var map = { products: 'products', services: 'services', policies: 'policies', about: 'about', contact: 'contact', faq: 'about', resources: 'services', other: 'about' };\n      return map[cat] || 'about';\n    })(),\n    pinecone_delete_url: chunkData.pinecone_host + '/vectors/delete',\n    pinecone_upsert_url: chunkData.pinecone_host + '/vectors/upsert'\n  }\n};"
+      },
+      "id": "2f15a90d-477a-4b32-a2bb-9fcb81b32c0b",
+      "name": "Build Vectors",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2112,
+        -304
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.pinecone_delete_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({filter: {page_id: {'$eq': $json.page_id}}, namespace: $json.namespace}) }}",
+        "options": {}
+      },
+      "id": "5d735790-46f5-4206-a114-50b521e9a496",
+      "name": "Delete Old Chunks",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2352,
+        -304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KhqgAMIOVb6glj8J",
+          "name": "Header Auth account 2"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Build Vectors').first().json.pinecone_upsert_url }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({vectors: $('Build Vectors').first().json.vectors, namespace: $('Build Vectors').first().json.namespace}) }}",
+        "options": {}
+      },
+      "id": "0895da86-578d-40ff-b19e-ccecb8964a5b",
+      "name": "Upload to Pinecone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2576,
+        -304
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KhqgAMIOVb6glj8J",
+          "name": "Header Auth account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Scraper Input": {
+      "main": [
+        [
+          {
+            "node": "Crawl Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crawl Manager": {
+      "main": [
+        [
+          {
+            "node": "Has Content?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Content?": {
+      "main": [
+        [
+          {
+            "node": "AI Categorize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Categorize",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Categorize": {
+      "main": [
+        [
+          {
+            "node": "Chunk & Prepare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chunk & Prepare": {
+      "main": [
+        [
+          {
+            "node": "Check Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Chunks": {
+      "main": [
+        [
+          {
+            "node": "Batch Embed",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crawl Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Batch Embed": {
+      "main": [
+        [
+          {
+            "node": "Validate Embeddings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Embeddings": {
+      "main": [
+        [
+          {
+            "node": "Embed OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embed OK?": {
+      "main": [
+        [
+          {
+            "node": "Build Vectors",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Crawl Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Vectors": {
+      "main": [
+        [
+          {
+            "node": "Delete Old Chunks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Delete Old Chunks": {
+      "main": [
+        [
+          {
+            "node": "Upload to Pinecone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload to Pinecone": {
+      "main": [
+        [
+          {
+            "node": "Crawl Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "0beb81f4-8d2c-4a08-be9f-25f1c58f8536",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "pNRxNwf5D3n_T9C6FB8XD",
+  "tags": []
+}

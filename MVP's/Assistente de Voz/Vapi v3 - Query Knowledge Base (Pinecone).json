@@ -1,0 +1,254 @@
+{
+  "name": "Vapi v3 - Query Knowledge Base (Pinecone)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "query-knowledge-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1b2c3d4-pc01-4000-8000-000000000001",
+      "name": "Webhook - Receive from Vapi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a1b2c3d4-pc01-4000-8000-000000000099"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  const question = (body.question || '').toString().trim();\n  const category = (body.category || 'general').toString().trim().toLowerCase();\n\n  if (!question || question.length < 3) {\n    return { _error: true, errorMessage: 'Por favor, reformule a sua pergunta com mais detalhe.', toolCallId };\n  }\n\n  // Sanitize\n  const cleanQuestion = question.replace(/<[^>]*>/g, '').substring(0, 500);\n\n  return {\n    _error: false,\n    question: cleanQuestion,\n    category: category,\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao processar a sua pergunta. Por favor, tente novamente.', toolCallId };\n}"
+      },
+      "id": "a1b2c3d4-pc02-4000-8000-000000000001",
+      "name": "Extract & Validate Query",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "a1b2c3d4-pc03-4000-8000-000000000001",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1b2c3d4-pc04-4000-8000-000000000001",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.errorMessage }] } }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-pc05-4000-8000-000000000001",
+      "name": "Respond Error to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        640,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key={{ $env.GOOGLE_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"models/gemini-embedding-001\",\n  \"content\": {\n    \"parts\": [{ \"text\": \"{{ $json.question }}\" }]\n  },\n  \"taskType\": \"RETRIEVAL_QUERY\"\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1b2c3d4-pc06-4000-8000-000000000001",
+      "name": "Generate Embedding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        640,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://{{ $env.PINECONE_HOST_DESCOMPLICADOR }}/query",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Api-Key",
+              "value": "={{ $env.PINECONE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"vector\": {{ JSON.stringify($json.embedding.values) }},\n  \"topK\": 4,\n  \"namespace\": \"default\",\n  \"includeMetadata\": true\n}",
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "id": "a1b2c3d4-pc07-4000-8000-000000000001",
+      "name": "Query Pinecone",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        848,
+        0
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 1000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const pineconeResult = $input.item.json;\nconst extractData = $('Extract & Validate Query').item.json;\nconst toolCallId = extractData.toolCallId || '';\n\ntry {\n  // Check if embedding or query failed\n  const embeddingResult = $('Generate Embedding').item.json;\n  if (embeddingResult.error || !embeddingResult.embedding) {\n    return {\n      answer: 'Nao consegui processar a sua pergunta neste momento. Posso transferir para um colega que podera ajudar.',\n      toolCallId\n    };\n  }\n\n  // Check if Pinecone query failed\n  if (pineconeResult.error || !pineconeResult.matches) {\n    return {\n      answer: 'Nao foi possivel consultar a nossa base de conhecimento neste momento. Posso transferir a sua chamada para um especialista.',\n      toolCallId\n    };\n  }\n\n  const matches = pineconeResult.matches || [];\n\n  // No results\n  if (matches.length === 0 || matches[0].score < 0.3) {\n    return {\n      answer: 'Nao tenho essa informacao confirmada neste momento. Posso transferir para um consultor que podera esclarecer melhor.',\n      toolCallId\n    };\n  }\n\n  // Get the top matches above threshold\n  const goodMatches = matches.filter(m => m.score >= 0.4);\n  const bestMatch = matches[0];\n  const bestScore = bestMatch.score;\n\n  // Extract text content from metadata\n  const getText = (m) => {\n    const meta = m.metadata || {};\n    return meta.chunk_text || meta.text || '';\n  };\n\n  let answer;\n\n  if (bestScore >= 0.7) {\n    // High confidence - use top result directly\n    answer = getText(bestMatch);\n    // If there's a second strong match on a different topic, mention it\n    if (goodMatches.length >= 2 && goodMatches[1].score >= 0.6) {\n      const secondText = getText(goodMatches[1]);\n      const secondTitle = goodMatches[1].metadata?.title || '';\n      // Only add if it's a different topic\n      if (secondTitle !== bestMatch.metadata?.title) {\n        answer += ' Alem disso, ' + secondText.substring(0, 200);\n      }\n    }\n  } else if (bestScore >= 0.5) {\n    // Medium confidence - combine top results\n    const combined = goodMatches.slice(0, 2).map(m => getText(m)).join(' ');\n    answer = combined;\n  } else {\n    // Low confidence - hedge\n    answer = 'Encontrei informacao que pode ser relevante: ' + getText(bestMatch).substring(0, 300) + ' Para confirmar, posso transferir para a nossa equipa.';\n  }\n\n  // Trim answer for voice (max ~500 chars for natural speech)\n  if (answer.length > 600) {\n    // Cut at last sentence boundary before 600 chars\n    const truncated = answer.substring(0, 600);\n    const lastPeriod = truncated.lastIndexOf('.');\n    if (lastPeriod > 300) {\n      answer = truncated.substring(0, lastPeriod + 1);\n    } else {\n      answer = truncated + '...';\n    }\n  }\n\n  return { answer, toolCallId };\n} catch (err) {\n  console.log('Format answer error:', err.message);\n  return {\n    answer: 'Ocorreu um erro ao processar a sua pergunta. Posso transferir para um especialista.',\n    toolCallId\n  };\n}"
+      },
+      "id": "a1b2c3d4-pc08-4000-8000-000000000001",
+      "name": "Format Answer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.answer }] } }}",
+        "options": {}
+      },
+      "id": "a1b2c3d4-pc09-4000-8000-000000000001",
+      "name": "Respond to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1296,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Receive from Vapi": {
+      "main": [
+        [
+          {
+            "node": "Extract & Validate Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Validate Query": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Respond Error to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Embedding",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Embedding": {
+      "main": [
+        [
+          {
+            "node": "Query Pinecone",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Pinecone": {
+      "main": [
+        [
+          {
+            "node": "Format Answer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Answer": {
+      "main": [
+        [
+          {
+            "node": "Respond to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "versionId": "2cba4178-ca53-4d3f-92a7-505026c895c4",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "X6I7qbk8EkX8y7bk",
+  "tags": []
+}

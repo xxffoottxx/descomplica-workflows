@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e:*)",
+      "WebSearch",
+      "WebFetch(domain:community.n8n.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:v02.api.js.langchain.com)",
+      "Bash(powershell:*)",
+      "Bash(del \"C:\\\\Users\\\\andre\\\\Desktop\\\\Apps\\\\descomplica-demos\\\\MVP''s\\\\Assistente de Voz\\\\update_prompt.js\")"
+    ]
+  }
+}

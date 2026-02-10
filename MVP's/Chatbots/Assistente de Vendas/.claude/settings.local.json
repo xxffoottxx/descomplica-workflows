@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout:*)",
+      "Bash(ls:*)",
+      "Bash(dir:*)",
+      "Bash(node -e:*)",
+      "Bash(node apply_fixes.js:*)",
+      "Bash(python3:*)",
+      "Bash(node populate_mock_data.js:*)",
+      "Bash(node fix_prompts.js:*)",
+      "Bash(node:*)",
+      "Bash(del \"C:\\\\Users\\\\andre\\\\Desktop\\\\Apps\\\\descomplica-demos\\\\MVP''s\\\\Chatbot\\\\Assistente de Vendas\\\\validate_v2.js\")",
+      "WebFetch(domain:docs.google.com)",
+      "WebFetch(domain:doc-04-9g-sheets.googleusercontent.com)",
+      "Bash(wc:*)"
+    ]
+  }
+}

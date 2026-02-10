@@ -1,0 +1,832 @@
+{
+  "name": "Website scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Website scraper",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Seed url",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Links must contain",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Depth",
+              "fieldType": "number",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "14791817-e7b7-4bf4-843f-3f194028889e",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        976,
+        368
+      ],
+      "webhookId": "ee7b6522-5b7d-4107-b9aa-259038f4d819",
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5970bab1-0bfb-4212-a8f2-df6b2e003800",
+              "name": "URL",
+              "type": "string",
+              "value": "={{ $('Unify params').item.json[\"Seed url\"] }}"
+            },
+            {
+              "id": "5c941ad3-70bf-4fba-8cf3-1f79c1b20d3a",
+              "name": "Scraped",
+              "type": "string",
+              "value": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e2c63884-b523-4b20-87fb-5352686db0db",
+      "name": "Info to upload into spreadsheet",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1632,
+        464
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create Spreadsheet').item.json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Create Spreadsheet').item.json.sheets[0].properties.title }}"
+        },
+        "columns": {
+          "value": {},
+          "schema": [
+            {
+              "id": "URL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "URL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "URL"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2b052b6e-4835-48b0-9103-b52f72f7f4b0",
+      "name": "Load info to spreadsheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1856,
+        464
+      ],
+      "typeVersion": 4.5
+    },
+    {
+      "parameters": {
+        "resource": "extraction",
+        "operation": "scrape",
+        "sessionMode": "new",
+        "url": "={{ $json.URL }}",
+        "profileName": "="
+      },
+      "id": "5d4afc8f-ae1e-459e-99d9-994e266db688",
+      "name": "Scrape webpage",
+      "type": "n8n-nodes-base.airtop",
+      "position": [
+        2080,
+        464
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "folderId": "default",
+        "title": "=Site to File - {{ $('Unify params').item.json[\"Seed url\"] }}"
+      },
+      "id": "291f303f-fade-45dc-b11d-101dd8339114",
+      "name": "Create Google Docs",
+      "type": "n8n-nodes-base.googleDocs",
+      "position": [
+        2288,
+        464
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=The entire content from {{ $('Info to upload into spreadsheet').item.json.URL }} up to {{ $('Unify params').item.json.Depth }} levels deep.\n---------------------------------------------  \n{{ $('Scrape webpage').item.json.data.modelResponse.scrapedContent.text }}\n---------------------------------------------"
+            }
+          ]
+        }
+      },
+      "id": "56567845-4ac1-4845-9265-99da9c1110e8",
+      "name": "Write scraped content",
+      "type": "n8n-nodes-base.googleDocs",
+      "position": [
+        2512,
+        464
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "leftValue": "",
+            "caseSensitive": true,
+            "typeValidation": "strict"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "707d2bae-e834-478b-a4f6-9e6bbfa47530",
+              "operator": {
+                "type": "number",
+                "operation": "lt"
+              },
+              "leftValue": "={{ $runIndex }}",
+              "rightValue": "={{ $('Unify params').first().json.Depth - 1 }}"
+            },
+            {
+              "id": "cc763610-f775-4dcb-ae29-a3235b011b75",
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              },
+              "leftValue": "={{ Number($('Unify params').first().json.Depth) }}",
+              "rightValue": 1
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f85e4cc8-862c-4ae6-8d9a-c15bbc750f1b",
+      "name": "Should scrape more?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2752,
+        464
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create Spreadsheet').first().json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Create Spreadsheet').first().json.sheets[0].properties.title }}"
+        },
+        "options": {}
+      },
+      "id": "77b88581-a199-49a7-b4ff-d3e932ceb720",
+      "name": "Read scraped webpages",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        2960,
+        384
+      ],
+      "typeVersion": 4.5
+    },
+    {
+      "parameters": {
+        "resource": "extraction",
+        "operation": "query",
+        "sessionMode": "new",
+        "url": "={{ $json.URL }}",
+        "prompt": "Extract the list of links that lead to other pages in the same domain",
+        "additionalFields": {
+          "outputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"internal_links\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\",\n        \"description\": \"A URL that leads to another page within the airtop.ai domain\"\n      },\n      \"description\": \"A list of URLs that lead to other pages within the airtop.ai domain\"\n    }\n  },\n  \"required\": [\n    \"internal_links\"\n  ],\n  \"additionalProperties\": false,\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\"\n}"
+        }
+      },
+      "id": "dfc6e855-9fc6-425c-b32a-744db6ea07fc",
+      "name": "Retrieve links to scrape",
+      "type": "n8n-nodes-base.airtop",
+      "position": [
+        3168,
+        384
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsCode": "const modelResponse = $('Retrieve links to scrape').first().json.data.modelResponse;\nconst containsString = $('Unify params').first().json[\"Links must contain\"];\nconst parsed = JSON.parse(modelResponse);\nconst links = [...new Set(parsed.internal_links)]; \nconst sheetsLinks = $input.all().map(item => item.json.URL)\nlet response; \n\nif(containsString === \"\"){\n  response = links\n    .map(item =>(\n        { json: { link: item.split('?')[0] } }\n    ))\n} else {\n  response = links\n    .map(item =>\n      item.includes(containsString)\n        ? { json: { link: item.split('?')[0] } }\n        : null\n    )\n    .filter(item => item !== null);\n}\nconst dedupeBetweenSheetsAndModel = response.filter(item => !sheetsLinks.includes(item.json.link));\nconst deduped = [...new Map(dedupeBetweenSheetsAndModel.map(item => [item.json.link, item])).values()]\nreturn deduped\n"
+      },
+      "id": "af29bb93-6826-4db0-b765-eaa67dfff74b",
+      "name": "Filter links to insert to Sheets",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3392,
+        384
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create Spreadsheet').first().json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Create Spreadsheet').first().json.sheets[0].properties.title }}"
+        },
+        "columns": {
+          "value": {
+            "URL": "={{ $json.link }}"
+          },
+          "schema": [
+            {
+              "id": "URL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "URL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Scraped",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Scraped",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "9d25cbe2-8904-40cf-a92d-44e482854f87",
+      "name": "Insert new links",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        3616,
+        384
+      ],
+      "typeVersion": 4.5
+    },
+    {
+      "parameters": {
+        "resource": "extraction",
+        "operation": "scrape",
+        "sessionMode": "new",
+        "url": "={{ $json.URL }}"
+      },
+      "id": "4e4de696-a35c-4ee0-962e-00596f32347e",
+      "name": "Scrape webpage1",
+      "type": "n8n-nodes-base.airtop",
+      "position": [
+        3840,
+        384
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentURL": "={{ $('Create Google Docs').first().json.id }}",
+        "actionsUi": {
+          "actionFields": [
+            {
+              "action": "insert",
+              "text": "=-------------------------  \n{{ $json.data.modelResponse.scrapedContent.text }}\n-------------------------"
+            }
+          ]
+        }
+      },
+      "id": "52e3eff9-22a9-41e3-8e28-118ffef6da26",
+      "name": "Update with new scraped content",
+      "type": "n8n-nodes-base.googleDocs",
+      "position": [
+        4048,
+        384
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "72c9cd92-fd01-4339-b9fe-52477b691df3",
+              "name": "URL",
+              "type": "string",
+              "value": "={{ $('Insert new links').item.json.URL }}"
+            },
+            {
+              "id": "a817116e-6ae5-4e0a-b210-4fd27f5a455a",
+              "name": "Scraped",
+              "type": "string",
+              "value": "={{ $runIndex }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3225c95d-67fd-45f5-96d6-7f7ffb82cbb8",
+      "name": "Flag scraped link",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        4272,
+        384
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Create Spreadsheet').first().json.spreadsheetId }}"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "={{ $('Create Spreadsheet').first().json.sheets[0].properties.title }}"
+        },
+        "columns": {
+          "value": {
+            "URL": "={{ $('Insert new links').item.json.URL }}"
+          },
+          "schema": [
+            {
+              "id": "URL",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "URL",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Scraped",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "required": false,
+              "displayName": "Scraped",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "type": "string",
+              "display": true,
+              "removed": false,
+              "readOnly": true,
+              "required": false,
+              "displayName": "row_number",
+              "defaultMatch": false,
+              "canBeUsedToMatch": true
+            }
+          ],
+          "mappingMode": "autoMapInputData",
+          "matchingColumns": [
+            "URL"
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "1e628125-50a9-449d-8061-e0b324aba87c",
+      "name": "Insert flag",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        4496,
+        464
+      ],
+      "typeVersion": 4.5
+    },
+    {
+      "parameters": {
+        "content": "## Create Spreadsheet\nCreate a spreadsheet to track all the links found on the webpage.",
+        "height": 280,
+        "width": 660
+      },
+      "id": "a4223ed0-dfd4-488a-951b-bfea14b5284f",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1360,
+        336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "title": "=Site map -  {{ $json[\"Seed url\"] }} (Depth - {{ $json.Depth }})",
+        "options": {}
+      },
+      "id": "538bc239-d041-4d54-b060-01183c38c1ac",
+      "name": "Create Spreadsheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        1408,
+        464
+      ],
+      "typeVersion": 4.5
+    },
+    {
+      "parameters": {
+        "content": "## Scrape webpage",
+        "height": 280,
+        "width": 180,
+        "color": 4
+      },
+      "id": "61b7843a-0915-4894-9cfd-e9eab932e936",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2032,
+        336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Create Doc\nCreate a document to store all the information scraped from the webpage.",
+        "height": 280,
+        "width": 440
+      },
+      "id": "3ab5c25e-b584-4e2f-a5ca-27a823a8b39b",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2240,
+        336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Recursive Scraping Process\nReads a list of URLs from a Google Sheet, scrapes each page, saves the content to a doc, and adds new links back to the sheet. Repeats the process for each depth level, up to the defined scraping depth minus one.",
+        "height": 380,
+        "width": 1980
+      },
+      "id": "fcfd1013-2098-4d30-96d4-ac56946a2f1b",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2688,
+        288
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "README\n# Recursive Web Scraping \n\n## Use Case  \nAutomating web scraping with recursive depth is ideal for collecting content across multiple linked pages—perfect for content aggregation, lead generation, or research projects.\n\n## What This Automation Does  \nThis automation reads a list of URLs from a Google Sheet, scrapes each page, stores the content in a document, and adds newly discovered links back to the sheet. It continues this process for a specified number of iterations based on the defined scraping depth.\n\n### Input Parameters:\n- `Seed URL`: The starting URL to begin the scraping process.  \n  Example: `https://example.com/`\n- `Links must contain`: Restricts the links to those that contain this specified string.  \n  Example: `https://example.com/`\n- `Depth`: The number of iterations (layers of links) to scrape beyond the initial set.  \n  Example: `3`\n\n## How It Works  \n1. Starts by reading the `Seed URL` from the Google Sheet.\n2. Scrapes each page and saves its content to the specified document.\n3. Extracts new links from each page that match the `Links must contain` string, appends them to the Google Sheet.\n4. Repeats steps 2–3 for the number of times specified by `Depth - 1`.\n\n## Setup Requirements  \n1. [Airtop API Key](https://portal.airtop.ai/api-keys) — free to generate.  \n2. Credentials set up for Google Docs (requires creating a project on Google Console). Read [how to](https://docs.n8n.io/integrations/builtin/credentials/google/).  \n3. Credentials set up for Google Spreadsheet.\n\n## Next Steps  \n- **Add Filtering Rules**: Filter which links to follow based on domain, path, or content type.  \n- **Combine with Scheduler**: Run this automation on a schedule to continuously explore newly discovered pages.  \n- **Export Structured Data**: Extend the process to store extracted data in a CSV or database for analysis.\n",
+        "height": 940,
+        "width": 660,
+        "color": 7
+      },
+      "id": "85455050-2743-4052-936b-ab635c811da4",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        208,
+        16
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Seed url"
+            },
+            {
+              "name": "Links must contain"
+            },
+            {
+              "name": "Depth",
+              "type": "number"
+            }
+          ]
+        }
+      },
+      "id": "522daa2b-196e-4a69-b413-28c8ae4872a0",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "position": [
+        976,
+        560
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "content": "## Input Parameters\nRun this workflow using a form or from another workflow",
+        "height": 460,
+        "width": 400
+      },
+      "id": "5ba73ff3-4ebb-4693-95e2-d287f0b43bb9",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        928,
+        256
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "18e3200c-ab2a-44da-b401-eace47a3ccc0",
+              "name": "Seed url",
+              "type": "string",
+              "value": "={{ $json[\"Seed url\"] }}"
+            },
+            {
+              "id": "cb21aa86-bf75-427f-bf07-70d4f2d83894",
+              "name": "Links must contain",
+              "type": "string",
+              "value": "={{ $json[\"Links must contain\"] }}"
+            },
+            {
+              "id": "80bb934f-816d-43f0-9432-170047fa02a3",
+              "name": "Depth",
+              "type": "number",
+              "value": "={{ $json.Depth }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e5ffc9ec-c523-4d60-b398-e823f996c26c",
+      "name": "Unify params",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        1200,
+        464
+      ],
+      "typeVersion": 3.4
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Insert flag": {
+      "main": [
+        [
+          {
+            "node": "Should scrape more?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unify params": {
+      "main": [
+        [
+          {
+            "node": "Create Spreadsheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape webpage": {
+      "main": [
+        [
+          {
+            "node": "Create Google Docs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrape webpage1": {
+      "main": [
+        [
+          {
+            "node": "Update with new scraped content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert new links": {
+      "main": [
+        [
+          {
+            "node": "Scrape webpage1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flag scraped link": {
+      "main": [
+        [
+          {
+            "node": "Insert flag",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Docs": {
+      "main": [
+        [
+          {
+            "node": "Write scraped content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Spreadsheet": {
+      "main": [
+        [
+          {
+            "node": "Info to upload into spreadsheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Unify params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Should scrape more?": {
+      "main": [
+        [
+          {
+            "node": "Read scraped webpages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read scraped webpages": {
+      "main": [
+        [
+          {
+            "node": "Retrieve links to scrape",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write scraped content": {
+      "main": [
+        [
+          {
+            "node": "Should scrape more?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load info to spreadsheet": {
+      "main": [
+        [
+          {
+            "node": "Scrape webpage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retrieve links to scrape": {
+      "main": [
+        [
+          {
+            "node": "Filter links to insert to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Info to upload into spreadsheet": {
+      "main": [
+        [
+          {
+            "node": "Load info to spreadsheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update with new scraped content": {
+      "main": [
+        [
+          {
+            "node": "Flag scraped link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter links to insert to Sheets": {
+      "main": [
+        [
+          {
+            "node": "Insert new links",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Unify params",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "de458900-a240-4518-90a1-9970e61b0faa",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "XzPoinw4A-V3w5_4ZkD0F",
+  "tags": []
+}

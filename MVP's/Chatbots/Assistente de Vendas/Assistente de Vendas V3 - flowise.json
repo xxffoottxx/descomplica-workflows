@@ -1,0 +1,434 @@
+{
+  "name": "Assistente de Vendas V3 - flowise",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sales-assistant-v3-flowise",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://descomplicador.pt",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://descomplicador.pt"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "6311ca71-7072-434e-b40e-c04a33550004",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -992,
+        96
+      ],
+      "webhookId": "b2c3d4e5-2222-4bbb-c222-222222222222",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const month = now.getUTCMonth();\n  const isDST = month >= 2 && month <= 9;\n  const offset = isDST ? 0 : -1;\n  const local = new Date(now.getTime() + offset * 3600000);\n  const days = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\n  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\n  return days[local.getUTCDay()] + ', ' + local.getUTCDate() + ' de ' + months[local.getUTCMonth()] + ' de ' + local.getUTCFullYear() + ', ' + String(local.getUTCHours()).padStart(2,'0') + ':' + String(local.getUTCMinutes()).padStart(2,'0');\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
+      },
+      "id": "53d3eb4d-3603-41d6-b399-8be4cc2a6859",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -800,
+        96
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_SALES }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.FLOWISE_API_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ question: $json.message, overrideConfig: { sessionId: $json.session_id } }) }}",
+        "options": {
+          "timeout": 15000
+        }
+      },
+      "id": "2f966728-7293-4d3b-b1f3-c984433d9bc1",
+      "name": "Flowise API",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -624,
+        96
+      ],
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "waitBetweenTries": 2000,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\nconst flowiseResponse = inputData.text || inputData.output || '';\nconst isFallback = !flowiseResponse || flowiseResponse.trim() === '';\n\nlet sessionId = 'unknown';\nlet customerMessage = '';\ntry {\n  const validateData = $('Validate Input').first().json;\n  sessionId = validateData.session_id || 'unknown';\n  customerMessage = validateData.message || '';\n} catch (e) {}\n\nlet output = flowiseResponse;\nif (isFallback) {\n  output = '[INTENT:error] Peço desculpa, mas não consegui processar o seu pedido neste momento. Por favor, tente novamente ou entre em contacto connosco através de geral@estragaferro.com ou +351 295 628 298 / +351 915 032 185.';\n}\n\n// Extract [INTENT:xxx] tag\nlet llmIntent = null;\nconst intentMatch = output.match(/^\\s*\\[INTENT:(\\w+)\\]/);\nif (intentMatch) {\n  llmIntent = intentMatch[1].toLowerCase();\n  output = output.replace(/^\\s*\\[INTENT:\\w+\\]\\s*/, '');\n}\n\n// Check for QUOTE_DATA\nlet quoteData = null;\nlet hasQuote = false;\nconst quoteMatch = output.match(/\\[QUOTE_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/QUOTE_DATA\\]/);\nif (quoteMatch) {\n  try {\n    quoteData = JSON.parse(quoteMatch[1].trim());\n    if (!quoteData.customer_name || !quoteData.customer_email || !quoteData.products_description) {\n      quoteData = null;\n    } else {\n      // Validate email\n      if (quoteData.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(quoteData.customer_email)) {\n        quoteData = null;\n      } else {\n        quoteData.reference_id = 'QUOTE-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n        quoteData.session_id = sessionId;\n        quoteData.created_at = new Date().toISOString();\n        for (const key of Object.keys(quoteData)) {\n          if (typeof quoteData[key] === 'string') {\n            quoteData[key] = quoteData[key].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n          }\n        }\n        hasQuote = true;\n      }\n    }\n  } catch (e) { quoteData = null; }\n}\n\n// Check for ORDER_DATA\nlet orderData = null;\nlet hasOrder = false;\nconst orderMatch = output.match(/\\[ORDER_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/ORDER_DATA\\]/);\nif (orderMatch) {\n  try {\n    orderData = JSON.parse(orderMatch[1].trim());\n    if (!orderData.customer_name || !orderData.customer_email || !orderData.issue_description) {\n      orderData = null;\n    } else {\n      // Validate email\n      if (orderData.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(orderData.customer_email)) {\n        orderData = null;\n      } else {\n        orderData.reference_id = 'SUPPORT-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n        orderData.session_id = sessionId;\n        orderData.created_at = new Date().toISOString();\n        for (const key of Object.keys(orderData)) {\n          if (typeof orderData[key] === 'string') {\n            orderData[key] = orderData[key].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n          }\n        }\n        hasOrder = true;\n      }\n    }\n  } catch (e) { orderData = null; }\n}\n\n// Clean response\nlet cleanResponse = output\n  .replace(/\\[QUOTE_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/QUOTE_DATA\\]/, '')\n  .replace(/\\[ORDER_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/ORDER_DATA\\]/, '')\n  .trim();\n\nif (hasQuote && quoteData) {\n  cleanResponse = cleanResponse.replace(/QUOTE-X+/g, quoteData.reference_id);\n}\nif (hasOrder && orderData) {\n  cleanResponse = cleanResponse.replace(/ORDER-X+/g, orderData.reference_id);\n  cleanResponse = cleanResponse.replace(/SUPPORT-X+/g, orderData.reference_id);\n}\n\nlet classifiedIntent = 'general';\nif (hasQuote) classifiedIntent = 'quote_request';\nelse if (hasOrder) classifiedIntent = 'support_request';\nelse if (llmIntent) classifiedIntent = llmIntent;\n\nreturn [{\n  json: {\n    output: cleanResponse,\n    hasQuote,\n    hasOrder,\n    quoteData,\n    orderData,\n    referenceId: hasQuote ? quoteData?.reference_id : (hasOrder ? orderData?.reference_id : null),\n    sessionId,\n    originalMessage: customerMessage,\n    classifiedIntent,\n    isFallback\n  }\n}];"
+      },
+      "id": "9de68130-2d88-4766-8fc8-8af00acccd35",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -448,
+        96
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasQuote }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "hasQuote"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasOrder }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "hasOrder"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "id": "22d2bed5-99d6-4a72-85e2-1f9c83918548",
+      "name": "Route Response",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -272,
+        80
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
+        "subject": "=Novo Pedido de Orçamento - {{ $json.quoteData.reference_id }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.products{background-color:#f9fafb;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Orçamento</h1><div class=\"reference-badge\">{{ $json.quoteData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informações do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.quoteData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.quoteData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Telefone:</span> <span class=\"value\">{{ $json.quoteData.customer_phone || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"products\"><div class=\"info-row\"><span class=\"label\">Produtos:</span> <span class=\"value\">{{ $json.quoteData.products_description }}</span></div><div class=\"info-row\"><span class=\"label\">Quantidades:</span> <span class=\"value\">{{ $json.quoteData.quantities || 'Não especificado' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Informações do Projeto</div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.quoteData.project_description || 'Não fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo:</span> <span class=\"value\">{{ $json.quoteData.timeline || 'Não especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Requisitos Especiais:</span> <span class=\"value\">{{ $json.quoteData.special_requirements || 'Nenhum' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.quoteData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Estraga Ferro</strong> - Metalomecânica e Serviços Industriais</p><p>Este email foi gerado automaticamente pelo assistente de vendas (Flowise).</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "d64fb022-6eaf-48cf-b1ad-a62615e12e56",
+      "name": "Email Quote",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        -32,
+        -48
+      ],
+      "webhookId": "fa4875b5-446a-48f8-acb6-dd4d6a3daa1a",
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
+        "subject": "=Novo Pedido de Suporte - {{ $json.orderData.reference_id }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.issue-box{background-color:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #dc2626}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Suporte</h1><div class=\"reference-badge\">{{ $json.orderData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informações do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.orderData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.orderData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Referência:</span> <span class=\"value\">{{ $json.orderData.order_id || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Problema</div><div class=\"issue-box\"><div class=\"info-row\"><span class=\"label\">Tipo de Problema:</span> <span class=\"value\">{{ $json.orderData.issue_type || 'Não especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.orderData.issue_description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.orderData.created_at }}</span></div><div class=\"info-row\"><span class=\"label\">Estado:</span> <span class=\"value\">{{ $json.orderData.status }}</span></div></div></div><div class=\"footer\"><p><strong>Estraga Ferro</strong> - Metalomecânica e Serviços Industriais</p><p>Este email foi gerado automaticamente pelo assistente de vendas (Flowise).</p></div></div></body></html>",
+        "options": {}
+      },
+      "id": "a3ed47b2-6764-4687-8d9a-642cc819a2e8",
+      "name": "Email Order",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        -32,
+        96
+      ],
+      "webhookId": "1f391aff-ac2a-4cd1-80c0-cd941a24b2d7",
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "let processData;\ntry {\n  processData = $('Process Response').first().json;\n} catch (e) {\n  processData = { output: 'Request processed. Please contact geral@estragaferro.com for confirmation.', sessionId: 'unknown', referenceId: null, classifiedIntent: 'quote_request' };\n}\nconst emailInput = $input.first().json;\nconst emailSuccess = emailInput && !emailInput.error;\nreturn [{\n  json: {\n    response: processData.output,\n    intent: 'quote_request',\n    session_id: processData.sessionId,\n    reference_id: processData.referenceId,\n    quote_submitted: emailSuccess,\n    email_error: emailSuccess ? undefined : (emailInput?.error?.message || 'Email delivery failed'),\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "25e9395e-dab8-4244-9aa8-1429f37a40da",
+      "name": "Format Quote Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        144,
+        -48
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "let processData;\ntry {\n  processData = $('Process Response').first().json;\n} catch (e) {\n  processData = { output: 'Request processed. Please contact geral@estragaferro.com for confirmation.', sessionId: 'unknown', referenceId: null, classifiedIntent: 'support_request' };\n}\nconst emailInput = $input.first().json;\nconst emailSuccess = emailInput && !emailInput.error;\nreturn [{\n  json: {\n    response: processData.output,\n    intent: 'support_request',\n    session_id: processData.sessionId,\n    reference_id: processData.referenceId,\n    support_submitted: emailSuccess,\n    email_error: emailSuccess ? undefined : (emailInput?.error?.message || 'Email delivery failed'),\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "c27d5535-69d1-425b-9034-21991470759e",
+      "name": "Format Order Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        144,
+        96
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "let processData;\ntry {\n  processData = $('Process Response').first().json;\n} catch (e) {\n  processData = { output: 'Em que posso ajudar?', sessionId: 'unknown', classifiedIntent: 'general' };\n}\nreturn [{\n  json: {\n    response: processData.output,\n    intent: processData.classifiedIntent || 'general',\n    session_id: processData.sessionId,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "ed4cc2e9-d41d-4c83-be12-42bc8d4e55db",
+      "name": "Format Normal Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -32,
+        240
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "504092d7-4df1-4719-8cf7-b4a052e4ac7a",
+      "name": "Respond Quote",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        320,
+        -48
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "7a4295b5-7a08-4363-ab29-ca51111bad57",
+      "name": "Respond Order",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        320,
+        96
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "58724d2a-1bff-498f-8c49-67b9e0edbf7f",
+      "name": "Respond Normal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        144,
+        240
+      ],
+      "typeVersion": 1.1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Flowise API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Flowise API": {
+      "main": [
+        [
+          {
+            "node": "Process Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          {
+            "node": "Route Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Response": {
+      "main": [
+        [
+          {
+            "node": "Email Quote",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email Order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Normal Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Quote": {
+      "main": [
+        [
+          {
+            "node": "Format Quote Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Order": {
+      "main": [
+        [
+          {
+            "node": "Format Order Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Quote Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Quote",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Order Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Order",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Normal Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Normal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "versionId": "df9b93dc-aba7-48a6-bb1b-633b75e61ee2",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "RNHIg_0S6WsaUevKh3Ej1",
+  "tags": []
+}

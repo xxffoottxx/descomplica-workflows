@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(dir:*)",
+      "WebSearch",
+      "WebFetch(domain:docs.n8n.io)",
+      "WebFetch(domain:estragaferro.com)",
+      "WebFetch(domain:www.airtop.ai)",
+      "WebFetch(domain:docs.airtop.ai)",
+      "WebFetch(domain:www.pinecone.io)",
+      "Bash(cat:*)"
+    ]
+  }
+}

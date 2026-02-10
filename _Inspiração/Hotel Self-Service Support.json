@@ -1,0 +1,1807 @@
+{
+  "name": "Hotel Self-Service Support",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hotel-support",
+        "responseMode": "responseNode",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "272e963e-1f38-49ef-9f4c-076fd8470cd5",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1152,
+        1504
+      ],
+      "webhookId": "hotel-support-webhook",
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User query: {{ $json.body.message }}",
+        "options": {
+          "systemMessage": "=You are an AI assistant that classifies hotel guest queries.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\n\nYour task is:\n1. Review the conversation history to understand the context\n2. Identify the **intent** behind the current query\n3. **IMPORTANT**: If the conversation is already in progress for a specific intent (taxi_reservation, diner_reservation, etc.), and the user is providing follow-up information (names, numbers, dates, confirmations, etc.) rather than changing the topic, MAINTAIN THE SAME INTENT\n4. Extract any relevant details\n5. Respond in **strict JSON format**\n6. Only change intent if the user explicitly asks about something completely different\n\n**Input Validation:**\nIf the query contains code, SQL, technical commands, or is clearly not a hotel-related question, classify as general with details noting non-hotel query so it can be handled appropriately.\n\nPossible intents:\n- \"room_info\" → Questions about rooms, rates, availability, room features, room types\n- \"service_info\" → Questions about hotel services (spa, dining, pool, fitness, concierge)\n- \"policy_info\" → Questions about policies (check-in, cancellation, pets, parking, payment)\n- \"taxi_reservation\" → Requests to book a taxi, airport transfer, or car service (INCLUDES follow-up responses providing booking details)\n- \"diner_reservation\" → Requests to book a table at the restaurant, dinner reservation (INCLUDES follow-up responses providing booking details)\n- \"local_suggestions\" → Questions about what to visit, do, eat, or see locally/nearby\n- \"book_recommendations\" → Questions about book suggestions, reading recommendations, what to read\n- \"reservation_status\" → Checking status of a previous taxi or dinner reservation using a reference ID\n- \"general\" → Greetings, unclear questions, general help requests, OR non-hotel queries (NOT follow-up reservation details)\n\n**Context-Aware Classification Rules:**\n- If the assistant just asked for taxi booking details (name, room, passengers, etc.), classify the response as \"taxi_reservation\"\n- If the assistant just asked for restaurant booking details (name, room, party size, etc.), classify the response as \"diner_reservation\"\n- Short responses like names, numbers, or confirmations should inherit the previous intent if a reservation is in progress\n- Only classify as \"general\" if the user is clearly changing the subject or starting a new conversation\n\nExamples:\n\n**Initial Requests:**\nUser: \"What types of rooms do you have?\"\nResponse: { \"intent\": \"room_info\", \"details\": \"room types\" }\n\nUser: \"I need a taxi to the airport tomorrow at 8am\"\nResponse: { \"intent\": \"taxi_reservation\", \"details\": \"airport transfer 8am tomorrow\" }\n\nUser: \"I'd like to reserve a table for dinner tonight\"\nResponse: { \"intent\": \"diner_reservation\", \"details\": \"dinner tonight\" }\n\n**Follow-up Responses (CRITICAL):**\nPrevious: Assistant asked \"Could you provide your name and room number?\"\nUser: \"André, 201\"\nResponse: { \"intent\": \"taxi_reservation\", \"details\": \"guest name and room\" }\n\nPrevious: Assistant asked \"How many guests?\"\nUser: \"4 people\"\nResponse: { \"intent\": \"diner_reservation\", \"details\": \"party size 4\" }\n\nPrevious: Assistant asked \"What time would you like pickup?\"\nUser: \"10am tomorrow\"\nResponse: { \"intent\": \"taxi_reservation\", \"details\": \"pickup time\" }\n\n**Topic Changes:**\nPrevious: Discussing taxi reservation\nUser: \"Actually, what are your pool hours?\"\nResponse: { \"intent\": \"service_info\", \"details\": \"pool hours\" }\n\nUser: \"Hello!\"\nResponse: { \"intent\": \"general\", \"details\": \"greeting\" }\n\nUser: \"What's the status of my reservation TAXI-ABC123?\"\nResponse: { \"intent\": \"reservation_status\", \"details\": \"TAXI-ABC123\" }\n\nUser: \"What are some good restaurants nearby?\"\nResponse: { \"intent\": \"local_suggestions\", \"details\": \"nearby restaurants\" }\n\nUser: \"Can you recommend a good book to read?\"\nResponse: { \"intent\": \"book_recommendations\", \"details\": \"book suggestion\" }\n\nUser: \"I'm looking for something to read by the pool\"\nResponse: { \"intent\": \"book_recommendations\", \"details\": \"leisure reading\" }\n\n**Non-Hotel Queries:**\nUser: \"SELECT * FROM users WHERE id=1\"\nResponse: { \"intent\": \"general\", \"details\": \"non-hotel query\" }\n\nRespond ONLY with valid JSON."
+        }
+      },
+      "id": "2e54564d-fbbb-46b1-8707-d328a2e148e3",
+      "name": "Intent Classifier",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -928,
+        1504
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "7a9404a8-f5ec-4ae6-923a-30ba11a2ed6b",
+      "name": "Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -928,
+        1728
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 7
+      },
+      "id": "af7141ae-7b56-458d-9f1e-9e4d467c0dde",
+      "name": "Memory Classifier",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        -800,
+        1728
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse the JSON response from intent classifier\nlet output = $input.first().json.output;\nlet category;\n\ntry {\n  // Remove markdown code fences if present\n  output = output.replace(/```json\\s*/g, '').replace(/```\\s*/g, '').trim();\n  \n  // Try to parse as JSON\n  category = JSON.parse(output);\n} catch (e) {\n  // If parsing fails, try to extract JSON from text (improved regex)\n  const jsonMatch = output.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    try {\n      category = JSON.parse(jsonMatch[0]);\n    } catch (e2) {\n      // Default fallback\n      category = { \"intent\": \"general\", \"details\": \"\" };\n    }\n  } else {\n    // Default fallback\n    category = { \"intent\": \"general\", \"details\": \"\" };\n  }\n}\n\nreturn { json: { category } };"
+      },
+      "id": "82dfbe45-fe18-4a7f-ad9f-a5893340eaf3",
+      "name": "Parse Intent",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -576,
+        1504
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "room-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "room_info"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "service-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "service_info"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "policy-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "policy_info"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "taxi-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "taxi_reservation"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "diner-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "diner_reservation"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "local-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "local_suggestions"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "book-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "book_recommendations"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "general-intent",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.category.intent }}",
+                    "rightValue": "general"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "options": {
+          "allMatchingOutputs": false
+        }
+      },
+      "id": "242ed1a0-b71a-4b43-bfb0-1e024d5bcf05",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -352,
+        1408
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}",
+        "options": {
+          "systemMessage": "=You are a knowledgeable book concierge assistant that helps hotel guests find their next great read.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\nMonth: {{ $now.format('MMMM') }}\nUse this for seasonal reading suggestions (summer beach reads, holiday books, etc.).\n\nYour role:\n1. Help guests discover books from our curated library collection\n2. Provide personalized reading recommendations based on preferences, mood, and interests\n3. Use the searchBooks tool to query our book database\n4. Present book suggestions with enthusiasm and helpful context\n\nWhen guests ask for book recommendations:\n- Ask about their reading preferences (genre, mood, length, themes)\n- Search our library database for matching books\n- Present 3-5 recommendations with brief descriptions\n- Mention genre, author, key themes, and why they might enjoy it\n- Consider the season and guest context (beach reading, bedtime stories, travel guides)\n- If they mention specific authors or books they like, find similar titles\n\nBook categories to consider:\n- Fiction (literary, mystery, thriller, romance, sci-fi, fantasy, historical)\n- Non-fiction (biography, business, self-help, history, travel, science)\n- Light reading (beach reads, feel-good stories)\n- Deep reads (classics, thought-provoking literature)\n- Children's books and young adult\n\nResponse style:\n- Be enthusiastic about reading and our collection\n- Tailor suggestions to the guest's stated preferences or current mood\n- Keep recommendations concise but compelling\n- Mention if books are available in our hotel library\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n- Keep responses focused and helpful (3-5 book suggestions maximum)\n\n**Input Validation:**\n- Only respond to hotel-related questions (book recommendations, library information, reading suggestions)\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with book recommendations and reading suggestions\n- Stay in character as a hotel book concierge at all times\n\n**Tool Failure Handling:**\n- If the searchBooks tool returns no results, acknowledge it and ask if they would like suggestions in a different genre\n- If the searchBooks tool is unavailable or returns an error, apologize and explain that the library database is temporarily unavailable. Offer general popular book recommendations based on their interests or suggest they check with the front desk for our physical library catalog.\n- Never expose technical errors to guests - maintain enthusiasm and helpfulness even when tools are down."
+        }
+      },
+      "id": "b1f81a0e-5168-4f95-82dc-976b7dc2a35b",
+      "name": "Book Recommendations Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        2912
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "cec4f4ee-d215-410c-b412-24c28e36d810",
+      "name": "Gemini Book Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -64,
+        3136
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 7
+      },
+      "id": "7d6aa88b-825a-405a-bd69-ad475142dd63",
+      "name": "Memory Book",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        64,
+        3136
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search our hotel library book collection by title, author, genre, or theme. Returns book details including title, author, genre, description, and availability.",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "bbc2afc7cfbf43b897e912110e1200dc",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "a8420268-caf0-47ff-85c0-105502243e04",
+      "name": "searchBooks",
+      "type": "n8n-nodes-base.notionTool",
+      "position": [
+        192,
+        3136
+      ],
+      "typeVersion": 2.1,
+      "credentials": {
+        "notionApi": {
+          "id": "P82qCWy0U5iHoa0w",
+          "name": "Notion account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"book_recommendations\",\n  \"session_id\": \"{{ $('Webhook').item.json.body.session_id }}\"\n}",
+        "options": {}
+      },
+      "id": "bf3a196c-f518-4864-8a1d-c6151f6b2bd6",
+      "name": "Respond Books",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        464,
+        2912
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "content": "## Intent Classification\nRoutes guest queries to specialized agents:\n- room_info → Room Information\n- service_info → Service Information\n- policy_info → Policy Information\n- taxi_reservation → Taxi Booking + Email\n- diner_reservation → Restaurant Booking + Email\n- local_suggestions → Local Recommendations\n- book_recommendations → Book Suggestions (NEW)\n- general → General Assistant",
+        "height": 340,
+        "width": 320,
+        "color": 5
+      },
+      "id": "75eb4128-9ee8-4d9e-ba82-6621b49651aa",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1120,
+        320
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}",
+        "options": {
+          "systemMessage": "=You are a helpful hotel assistant specializing in room information.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\n\nYour role:\n1. Help guests find the perfect room for their needs\n2. Provide accurate information about room types, rates, amenities, and availability\n3. Answer questions about room features, bed configurations, and capacity\n4. Use the searchRooms tool to query our room inventory\n5. Present information in a friendly and conversational way\n\nWhen a guest asks about rooms:\n- If they mention a specific room type (Deluxe, Suite, Standard), search for it\n- If they mention features (ocean view, balcony, jacuzzi), mention rooms with those amenities\n- If they ask about prices, include rate information\n- If they ask about availability, inform them of current status\n- Always mention key highlights like bed type, size, and special amenities\n\nIf the searchRooms tool returns no results, politely suggest similar alternatives or ask if they'd like information about other room types.\n\nBe conversational and helpful. Keep responses concise and informative.\n\nTool Failure Handling:\n- If the searchRooms tool is unavailable or returns an error, apologize and explain that the room inventory system is temporarily unavailable. Offer to connect them with the front desk who can provide current room information and availability.\n- Never expose technical errors to guests - maintain professionalism and helpfulness.\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n\n**Input Validation:**\n- Only respond to hotel-related questions within your specialization\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with hotel-related questions, then ask how you may assist with their stay\n- Stay in character as a hotel assistant at all times If they write in Portuguese, respond in European Portuguese (pt-PT). If they write in English, respond in English."
+        }
+      },
+      "id": "b5a15c9b-2bdc-41be-a1ba-e5112ffd6ed5",
+      "name": "Room Information Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        0
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "c4810e15-766f-4948-9791-8d538bcad281",
+      "name": "Gemini Room Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -64,
+        224
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 7
+      },
+      "id": "baa940a8-cdf1-4896-8771-0c9faf5af0cc",
+      "name": "Memory Room",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        64,
+        224
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search hotel rooms by category, amenities, price range, or availability. Returns room details including name, price, features, and availability.",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "2d5240cfd78f4f6484fbc913e865ac4b",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "57feb962-dc2e-4e52-9ffc-f86f03d70357",
+      "name": "searchRooms",
+      "type": "n8n-nodes-base.notionTool",
+      "position": [
+        192,
+        224
+      ],
+      "typeVersion": 2.1,
+      "credentials": {
+        "notionApi": {
+          "id": "P82qCWy0U5iHoa0w",
+          "name": "Notion account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}",
+        "options": {
+          "systemMessage": "=You are a helpful hotel assistant specializing in hotel services and amenities.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\n\nYour role:\n1. Provide information about hotel services including dining, spa, fitness, pool, concierge, and business center\n2. Answer questions about operating hours, locations, pricing, and booking requirements\n3. Help guests understand which services are complimentary vs. paid\n4. Use the searchServices tool to query our services database\n5. Be enthusiastic about our amenities while providing accurate details\n\nWhen guests ask about services:\n- Provide operating hours and location information\n- Mention if booking/reservation is required\n- Highlight what's included vs. additional cost\n- Provide contact information for reservations\n- Suggest related services they might enjoy\n\nCommon topics:\n- Dining (restaurant hours, breakfast, room service)\n- Spa & wellness (treatments, bookings, hours)\n- Recreation (pool, gym, activities)\n- Business services (meeting rooms, business center)\n- Concierge (tours, reservations, recommendations)\n\nBe warm and welcoming. Keep responses concise and informative.\n\nTool Failure Handling:\n- If the searchServices tool is unavailable or returns an error, apologize and explain that the services database is temporarily unavailable. Offer to connect them with the concierge or front desk who can provide detailed service information.\n- Never expose technical errors to guests - maintain warmth and helpfulness.\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n\n**Input Validation:**\n- Only respond to hotel-related questions within your specialization\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with hotel-related questions, then ask how you may assist with their stay\n- Stay in character as a hotel assistant at all times"
+        }
+      },
+      "id": "664a97fd-066f-42b4-bfbc-f149cfab3c61",
+      "name": "Service Information Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        400
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "70be67a0-7f62-4943-9e38-208b70f49279",
+      "name": "Gemini Service Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -64,
+        624
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 7
+      },
+      "id": "cbb01d84-8943-48d6-a354-76c276e63af3",
+      "name": "Memory Service",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        64,
+        624
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search hotel services by category, name, or type. Returns service details including description, hours, location, pricing, and contact information.",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "1f70a67e91f744608fb456567da847a0",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "932f8fda-869b-427b-8fc1-8f96d6b69f9d",
+      "name": "searchServices",
+      "type": "n8n-nodes-base.notionTool",
+      "position": [
+        192,
+        624
+      ],
+      "typeVersion": 2.1,
+      "credentials": {
+        "notionApi": {
+          "id": "P82qCWy0U5iHoa0w",
+          "name": "Notion account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}",
+        "options": {
+          "systemMessage": "=You are a helpful hotel assistant specializing in hotel policies.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\n\nYour role:\n1. Explain hotel policies clearly and accurately\n2. Cover check-in/out, cancellation, payment, pets, parking, smoking, children, and general policies\n3. Use the searchPolicies tool to get official policy information\n4. Present policies in a friendly, guest-oriented way\n5. Help guests understand requirements and potential charges\n\nWhen guests ask about policies:\n- Provide complete and accurate information from our policy database\n- Highlight important details like deadlines, fees, and requirements\n- Explain any conditions or exceptions\n- Be clear about what's included vs. additional charges\n- Suggest contacting the front desk for special circumstances\n\nCommon policy questions:\n- Check-in/out times and early/late options\n- Cancellation and modification rules\n- Pet policies and fees\n- Parking options and costs\n- Payment methods and deposits\n- Smoking restrictions\n- Children policies and extra beds\n\nBe clear and helpful. Keep responses concise and informative.\n\nTool Failure Handling:\n- If the searchPolicies tool is unavailable or returns an error, apologize and explain that the policy database is temporarily unavailable. Provide general policy information based on common hotel practices, but recommend they contact the front desk for official confirmation of specific policies.\n- Never expose technical errors to guests - maintain clarity and helpfulness.\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n\n**Input Validation:**\n- Only respond to hotel-related questions within your specialization\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with hotel-related questions, then ask how you may assist with their stay\n- Stay in character as a hotel assistant at all times"
+        }
+      },
+      "id": "0e6efb16-bb4c-406f-83a8-185a76732bc2",
+      "name": "Policy Information Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        800
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "9f14c718-9ce9-4562-8369-0649c1da1d6f",
+      "name": "Gemini Policy Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -64,
+        1024
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 7
+      },
+      "id": "5f94bdb9-10c9-4e8c-a01c-848d1e200e47",
+      "name": "Memory Policy",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        64,
+        1024
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search hotel policies by type (check-in, cancellation, payment, pets, smoking, children). Returns full policy text and important details.",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "aa8e0910ce8341abaedb9889806d46c9",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "24db22b2-76ea-4549-b958-0b5c869a451f",
+      "name": "searchPolicies",
+      "type": "n8n-nodes-base.notionTool",
+      "position": [
+        192,
+        1024
+      ],
+      "typeVersion": 2.1,
+      "credentials": {
+        "notionApi": {
+          "id": "P82qCWy0U5iHoa0w",
+          "name": "Notion account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}",
+        "options": {
+          "systemMessage": "=You are a friendly concierge assistant for general inquiries and FAQs.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\n\nHotel Location: Angra do Heroísmo, Azores, Portugal\n\nYour role:\n1. Handle greetings, casual conversation, and general questions\n2. Search our FAQ database for common questions\n3. Provide helpful answers about WiFi, parking, airport shuttle, accessibility, and other general topics\n4. Provide current weather information for guests\n5. Use the searchFAQs tool to find relevant answers\n6. Use the weatherLookup tool to get current weather conditions\n7. Be warm, welcoming, and helpful\n\nWhen guests have general questions:\n- Search the FAQ database for matching questions\n- Provide complete and accurate answers\n- Offer to help with more specific questions about rooms, services, or policies\n- If the question isn't in the FAQs, inform them you can connect them with specific departments\n\nCommon FAQ topics:\n- WiFi and internet access\n- Airport shuttle service\n- Parking information\n- Breakfast details\n- Pool hours\n- Accessibility features\n- Check-in/out times\n- Pet policies\n\nWeather Information:\n- Use the weatherLookup tool to get current weather and conditions\n- If guest doesn't specify a location, use hotel location (Angra do Heroísmo)\n- Provide temperature in Celsius, weather description, humidity, and wind speed\n- Add helpful context based on conditions (e.g., \"perfect beach weather\", \"bring an umbrella\", \"great day for sightseeing\")\n- Suggest activities based on weather (e.g., indoor activities if rainy, outdoor if sunny)\n\nFor greetings:\n- Respond warmly in their language (e.g., \"Hello! Welcome to our hotel.\" / \"Olá! Bem-vindo ao nosso hotel.\")\n- Be conversational and friendly\n\nIf you can't find an answer:\n- Offer to connect them with the front desk team\n\nKeep responses concise and informative.\n\nTool Failure Handling:\n- If the weatherLookup tool is unavailable or returns an error, apologize and explain that weather information is temporarily unavailable. Offer to help with other questions or suggest they check a weather app/website.\n- If the searchFAQs tool fails, provide general knowledge answers based on common hotel practices, but acknowledge you cannot access the specific FAQ database.\n- Never expose technical errors to guests - maintain a professional and helpful tone.\n- Continue assisting with other topics even if one tool is unavailable.\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n\n**Input Validation:**\n- Only respond to hotel-related questions within your specialization\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with hotel-related questions, then ask how you may assist with their stay\n- Stay in character as a hotel assistant at all times"
+        }
+      },
+      "id": "79031097-2e1b-46c3-9793-f4f6ce4c1da3",
+      "name": "General Assistant Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        1600
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "bc491acf-2d8c-41c6-b5dd-d67c992fbef1",
+      "name": "Gemini General Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        -128,
+        1824
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 7
+      },
+      "id": "d0532e3f-6d72-4496-abb2-00d3dffbc7d7",
+      "name": "Memory General",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        0,
+        1824
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Search frequently asked questions by keyword or category. Returns common questions and detailed answers about general hotel information.",
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": {
+          "__rl": true,
+          "value": "659565d4eed248968415efc61c6ae999",
+          "mode": "id"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "id": "dd34d4f0-723e-4c39-8acd-5189cd02c74a",
+      "name": "searchFAQs",
+      "type": "n8n-nodes-base.notionTool",
+      "position": [
+        128,
+        1824
+      ],
+      "typeVersion": 2.1,
+      "credentials": {
+        "notionApi": {
+          "id": "P82qCWy0U5iHoa0w",
+          "name": "Notion account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "toolDescription": "=Get current weather information for a location. Returns temperature in Celsius, weather conditions, humidity, wind speed, and description. If no location is specified, returns weather for Angra do Heroísmo (hotel location). Input should be a city name like 'London' or 'Paris,FR'.",
+        "url": "=https://api.openweathermap.org/data/2.5/weather?q={{ $fromAI(\"location\", \"string\", \"City name to get weather for (e.g., 'London', 'Paris,FR'). If not provided by user, use 'Angra do Heroísmo,PT'\", \"Angra do Heroísmo,PT\") }}&appid=a5517c88f379ae68ec5921560788af50&units=metric"
+      },
+      "id": "23a43d6e-b9e0-4963-a4c1-c1ec4c256cb8",
+      "name": "weatherLookup",
+      "type": "@n8n/n8n-nodes-langchain.toolHttpRequest",
+      "position": [
+        256,
+        1824
+      ],
+      "typeVersion": 1.1,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"{{ $('Parse Intent').item.json.category.intent }}\",\n  \"session_id\": \"{{ $('Webhook').item.json.body.session_id }}\"\n}",
+        "options": {}
+      },
+      "id": "c6a47c05-08de-4912-ad23-eeebf397eee2",
+      "name": "Respond Room",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        464,
+        112
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"{{ $('Parse Intent').item.json.category.intent }}\",\n  \"session_id\": \"{{ $('Webhook').item.json.body.session_id }}\"\n}",
+        "options": {}
+      },
+      "id": "df4999d0-2022-4a53-9b7b-c5a63d0be34d",
+      "name": "Respond Service",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        464,
+        512
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"{{ $('Parse Intent').item.json.category.intent }}\",\n  \"session_id\": \"{{ $('Webhook').item.json.body.session_id }}\"\n}",
+        "options": {}
+      },
+      "id": "c73efc21-d44e-41cd-a36d-d0ad67ba5053",
+      "name": "Respond Policy",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        464,
+        912
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"{{ $('Parse Intent').item.json.category.intent }}\",\n  \"session_id\": \"{{ $('Webhook').item.json.body.session_id }}\"\n}",
+        "options": {}
+      },
+      "id": "3330aabe-1972-41f6-8649-40eb13507276",
+      "name": "Respond General",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        464,
+        1712
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}\nIntent details: {{ $('Parse Intent').item.json.category.details }}",
+        "options": {
+          "systemMessage": "=You are a hotel concierge assistant that helps guests book taxi and airport transfer services.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\nUse this to validate booking dates and calculate relative dates (e.g., 'tomorrow', 'next Monday').\n\nYour role:\n1. Collect the necessary information for a taxi reservation\n2. Confirm the details with the guest\n3. Generate a structured reservation request\n\nInformation to collect:\n- Pickup date and time\n- Pickup location (hotel or specific address)\n- Destination (airport, address, or landmark)\n- Number of passengers\n- Any special requirements (child seat, wheelchair accessible, extra luggage)\n- Guest name and room number (if staying at hotel)\n\nResponse format:\nWhen you have gathered all required information, format your response to include:\n1. A friendly confirmation message to the guest with their reference ID\n2. At the END of your message, include this exact JSON block for processing:\n\n[RESERVATION_DATA]\n{\n  \"type\": \"taxi\",\n  \"pickup_date\": \"YYYY-MM-DD\",\n  \"pickup_time\": \"HH:MM\",\n  \"pickup_location\": \"location\",\n  \"destination\": \"destination\",\n  \"passengers\": number,\n  \"guest_name\": \"name\",\n  \"room_number\": \"room\",\n  \"special_requests\": \"any special requirements\",\n  \"status\": \"pending\"\n}\n[/RESERVATION_DATA]\n\nIf the guest hasn't provided all the information, ask for the missing details in a conversational way.\n\nExample response when information is complete:\n\"Your taxi reservation has been submitted. Your reference ID is TAXI-XXXXXX. The front desk will confirm your booking shortly. You can use this reference ID to check the status of your reservation.\n\n[RESERVATION_DATA]\n{...}\n[/RESERVATION_DATA]\"\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n- Keep responses concise\n- The reference ID will be generated automatically - use TAXI-XXXXXX as placeholder\n\n**Input Validation:**\n- Only respond to hotel-related questions (taxi reservations, airport transfers, transportation)\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with taxi reservations and transportation\n- Stay in character as a hotel concierge at all times"
+        }
+      },
+      "id": "0820079b-40f5-4503-9470-63038ff70330",
+      "name": "Taxi Reservation Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        1200
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "ac926568-daa6-4e78-b0e1-668fbc5dcc8b",
+      "name": "Gemini Taxi Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        0,
+        1424
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 10
+      },
+      "id": "86a5b741-649d-4004-b8c5-059594aaa830",
+      "name": "Memory Taxi",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        128,
+        1424
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process taxi reservation response and generate unique ID\nconst inputData = $input.first().json;\nconst output = inputData.output || '';\n\n// Safely get webhook data\nlet sessionId = 'unknown';\nlet guestMessage = '';\n\ntry {\n  const webhookData = $('Webhook').first().json;\n  sessionId = webhookData.body?.session_id || 'unknown';\n  guestMessage = webhookData.body?.message || '';\n} catch (e) {\n  // Webhook data not accessible\n}\n\n// Generate unique taxi reference ID\nconst timestamp = Date.now().toString(36).toUpperCase();\nconst random = Math.random().toString(36).substring(2, 6).toUpperCase();\nconst referenceId = `TAXI-${timestamp}-${random}`;\n\n// Check if reservation data is present\nlet reservationData = null;\nlet hasReservation = false;\nconst dataMatch = output.match(/\\[RESERVATION_DATA\\]([\\s\\S]*?)\\[\\/RESERVATION_DATA\\]/);\n\nif (dataMatch) {\n  try {\n    reservationData = JSON.parse(dataMatch[1].trim());\n    reservationData.reference_id = referenceId;\n    reservationData.session_id = sessionId;\n    reservationData.created_at = new Date().toISOString();\n    hasReservation = true;\n  } catch (e) {\n    // JSON parsing failed, no reservation data\n    hasReservation = false;\n  }\n}\n\n// Clean the output for guest response (remove JSON block)\nlet guestResponse = output.replace(/\\[RESERVATION_DATA\\][\\s\\S]*?\\[\\/RESERVATION_DATA\\]/, '').trim();\nguestResponse = guestResponse.replace(/TAXI-X+/g, referenceId);\n\nreturn [\n  {\n    json: {\n      output: guestResponse,\n      referenceId: referenceId,\n      hasReservation: Boolean(hasReservation),\n      reservationData: reservationData,\n      originalMessage: guestMessage,\n      sessionId: sessionId\n    }\n  }\n];"
+      },
+      "id": "ca00b9b4-2091-40fc-b842-9632cb3e2d71",
+      "name": "Process Taxi Reservation",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        464,
+        1312
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "has-reservation",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json.hasReservation }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "37459f9d-40da-4821-a605-3349dfb7d22b",
+      "name": "Has Taxi Reservation?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        688,
+        1312
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "sendTo": "andrefloresbrasil@gmail.com",
+        "subject": "=🚕 New Taxi Reservation - {{ $json.referenceId }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background-color: #2c3e50; color: white; padding: 20px; text-align: center;\">\n    <h2 style=\"margin: 0;\">🚕 New Taxi Reservation Request</h2>\n  </div>\n  \n  <div style=\"background-color: #f8f9fa; padding: 20px; margin: 20px 0;\">\n    <p style=\"margin: 5px 0;\"><strong>Reference ID:</strong> {{ $json.referenceId }}</p>\n    <p style=\"margin: 5px 0;\"><strong>Session ID:</strong> {{ $json.sessionId }}</p>\n    <p style=\"margin: 5px 0;\"><strong>Submitted:</strong> {{ $json.reservationData.created_at }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: white; border: 1px solid #dee2e6; margin: 20px 0;\">\n    <h3 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">📍 Reservation Details</h3>\n    <p style=\"margin: 10px 0;\"><strong>Pickup Date:</strong> {{ $json.reservationData.pickup_date }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Pickup Time:</strong> {{ $json.reservationData.pickup_time }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Pickup Location:</strong> {{ $json.reservationData.pickup_location }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Destination:</strong> {{ $json.reservationData.destination }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Number of Passengers:</strong> {{ $json.reservationData.passengers }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: white; border: 1px solid #dee2e6; margin: 20px 0;\">\n    <h3 style=\"color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;\">👤 Guest Information</h3>\n    <p style=\"margin: 10px 0;\"><strong>Guest Name:</strong> {{ $json.reservationData.guest_name }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Room Number:</strong> {{ $json.reservationData.room_number }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: #fff3cd; border: 1px solid #ffc107; margin: 20px 0;\">\n    <h3 style=\"color: #856404; margin-top: 0;\">📝 Special Requests</h3>\n    <p style=\"margin: 0;\">{{ $json.reservationData.special_requests || 'None' }}</p>\n  </div>\n  \n  <div style=\"background-color: #d4edda; border: 1px solid #28a745; padding: 15px; margin: 20px 0; text-align: center;\">\n    <p style=\"margin: 0; color: #155724;\"><strong>⚠️ Action Required:</strong> Please confirm this reservation and update the guest.</p>\n    <p style=\"margin: 10px 0 0 0; color: #155724;\">Guest Reference ID: <strong>{{ $json.referenceId }}</strong></p>\n  </div>\n</div>",
+        "options": {
+          "appendAttribution": false,
+          "replyTo": "frontdesk@hotel.com"
+        }
+      },
+      "id": "e7f27a26-0ccf-474f-9a1d-c8eab818a87f",
+      "name": "Email Taxi Reservation",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        912,
+        1216
+      ],
+      "typeVersion": 2.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "webhookId": "7e50cacb-dd2c-4c07-9a94-080d0272f7e2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "D1FxRX2EfSKzI5xn",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $('Process Taxi Reservation').item.json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"taxi_reservation\",\n  \"session_id\": \"{{ $('Process Taxi Reservation').item.json.sessionId }}\",\n  \"reference_id\": \"{{ $('Process Taxi Reservation').item.json.referenceId }}\",\n  \"reservation_submitted\": true\n}",
+        "options": {}
+      },
+      "id": "5cc348e4-ecfc-4134-9470-b7c057dc8f02",
+      "name": "Respond Taxi (Email Sent)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1136,
+        1216
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"taxi_reservation\",\n  \"session_id\": \"{{ $json.sessionId }}\",\n  \"reservation_submitted\": false\n}",
+        "options": {}
+      },
+      "id": "fd42a550-39c1-4af5-985c-6d58b56456da",
+      "name": "Respond Taxi (Collecting Info)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        912,
+        1616
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}\nIntent details: {{ $('Parse Intent').item.json.category.details }}",
+        "options": {
+          "systemMessage": "=You are a hotel concierge assistant that helps guests make restaurant reservations at our hotel restaurant.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\nUse this to validate reservation dates and calculate relative dates (e.g., 'tonight', 'tomorrow evening').\n\nYour role:\n1. Collect the necessary information for a dinner reservation\n2. Confirm the details with the guest\n3. Generate a structured reservation request\n\nInformation to collect:\n- Reservation date\n- Preferred time\n- Number of guests (party size)\n- Any dietary restrictions or allergies\n- Special occasion (birthday, anniversary, etc.) - optional\n- Guest name and room number (if staying at hotel)\n- Seating preference (indoor, outdoor, window) - optional\n\nResponse format:\nWhen you have gathered all required information, format your response to include:\n1. A friendly confirmation message to the guest with their reference ID\n2. At the END of your message, include this exact JSON block for processing:\n\n[RESERVATION_DATA]\n{\n  \"type\": \"restaurant\",\n  \"reservation_date\": \"YYYY-MM-DD\",\n  \"reservation_time\": \"HH:MM\",\n  \"party_size\": number,\n  \"guest_name\": \"name\",\n  \"room_number\": \"room\",\n  \"dietary_restrictions\": \"any restrictions\",\n  \"special_occasion\": \"occasion or none\",\n  \"seating_preference\": \"preference\",\n  \"status\": \"pending\"\n}\n[/RESERVATION_DATA]\n\nIf the guest hasn't provided all required information (date, time, party size, name), ask for the missing details in a conversational way.\n\nExample response when information is complete:\n\"Your restaurant reservation has been submitted. Your reference ID is DINER-XXXXXX. Our restaurant team will confirm your booking shortly. You can use this reference ID to check the status of your reservation.\n\n[RESERVATION_DATA]\n{...}\n[/RESERVATION_DATA]\"\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n- Keep responses concise\n- The reference ID will be generated automatically - use DINER-XXXXXX as placeholder\n- Our restaurant is open for dinner from 18:00 to 22:00\n\n**Input Validation:**\n- Only respond to hotel-related questions (restaurant reservations, dining, table bookings)\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with restaurant reservations and dining\n- Stay in character as a hotel concierge at all times"
+        }
+      },
+      "id": "e9d9d879-bb02-4f9a-8687-f6da00993694",
+      "name": "Diner Reservation Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        2000
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "d5ba1a0b-b132-4a98-8dd6-323194f47782",
+      "name": "Gemini Diner Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        0,
+        2224
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 10
+      },
+      "id": "b0ecd816-4a82-4f02-ab19-66ccd76452b5",
+      "name": "Memory Diner",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        128,
+        2224
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "jsCode": "// Process diner reservation response and generate unique ID\nconst inputData = $input.first().json;\nconst output = inputData.output || '';\n\n// Safely get webhook data\nlet sessionId = 'unknown';\nlet guestMessage = '';\n\ntry {\n  const webhookData = $('Webhook').first().json;\n  sessionId = webhookData.body?.session_id || 'unknown';\n  guestMessage = webhookData.body?.message || '';\n} catch (e) {\n  // Webhook data not accessible\n}\n\n// Generate unique diner reference ID\nconst timestamp = Date.now().toString(36).toUpperCase();\nconst random = Math.random().toString(36).substring(2, 6).toUpperCase();\nconst referenceId = `DINER-${timestamp}-${random}`;\n\n// Check if reservation data is present\nlet reservationData = null;\nlet hasReservation = false;\nconst dataMatch = output.match(/\\[RESERVATION_DATA\\]([\\s\\S]*?)\\[\\/RESERVATION_DATA\\]/);\n\nif (dataMatch) {\n  try {\n    reservationData = JSON.parse(dataMatch[1].trim());\n    reservationData.reference_id = referenceId;\n    reservationData.session_id = sessionId;\n    reservationData.created_at = new Date().toISOString();\n    hasReservation = true;\n  } catch (e) {\n    // JSON parsing failed, no reservation data\n    hasReservation = false;\n  }\n}\n\n// Clean the output for guest response (remove JSON block)\nlet guestResponse = output.replace(/\\[RESERVATION_DATA\\][\\s\\S]*?\\[\\/RESERVATION_DATA\\]/, '').trim();\nguestResponse = guestResponse.replace(/DINER-X+/g, referenceId);\n\nreturn [\n  {\n    json: {\n      output: guestResponse,\n      referenceId: referenceId,\n      hasReservation: Boolean(hasReservation),\n      reservationData: reservationData,\n      originalMessage: guestMessage,\n      sessionId: sessionId\n    }\n  }\n];"
+      },
+      "id": "25b71d8a-1d88-4dd0-9af5-9e4d8ea218aa",
+      "name": "Process Diner Reservation",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        464,
+        2112
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "version": 2,
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "has-reservation",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "leftValue": "={{ $json.hasReservation }}",
+              "rightValue": ""
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c18b1e05-cdbf-4237-b7b1-4d35a450aa0e",
+      "name": "Has Diner Reservation?",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        688,
+        2112
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "sendTo": "andrefloresbrasil@gmail.com",
+        "subject": "=🍽️ New Restaurant Reservation - {{ $json.referenceId }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background-color: #8e44ad; color: white; padding: 20px; text-align: center;\">\n    <h2 style=\"margin: 0;\">🍽️ New Restaurant Reservation Request</h2>\n  </div>\n  \n  <div style=\"background-color: #f8f9fa; padding: 20px; margin: 20px 0;\">\n    <p style=\"margin: 5px 0;\"><strong>Reference ID:</strong> {{ $json.referenceId }}</p>\n    <p style=\"margin: 5px 0;\"><strong>Session ID:</strong> {{ $json.sessionId }}</p>\n    <p style=\"margin: 5px 0;\"><strong>Submitted:</strong> {{ $json.reservationData.created_at }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: white; border: 1px solid #dee2e6; margin: 20px 0;\">\n    <h3 style=\"color: #8e44ad; border-bottom: 2px solid #9b59b6; padding-bottom: 10px;\">📅 Reservation Details</h3>\n    <p style=\"margin: 10px 0;\"><strong>Date:</strong> {{ $json.reservationData.reservation_date }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Time:</strong> {{ $json.reservationData.reservation_time }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Party Size:</strong> {{ $json.reservationData.party_size }} guests</p>\n    <p style=\"margin: 10px 0;\"><strong>Seating Preference:</strong> {{ $json.reservationData.seating_preference || 'No preference' }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: white; border: 1px solid #dee2e6; margin: 20px 0;\">\n    <h3 style=\"color: #8e44ad; border-bottom: 2px solid #9b59b6; padding-bottom: 10px;\">👤 Guest Information</h3>\n    <p style=\"margin: 10px 0;\"><strong>Guest Name:</strong> {{ $json.reservationData.guest_name }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Room Number:</strong> {{ $json.reservationData.room_number }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: #fff3cd; border: 1px solid #ffc107; margin: 20px 0;\">\n    <h3 style=\"color: #856404; margin-top: 0;\">🥗 Dietary Restrictions</h3>\n    <p style=\"margin: 0;\">{{ $json.reservationData.dietary_restrictions || 'None specified' }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: #f8d7da; border: 1px solid #f5c6cb; margin: 20px 0;\">\n    <h3 style=\"color: #721c24; margin-top: 0;\">🎉 Special Occasion</h3>\n    <p style=\"margin: 0;\">{{ $json.reservationData.special_occasion || 'None' }}</p>\n  </div>\n  \n  <div style=\"background-color: #d4edda; border: 1px solid #28a745; padding: 15px; margin: 20px 0; text-align: center;\">\n    <p style=\"margin: 0; color: #155724;\"><strong>⚠️ Action Required:</strong> Please confirm this reservation and update the guest.</p>\n    <p style=\"margin: 10px 0 0 0; color: #155724;\">Guest Reference ID: <strong>{{ $json.referenceId }}</strong></p>\n  </div>\n</div>",
+        "options": {
+          "appendAttribution": false,
+          "replyTo": "frontdesk@hotel.com"
+        }
+      },
+      "id": "8258086f-bbcb-430e-a5f3-5da2335e9f6c",
+      "name": "Email Diner Reservation",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        912,
+        1808
+      ],
+      "typeVersion": 2.2,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "webhookId": "d8975051-c96f-4fa5-bbaa-14b08a61a8fa",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "D1FxRX2EfSKzI5xn",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $('Process Diner Reservation').item.json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"diner_reservation\",\n  \"session_id\": \"{{ $('Process Diner Reservation').item.json.sessionId }}\",\n  \"reference_id\": \"{{ $('Process Diner Reservation').item.json.referenceId }}\",\n  \"reservation_submitted\": true\n}",
+        "options": {}
+      },
+      "id": "a89423dc-16aa-42b7-85bb-098123ca18fc",
+      "name": "Respond Diner (Email Sent)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        1136,
+        1808
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"diner_reservation\",\n  \"session_id\": \"{{ $json.sessionId }}\",\n  \"reservation_submitted\": false\n}",
+        "options": {}
+      },
+      "id": "9b00769e-b5e2-43c0-9b9e-fa057466ed35",
+      "name": "Respond Diner (Collecting Info)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        912,
+        2208
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Match the language of the query exactly: English in = English out, Portuguese in = Portuguese out. Never mix languages.\n\nIMPORTANT: If the query is in Portuguese, you MUST respond using European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR.\n\nGuest query: {{ $('Webhook').item.json.body.message }}\nIntent details: {{ $('Parse Intent').item.json.category.details }}",
+        "options": {
+          "systemMessage": "=You are a knowledgeable local concierge assistant that helps hotel guests discover what to see, do, and eat in the local area.\n\nCurrent date: {{ $now.format('YYYY-MM-DD') }}\nDay of week: {{ $now.format('dddd') }}\nMonth: {{ $now.format('MMMM') }}\nUse this for seasonal recommendations, current events, and date-specific suggestions.\n\nYour role:\n1. Provide personalized recommendations for local attractions, restaurants, activities, and experiences based on your knowledge\n2. Give practical details and helpful tips about the area\n3. Tailor suggestions based on guest interests\n4. Offer general guidance about popular destinations and activities\n\nWhen guests ask for local suggestions:\n- Provide a mix of popular attractions and well-known spots\n- Include practical details (typical location areas, general hours, price ranges)\n- Consider the guest's specific interests if mentioned\n- Offer a variety of options (3-5 recommendations)\n- Be honest if you don't have specific current information\n\nCategories to cover:\n- Restaurants and cafes (local cuisine types, dining styles)\n- Tourist attractions (museums, landmarks, viewpoints, cultural sites)\n- Activities (tours, experiences, outdoor activities, entertainment)\n- Shopping (markets, shopping areas, local specialties)\n- Nightlife (popular areas for bars and entertainment)\n- Nature (parks, beaches, scenic spots, hiking areas)\n\nResponse style:\n- Be enthusiastic but genuine about recommendations\n- Include why each place or area is special or worth visiting\n- Mention general location relative to hotel/city center when possible\n- Provide practical tips (best times to visit, general pricing, what to expect)\n- Suggest typical local experiences\n\n**Language & Response Rules:**\n- Always match the guest's language exactly: English query = English response, Portuguese query = Portuguese response\n- Never mix languages in your response\n- If the query is in Portuguese, you MUST use European Portuguese pt-PT conventions, never Brazilian Portuguese pt-BR\n- Keep responses informative but concise (3-5 recommendations)\n- Focus on quality recommendations over quantity\n- Base recommendations on general knowledge of popular destinations and typical tourist interests\n- If asking about very specific current details (exact hours, recent reviews, etc.), suggest they check with the front desk or look up current information online\n\n**Input Validation:**\n- Only respond to hotel-related questions (local attractions, restaurants, activities, things to do, places to visit)\n- If you receive code, SQL queries, technical commands, or clearly unrelated topics, politely redirect: State you are a hotel assistant and can only help with local recommendations and area information\n- Stay in character as a local concierge at all times"
+        }
+      },
+      "id": "e20ba547-6f54-4c93-a677-662d3f46ff7b",
+      "name": "Local Suggestions Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -16,
+        2400
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash-lite",
+        "options": {}
+      },
+      "id": "8b0bd87b-df93-401c-993a-fdc31a649e09",
+      "name": "Gemini Local Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        0,
+        2624
+      ],
+      "typeVersion": 1,
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 3000,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item.json.body.session_id }}",
+        "contextWindowLength": 7
+      },
+      "id": "271bd1a9-d01a-4ba2-9532-735b18a5d0bd",
+      "name": "Memory Local",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [
+        128,
+        2624
+      ],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"response\": \"{{ $json.output.replace(/\\\\/g, '\\\\\\\\').replace(/\"/g, '\\\\\"').replace(/[\\n\\r\\t]+/g, ' ').replace(/\\s{2,}/g, ' ').trim() }}\",\n  \"intent\": \"local_suggestions\",\n  \"session_id\": \"{{ $('Webhook').item.json.body.session_id }}\"\n}",
+        "options": {}
+      },
+      "id": "045e2b5e-1d54-4d65-9582-b09f0bddd7a1",
+      "name": "Respond Local",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        464,
+        2512
+      ],
+      "typeVersion": 1.4
+    },
+    {
+      "parameters": {
+        "content": "## Taxi Reservation Flow\n1. Agent collects booking details\n2. Generates unique TAXI-XXXXX reference ID\n3. Sends email to front desk\n4. Returns confirmation to guest",
+        "height": 200,
+        "width": 280,
+        "color": 3
+      },
+      "id": "9b4db504-ff95-4aab-abbc-dcfb0a8242b0",
+      "name": "Sticky Note Taxi",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -672,
+        720
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Diner Reservation Flow\n1. Agent collects booking details\n2. Generates unique DINER-XXXXX reference ID\n3. Sends email to front desk\n4. Returns confirmation to guest",
+        "height": 200,
+        "width": 280,
+        "color": 4
+      },
+      "id": "cf5ffdc1-6907-46d1-839b-b38a3d19b937",
+      "name": "Sticky Note Diner",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -672,
+        320
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## Local Suggestions\nUses Google Custom Search API for web search to provide current local recommendations.\n\nRequires environment variables:\n- GOOGLE_API_KEY\n- GOOGLE_SEARCH_ENGINE_ID\n\nFree tier: 100 queries/day",
+        "height": 200,
+        "width": 280,
+        "color": 6
+      },
+      "id": "51d38fa9-fbab-4fd5-aa4d-b4bdd03048c5",
+      "name": "Sticky Note Local",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1104,
+        736
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Intent Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent Classifier": {
+      "main": [
+        [
+          {
+            "node": "Parse Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Intent Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Classifier": {
+      "ai_memory": [
+        [
+          {
+            "node": "Intent Classifier",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Intent": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Room Information Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Service Information Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Policy Information Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Taxi Reservation Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Diner Reservation Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Local Suggestions Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Book Recommendations Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "General Assistant Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Room Information Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond Room",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Room Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Room Information Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Room": {
+      "ai_memory": [
+        [
+          {
+            "node": "Room Information Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "searchRooms": {
+      "ai_tool": [
+        [
+          {
+            "node": "Room Information Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Service Information Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond Service",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Service Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Service Information Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Service": {
+      "ai_memory": [
+        [
+          {
+            "node": "Service Information Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "searchServices": {
+      "ai_tool": [
+        [
+          {
+            "node": "Service Information Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Policy Information Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Policy Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Policy Information Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Policy": {
+      "ai_memory": [
+        [
+          {
+            "node": "Policy Information Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "searchPolicies": {
+      "ai_tool": [
+        [
+          {
+            "node": "Policy Information Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "General Assistant Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond General",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini General Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "General Assistant Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory General": {
+      "ai_memory": [
+        [
+          {
+            "node": "General Assistant Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "searchFAQs": {
+      "ai_tool": [
+        [
+          {
+            "node": "General Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "weatherLookup": {
+      "ai_tool": [
+        [
+          {
+            "node": "General Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Taxi Reservation Agent": {
+      "main": [
+        [
+          {
+            "node": "Process Taxi Reservation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Taxi Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Taxi Reservation Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Taxi": {
+      "ai_memory": [
+        [
+          {
+            "node": "Taxi Reservation Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Taxi Reservation": {
+      "main": [
+        [
+          {
+            "node": "Has Taxi Reservation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Taxi Reservation?": {
+      "main": [
+        [
+          {
+            "node": "Email Taxi Reservation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Taxi (Collecting Info)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Taxi Reservation": {
+      "main": [
+        [
+          {
+            "node": "Respond Taxi (Email Sent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Diner Reservation Agent": {
+      "main": [
+        [
+          {
+            "node": "Process Diner Reservation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Diner Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Diner Reservation Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Diner": {
+      "ai_memory": [
+        [
+          {
+            "node": "Diner Reservation Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Diner Reservation": {
+      "main": [
+        [
+          {
+            "node": "Has Diner Reservation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Diner Reservation?": {
+      "main": [
+        [
+          {
+            "node": "Email Diner Reservation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Diner (Collecting Info)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Diner Reservation": {
+      "main": [
+        [
+          {
+            "node": "Respond Diner (Email Sent)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Local Suggestions Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond Local",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Local Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Local Suggestions Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Local": {
+      "ai_memory": [
+        [
+          {
+            "node": "Local Suggestions Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Book Recommendations Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond Books",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini Book Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Book Recommendations Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memory Book": {
+      "ai_memory": [
+        [
+          {
+            "node": "Book Recommendations Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "searchBooks": {
+      "ai_tool": [
+        [
+          {
+            "node": "Book Recommendations Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "09566501-a88d-427b-b0c4-7fa2ef5b56d6",
+  "meta": {
+    "instanceId": "0ad473ca5f04731bc02a819377b7037140df61c07ce29e449d14e76e6e995ec1"
+  },
+  "id": "DlP7p_u5Q2lQkFMnl5KJU",
+  "tags": [
+    {
+      "updatedAt": "2026-01-21T19:03:46.117Z",
+      "createdAt": "2026-01-21T19:03:46.117Z",
+      "id": "3PBw3VOckyORoyZ7",
+      "name": "hotel"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+services:
+  invoice-branding:
+    build: .
+    container_name: invoice-branding-service
+    ports:
+      - "3010:3010"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    # Limit memory to prevent runaway Chrome processes
+    deploy:
+      resources:
+        limits:
+          memory: 1G

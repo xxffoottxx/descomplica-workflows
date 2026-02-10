@@ -1,0 +1,168 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:2.3.4
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_HOST=${N8N_HOST:-localhost}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=${N8N_PROTOCOL:-http}
+      - NODE_ENV=production
+      - N8N_LOG_LEVEL=info
+      - NODE_OPTIONS=--max-old-space-size=4096
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - WEBHOOK_URL=${WEBHOOK_URL:-http://localhost:5678/}
+      - GENERIC_TIMEZONE=${TIMEZONE:-Atlantic/Azores}
+      # Privacy - disable all telemetry and phone-home
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      - N8N_TEMPLATES_ENABLED=false
+      - N8N_ONBOARDING_FLOW_DISABLED=true
+      - EXTERNAL_FRONTEND_HOOKS_URLS=
+      - N8N_DIAGNOSTICS_CONFIG_FRONTEND=
+      - N8N_DIAGNOSTICS_CONFIG_BACKEND=
+      - N8N_BASIC_AUTH_ACTIVE=${N8N_BASIC_AUTH_ACTIVE:-true}
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      # Database - connect to existing PostgreSQL with all workflows/credentials
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=self-hosted-ai-starter-kit-postgres-1
+      - DB_POSTGRESDB_PORT=5432
+      - DB_POSTGRESDB_DATABASE=n8n
+      - DB_POSTGRESDB_USER=${DB_POSTGRESDB_USER}
+      - DB_POSTGRESDB_PASSWORD=${DB_POSTGRESDB_PASSWORD}
+      # AI Services
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+      - LLM_PROVIDER=${LLM_PROVIDER:-ollama}
+      # Pinecone Vector DB
+      - PINECONE_API_KEY=${PINECONE_API_KEY}
+      - PINECONE_HOST_DESCOMPLICADOR=${PINECONE_HOST_DESCOMPLICADOR}
+      # Vapi Webhook Auth
+      - VAPI_WEBHOOK_SECRET=${VAPI_WEBHOOK_SECRET}
+      # Evaluation Framework
+      - EVALUATION_CONFIG_PATH=/home/node/.n8n/evaluations/configs/hotel-support-config.json
+      - EVALUATION_RESULTS_SPREADSHEET_ID=1n4xNqXGxLEPfs0R2Xl74JZAX1imG2HZW0r45Ez_YoZQ
+      - EVALUATION_RESULTS_SHEET_NAME=Sheet1
+    volumes:
+      - self-hosted-ai-starter-kit_n8n_storage:/home/node/.n8n
+      - ./agents/n8n-workflows:/home/node/.n8n/workflows
+      - ./evaluations:/home/node/.n8n/evaluations
+    networks:
+      - ai-agents-network
+      - self-hosted-ai-starter-kit_demo
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - POSTGRES_DB=${POSTGRES_DB:-ai_agents_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init:/docker-entrypoint-initdb.d
+    networks:
+      - ai-agents-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ai-agents-network
+
+  flowise:
+    image: flowiseai/flowise:latest
+    container_name: flowise
+    restart: unless-stopped
+    ports:
+      - "${FLOWISE_PORT:-3000}:3000"
+    environment:
+      - FLOWISE_USERNAME=${FLOWISE_USERNAME}
+      - FLOWISE_PASSWORD=${FLOWISE_PASSWORD}
+      - FLOWISE_SECRETKEY_OVERWRITE=${FLOWISE_SECRETKEY_OVERWRITE}
+      - DATABASE_TYPE=postgres
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=${FLOWISE_DB_NAME:-flowise}
+      - DATABASE_USER=${POSTGRES_USER:-admin}
+      - DATABASE_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+      - APIKEY_STORAGE_TYPE=db
+      - LOG_LEVEL=info
+      - GENERIC_TIMEZONE=${TIMEZONE:-Atlantic/Azores}
+    volumes:
+      - flowise_data:/root/.flowise
+    networks:
+      - ai-agents-network
+    depends_on:
+      - postgres
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # Uncomment if you want Ollama running in Docker (instead of host)
+  # Note: Running on host is recommended for better performance
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   restart: unless-stopped
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   networks:
+  #     - ai-agents-network
+  #   # Uncomment if you have NVIDIA GPU
+  #   # deploy:
+  #   #   resources:
+  #   #     reservations:
+  #   #       devices:
+  #   #         - driver: nvidia
+  #   #           count: 1
+  #   #           capabilities: [gpu]
+
+  # Uncomment if you want pgAdmin for database management
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: pgadmin
+  #   restart: unless-stopped
+  #   environment:
+  #     - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@admin.com}
+  #     - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+  #   ports:
+  #     - "5050:80"
+  #   volumes:
+  #     - pgadmin_data:/var/lib/pgadmin
+  #   networks:
+  #     - ai-agents-network
+
+volumes:
+  self-hosted-ai-starter-kit_n8n_storage:
+    external: true
+  flowise_data:
+  postgres_data:
+  redis_data:
+  # ollama_data:
+  # pgadmin_data:
+
+networks:
+  ai-agents-network:
+    driver: bridge
+  self-hosted-ai-starter-kit_demo:
+    external: true

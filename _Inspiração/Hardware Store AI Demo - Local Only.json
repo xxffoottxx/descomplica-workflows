@@ -1,0 +1,479 @@
+{
+  "name": "Hardware Store AI Demo - Local Only",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "// Cache Check with Request Locking + Performance Metrics + Request Superseding\nif (typeof global.suggestionCache === 'undefined') {\n  global.suggestionCache = {};\n}\nif (typeof global.processingRequests === 'undefined') {\n  global.processingRequests = {};\n}\nif (typeof global.performanceMetrics === 'undefined') {\n  global.performanceMetrics = {\n    total_requests: 0,\n    cache_hits: 0,\n    cache_misses: 0,\n    wait_requests: 0,\n    total_processing_time: 0,\n    superseded_requests: 0\n  };\n}\nif (typeof global.newestRequests === 'undefined') {\n  global.newestRequests = {}; // Tracks newest requestId per session\n}\n\nconst webhookData = $input.first().json;\nconst body = webhookData.body || webhookData;\n\nconst sessionId = body.session_id || 'unknown';\nconst cartHash = body.cart_hash || 'unknown';\nconst requestId = body.request_id || 'unknown';\nconst isPrefetch = body.prefetch || false;\nconst cartEmpty = body.cart_empty || false;\n\nconst cacheKey = `${sessionId}:${cartHash}`;\nconst now = Date.now();\nconst TTL = 300000; // 5 minutes - recommendations don't change frequently\nconst PROCESSING_TTL = 60000; // 60 seconds (matches Ollama timeout)\n\n// Track request\nglobal.performanceMetrics.total_requests++;\n\n// CRITICAL: Handle empty cart - stop all processing for this session\nif (cartEmpty) {\n  console.log(`[Supersede] Cart empty signal for session ${sessionId} - clearing all caches and locks`);\n  \n  // Clear all entries for this session\n  Object.keys(global.suggestionCache).forEach(key => {\n    if (key.startsWith(sessionId + ':')) {\n      delete global.suggestionCache[key];\n    }\n  });\n  \n  Object.keys(global.processingRequests).forEach(key => {\n    if (key.startsWith(sessionId + ':')) {\n      delete global.processingRequests[key];\n    }\n  });\n  \n  delete global.newestRequests[sessionId];\n  \n  return {\n    json: {\n      success: false,\n      suggestions: [],\n      message: 'Cart empty - all processing stopped',\n      _skipProcessing: true,\n      _cacheHit: false\n    }\n  };\n}\n\n// Track newest request per session for request superseding\nconst sessionKey = sessionId;\nconst previousNewest = global.newestRequests[sessionKey];\n\n// Update newest request tracking\nglobal.newestRequests[sessionKey] = {\n  request_id: requestId,\n  cart_hash: cartHash,\n  timestamp: now,\n  is_prefetch: isPrefetch\n};\n\nif (previousNewest && previousNewest.cart_hash !== cartHash) {\n  console.log(`[Supersede] Cart changed for session ${sessionId}: ${previousNewest.cart_hash} -> ${cartHash}`);\n  console.log(`[Supersede] Previous request ${previousNewest.request_id} is now STALE, new request ${requestId} is NEWEST`);\n  global.performanceMetrics.superseded_requests++;\n  \n  // Clear old cache and processing locks for previous cart composition\n  const oldCacheKey = `${sessionId}:${previousNewest.cart_hash}`;\n  if (global.suggestionCache[oldCacheKey]) {\n    delete global.suggestionCache[oldCacheKey];\n    console.log(`[Supersede] Cleared cache for old cart: ${oldCacheKey}`);\n  }\n  if (global.processingRequests[oldCacheKey]) {\n    delete global.processingRequests[oldCacheKey];\n    console.log(`[Supersede] Cleared processing lock for old cart: ${oldCacheKey}`);\n  }\n}\n\n// Clean up expired cache entries\nlet cleanedCount = 0;\nObject.keys(global.suggestionCache).forEach(key => {\n  if (now - global.suggestionCache[key].timestamp > TTL) {\n    delete global.suggestionCache[key];\n    cleanedCount++;\n  }\n});\n\n// Clean up stale processing locks\nObject.keys(global.processingRequests).forEach(key => {\n  if (now - global.processingRequests[key].timestamp > PROCESSING_TTL) {\n    console.log(`[Cache] Cleaned stale processing lock: ${key}`);\n    delete global.processingRequests[key];\n  }\n});\n\n// Clean up old newest request tracking (older than 5 minutes)\nObject.keys(global.newestRequests).forEach(key => {\n  if (now - global.newestRequests[key].timestamp > TTL) {\n    delete global.newestRequests[key];\n  }\n});\n\nif (cleanedCount > 0) {\n  console.log(`[Cache] Cleaned ${cleanedCount} expired cache entries`);\n}\n\n// Check if we have a valid cached result\nconst cached = global.suggestionCache[cacheKey];\n\nif (cached && now - cached.timestamp < TTL) {\n  const age = Math.round((now - cached.timestamp) / 1000);\n  global.performanceMetrics.cache_hits++;\n  const hitRate = ((global.performanceMetrics.cache_hits / global.performanceMetrics.total_requests) * 100).toFixed(1);\n  console.log(`[Cache] HIT for ${cacheKey} (age: ${age}s, request: ${requestId}, hit rate: ${hitRate}%)`);\n  \n  return {\n    json: {\n      ...cached.data,\n      cached: true,\n      cache_age_seconds: age,\n      original_request_id: cached.request_id,\n      current_request_id: requestId,\n      _cacheHit: true,\n      _skipProcessing: true\n    }\n  };\n}\n\n// Check if another request is already processing this cart\nconst processing = global.processingRequests[cacheKey];\n\nif (processing && now - processing.timestamp < PROCESSING_TTL) {\n  // CRITICAL: Check if this is a prefetch and checkout is requesting\n  // In this case, the checkout should WAIT for the prefetch to complete\n  const waitTime = Math.round((now - processing.timestamp) / 1000);\n  global.performanceMetrics.wait_requests++;\n  console.log(`[Cache] PROCESSING by ${processing.request_id} (${waitTime}s ago) - request ${requestId} will WAIT`);\n  console.log(`[Metrics] Wait requests: ${global.performanceMetrics.wait_requests} (deduplication working!)`);\n  \n  return {\n    json: {\n      ...webhookData,\n      cacheKey: cacheKey,\n      timestamp: now,\n      _cacheHit: false,\n      _skipProcessing: true,\n      _waitForProcessing: true,\n      _processingRequestId: processing.request_id\n    }\n  };\n}\n\n// Mark this request as processing\nglobal.processingRequests[cacheKey] = {\n  request_id: requestId,\n  timestamp: now,\n  is_prefetch: isPrefetch\n};\n\nconsole.log(`[Cache] MISS for ${cacheKey} (request: ${requestId}, prefetch: ${isPrefetch}) - starting processing`);\n\nreturn {\n  json: {\n    ...webhookData,\n    cacheKey: cacheKey,\n    timestamp: now,\n    _cacheHit: false,\n    _skipProcessing: false,\n    _sessionId: sessionId,\n    _requestId: requestId\n  }\n};"
+      },
+      "id": "cache-check-node",
+      "name": "Check Cache",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        192,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json._skipProcessing}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "cache-route-node",
+      "name": "Skip Processing?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        384,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json._cacheHit}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "return-type-node",
+      "name": "Cache Hit or Wait?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        576,
+        -104
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Poll for result - another request is processing\nconst cacheKey = $json.cacheKey;\nconst requestId = $json.body?.request_id || $json.request_id || 'unknown';\nconst processingRequestId = $json._processingRequestId;\n\nconsole.log(`[Wait] Request ${requestId} waiting for ${processingRequestId} to complete...`);\n\n// Poll up to 80 times (40 seconds total) - Ollama takes up to 60s under load\nfor (let i = 0; i < 80; i++) {\n  await new Promise(resolve => setTimeout(resolve, 500));\n  \n  // Check if cache appeared\n  if (global.suggestionCache && global.suggestionCache[cacheKey]) {\n    const cached = global.suggestionCache[cacheKey];\n    const now = Date.now();\n    const age = Math.round((now - cached.timestamp) / 1000);\n    \n    if (now - cached.timestamp < 60000) {\n      console.log(`[Wait] Cache appeared after ${(i + 1) * 500}ms - returning cached result`);\n      return {\n        json: {\n          ...cached.data,\n          cached: true,\n          cache_age_seconds: age,\n          original_request_id: cached.request_id,\n          current_request_id: requestId,\n          waited_ms: (i + 1) * 500\n        }\n      };\n    }\n  }\n}\n\n// Timeout - return error\nconsole.log(`[Wait] Timeout waiting for result - returning error`);\nreturn {\n  json: {\n    success: false,\n    suggestions: [],\n    error: 'Request timeout - please try again',\n    cached: false\n  }\n};"
+      },
+      "id": "wait-for-result-node",
+      "name": "Wait for Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        768,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "X-Cache-Status",
+                "value": "HIT"
+              }
+            ]
+          }
+        }
+      },
+      "id": "return-cached-node",
+      "name": "Return Cached",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        576,
+        -208
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare context for AI - FIXED VERSION\n// Get webhook data from the Webhook Trigger node specifically\n// $input.first() picks up database results, not webhook data!\nconst webhookData = $node[\"Informação carrinho\"].json;\nconst inputData = webhookData.body || webhookData;\n\nconsole.log('DEBUG - Input keys:', Object.keys(inputData));\nconsole.log('DEBUG - Input.body type:', typeof inputData.body);\nconsole.log('DEBUG - Input.body keys:', inputData.body ? Object.keys(inputData.body) : 'no body');\n\n// Extract cart items from different possible locations\nlet cartItems = [];\n\n// n8n webhook receives POST JSON data in body object\nif (inputData.body && inputData.body.cart_items) {\n    cartItems = inputData.body.cart_items;\n    console.log('Found cart_items in inputData.body.cart_items');\n} else if (inputData.cart_items) {\n    cartItems = inputData.cart_items;\n    console.log('Found cart_items in inputData.cart_items');\n} else if (Array.isArray(inputData)) {\n    cartItems = inputData;\n    console.log('Using inputData as array');\n} else {\n    console.log('Could not find cart_items in:', Object.keys(inputData));\n    if (inputData.body) {\n        console.log('Body structure:', JSON.stringify(inputData.body).substring(0, 300));\n    }\n    cartItems = [];\n}\n\nconsole.log('Extracted cart items:', cartItems ? cartItems.length : 0, 'items');\n\n// Get products from database - SIMPLIFIED\nlet allProducts = [];\nconst allInputs = $input.all();\n\n// The Prepare AI Context node receives inputs from BOTH Webhook and Database nodes\n// We need to find the database products (items with id, name, price, category)\nallInputs.forEach(inputItem => {\n    const data = inputItem.json;\n    if (data && data.id && data.name && data.price && data.category) {\n        allProducts.push(data);\n    }\n});\n\nif (allProducts.length === 0) {\n    console.log('ERROR: No products loaded from database!');\n    console.log('Total inputs:', allInputs.length);\n}\n\nconsole.log('PREPARE AI CONTEXT DEBUG:');\nconsole.log('  - Total products loaded:', allProducts.length);\nconsole.log('  - First 5 product IDs:', allProducts.slice(0, 5).map(p => p.id).join(', '));\nconsole.log('  - Cart items count:', cartItems.length);\n\n// Build product lookup\nconst productMap = {};\nconst categoryMap = {};\n\nallProducts.forEach(product => {\n  productMap[product.id] = product;\n  if (!categoryMap[product.category]) {\n    categoryMap[product.category] = [];\n  }\n  categoryMap[product.category].push(product);\n});\n\n// Analyze cart\nconst cartProductIds = cartItems.map(item => item.product_id || item.id);\nconst cartCategories = [...new Set(cartItems.map(item => {\n  const product = productMap[item.product_id || item.id];\n  return product?.category || 'unknown';\n}))].filter(c => c !== 'unknown');\n\nconst cartTotal = cartItems.reduce((sum, item) => {\n  return sum + ((item.price || 0) * (item.quantity || 1));\n}, 0);\n\n// Get cart product details\nconst cartProductDetails = cartItems.map(item => {\n  const product = productMap[item.product_id || item.id];\n  return {\n    id: item.product_id || item.id,\n    name: item.product_name || item.name || product?.name,\n    category: product?.category,\n    compatibility_tags: product?.compatibility_tags || [],\n    quantity: item.quantity || 1\n  };\n});\n\n// Find compatible products\nconst allCartTags = new Set();\ncartProductDetails.forEach(item => {\n  (item.compatibility_tags || []).forEach(tag => allCartTags.add(tag));\n});\n\n// Start with tag-based compatible products\nlet compatibleProducts = allProducts\n  .filter(p => {\n    if (cartProductIds.includes(p.id)) return false;\n    const productTags = p.compatibility_tags || [];\n    return productTags.some(tag => allCartTags.has(tag));\n  });\n\n// CRITICAL: If power tools in cart, ensure ALL safety products are included\nconst hasPowerTools = cartItems.some(item => {\n  const prod = productMap[item.product_id || item.id];\n  return prod?.category === 'Power Tools';\n});\n\nif (hasPowerTools) {\n  // Add ALL safety products that aren't already in the list\n  const safetyProducts = allProducts.filter(p => p.category === 'Safety' && !cartProductIds.includes(p.id));\n  const existingIds = new Set(compatibleProducts.map(p => p.id));\n\n  safetyProducts.forEach(safetyProd => {\n    if (!existingIds.has(safetyProd.id)) {\n      compatibleProducts.unshift(safetyProd); // Add safety to front\n    }\n  });\n}\n\ncompatibleProducts = compatibleProducts.slice(0, 20); // Increase from 15 to 20\n\n// SAFETY-ONLY CART DETECTION: If cart has only safety gear, expand to suggest tools\nconst cartHasOnlySafety = cartItems.every(item => {\n  const product = productMap[item.product_id || item.id];\n  return product?.category === 'Safety';\n});\n\nif (cartHasOnlySafety && cartItems.length > 0 && cartItems.length <= 4) {\n  console.log('SAFETY-ONLY CART DETECTED - Expanding suggestions to include tools');\n  \n  // When customer has ONLY safety gear, they're clearly preparing for a project\n  // Give AI a diverse set of options to choose from\n  const existingIds = new Set(compatibleProducts.map(p => p.id));\n  \n  // Add power tools (most common use case for safety gear)\n  const powerTools = allProducts.filter(p =>\n    p.category === 'Power Tools' &&\n    !cartProductIds.includes(p.id) &&\n    p.price >= 30 && p.price <= 200\n  ).slice(0, 8);\n  \n  // Add hand tools (alternative scenario)\n  const handTools = allProducts.filter(p =>\n    p.category === 'Hand Tools' &&\n    !cartProductIds.includes(p.id) &&\n    p.price >= 15 && p.price <= 100\n  ).slice(0, 4);\n  \n  // Add accessories/consumables they'll likely need\n  const accessories = allProducts.filter(p =>\n    (p.category === 'Accessories' || p.subcategory === 'Drill Bits' || p.subcategory === 'Blades') &&\n    !cartProductIds.includes(p.id)\n  ).slice(0, 3);\n  \n  // Combine and add to compatible products\n  [...powerTools, ...handTools, ...accessories].forEach(item => {\n    if (!existingIds.has(item.id)) {\n      compatibleProducts.push(item);\n      existingIds.add(item.id);\n    }\n  });\n  \n  console.log('  - Added for safety-only cart:', powerTools.length, 'power tools,', handTools.length, 'hand tools,', accessories.length, 'accessories');\n}\n\nconsole.log('COMPATIBLE PRODUCTS DEBUG:');\nconsole.log('  - Compatible products count:', compatibleProducts.length);\nconsole.log('  - Compatible product IDs:', compatibleProducts.map(p => p.id).join(', '));\nconsole.log('  - Has power tools:', hasPowerTools);\nconsole.log('  - Safety products added:', compatibleProducts.filter(p => p.category === 'Safety').length);\nconsole.log('  - Safety-only cart:', cartHasOnlySafety);\nconsole.log('Compatible product IDs:', compatibleProducts.map(p => p.id).join(', '));\n\n// Detect project type\nlet projectType = 'general';\nconst powerToolsInCart = cartItems.some(item => {\n  const prod = productMap[item.product_id || item.id];\n  return prod?.category === 'Power Tools';\n});\nconst paintingInCart = cartItems.some(item => {\n  const prod = productMap[item.product_id || item.id];\n  return prod?.category === 'Paint';\n});\n\nif (powerToolsInCart) projectType = 'power_tool_project';\nif (paintingInCart) projectType = 'painting_project';\n\nconst customerId = inputData.body?.customer_id || inputData.customer_id || 'demo';\nconst sessionId = inputData.body?.session_id || inputData.session_id || 'demo-' + Date.now();\n\nconst contextData = {\n  cart_items: cartProductDetails,\n  cart_product_ids: cartProductIds,\n  cart_categories: cartCategories,\n  cart_total: cartTotal.toFixed(2),\n  project_type: projectType,\n  compatible_products: compatibleProducts,\n  all_compatibility_tags: Array.from(allCartTags),\n  customer_id: customerId,\n  session_id: sessionId,\n  timestamp: new Date().toISOString(),\n  safety_only_cart: cartHasOnlySafety\n};\n\n// Prepare Ollama request with content as STRING\nconst ollamaRequest = {\n  model: \"llama3.2\",\n  messages: [\n    {\n      role: \"system\",\n      content: \"És um assistente de vendas de ferramentas. Analisa o carrinho do cliente e sugere 6 produtos complementares da lista compatible_products.\\n\\nCritérios de seleção:\\n- Ferramentas/materiais em falta para completar o projeto\\n- Equipamento de segurança (prioridade alta se houver ferramentas elétricas)\\n- Consumíveis e acessórios necessários\\n- Orçamento adequado ao valor do carrinho\\n\\nRegras:\\n- Usa APENAS produtos da lista compatible_products\\n- Usa o id e name exatos de cada produto\\n- NÃO inventes IDs de produtos\\n- Atribui confidence (0.0-1.0) baseado na relevância\\n\\nRetorna apenas JSON válido:\\n{\\n  \\\"suggestions\\\": [\\n    {\\n      \\\"product_id\\\": <id exato da lista>,\\n      \\\"product_name\\\": \\\"<nome exato da lista>\\\",\\n      \\\"price\\\": <número>,\\n      \\\"confidence\\\": <0.0-1.0>\\n    }\\n  ]\\n}\"\n    },\n    {\n      role: \"user\",\n      content: JSON.stringify(contextData)  // MUST be a string!\n    }\n  ],\n  stream: false,\n  format: \"json\",\n  options: {\n    temperature: 0.4,\n    num_predict: 2500\n  }\n};\n\nreturn {\n  contextData: contextData,\n  ollamaRequest: ollamaRequest\n};"
+      },
+      "id": "18e4c018-d0c2-4f31-8c74-6812c6c5a05b",
+      "name": "Prepare AI Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check if this request has been superseded before calling Ollama\nconst checkCacheNode = $node[\"Check Cache\"].json;\nconst sessionId = checkCacheNode._sessionId || checkCacheNode.body?.session_id || 'unknown';\nconst requestId = checkCacheNode._requestId || checkCacheNode.body?.request_id || 'unknown';\nconst cartHash = checkCacheNode.body?.cart_hash || 'unknown';\n\n// Check if this request is still the newest for this session\nconst newestRequest = global.newestRequests && global.newestRequests[sessionId];\n\nif (newestRequest && newestRequest.request_id !== requestId) {\n  console.log(`[Supersede] Request ${requestId} has been SUPERSEDED by ${newestRequest.request_id} - skipping Ollama call`);\n  \n  // Clear processing lock since we're aborting\n  const cacheKey = `${sessionId}:${cartHash}`;\n  if (global.processingRequests && global.processingRequests[cacheKey]) {\n    delete global.processingRequests[cacheKey];\n  }\n  \n  // Return empty result - this request is stale\n  return {\n    json: {\n      success: false,\n      suggestions: [],\n      message: 'Request superseded by newer cart state',\n      superseded: true,\n      _skipOllama: true\n    }\n  };\n}\n\nconsole.log(`[Supersede] Request ${requestId} is still NEWEST - proceeding to Ollama`);\n\n// Pass through to Ollama\nreturn { json: $json };"
+      },
+      "id": "validate-request-node",
+      "name": "Validate Request Not Superseded",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json._skipOllama}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "check-skip-ollama-node",
+      "name": "Skip Ollama?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        640,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://ollama:11434/api/chat",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.ollamaRequest }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "446c3c75-6a58-45cc-8acb-28d8aa96b930",
+      "name": "Ollama Local AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        760,
+        0
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI response and validate - WITH STRICT ID VALIDATION\nconst prepareNode = $node[\"Prepare AI Context\"].json;\nconst cartData = prepareNode.contextData || prepareNode;\n\n// FIX: Build productMap from compatible_products instead of $input.all()\n// At this point in the workflow, only Ollama response is in $input, NOT the database products\nconst productMap = {};\ncartData.compatible_products.forEach(p => {\n  if (p.id && p.name && p.price) {\n    productMap[p.id] = p;\n  }\n});\n\n// CRITICAL: Build set of VALID IDs from compatible_products that were sent to Ollama\nconst validProductIds = new Set(cartData.compatible_products.map(p => p.id));\n\nconsole.log('Format Response: Total products in productMap:', Object.keys(productMap).length);\nconsole.log('Format Response: Valid IDs from compatible_products:', Array.from(validProductIds).join(', '));\n\nlet suggestions = [];\nlet llmUsed = 'ollama';\n\ntry {\n  const input = $input.first().json;\n\n  if (input.error) {\n    throw new Error('Ollama request failed: ' + input.error.message);\n  }\n\n  // Parse Ollama response\n  let ollamaResponse = input;\n  if (input.body) {\n    ollamaResponse = typeof input.body === 'string' ? JSON.parse(input.body) : input.body;\n  }\n\n  // Extract suggestions\n  if (ollamaResponse.message?.content) {\n    const content = typeof ollamaResponse.message.content === 'string'\n      ? JSON.parse(ollamaResponse.message.content)\n      : ollamaResponse.message.content;\n    suggestions = content.suggestions || [];\n  } else if (ollamaResponse.suggestions) {\n    suggestions = ollamaResponse.suggestions;\n  } else if (typeof ollamaResponse === 'string') {\n    const parsed = JSON.parse(ollamaResponse);\n    suggestions = parsed.suggestions || [];\n  }\n\n  console.log('Format Response: Ollama suggested IDs:', suggestions.map(s => s.product_id).join(', '));\n\n  // Enrich and validate - STRICT ID CHECKING\n  const enrichedSuggestions = suggestions\n    .map(suggestion => {\n      const productId = parseInt(suggestion.product_id);\n\n      // CRITICAL: Check if this ID was in the compatible_products sent to Ollama\n      if (!validProductIds.has(productId)) {\n        console.log(`Format Response: REJECTED - Product ${productId} was NOT in compatible_products (Ollama hallucinated this ID)`);\n        return null;\n      }\n\n      const product = productMap[productId];\n\n      if (!product) {\n        console.log(`Format Response: REJECTED - Product ${productId} not found in database`);\n        return null;\n      }\n\n      console.log(`Format Response: ACCEPTED - Product ${productId} - ${product.name}`);\n\n      return {\n        product_id: productId,\n        product_name: product.name,\n        description: product.description || '',\n        category: product.category,\n        subcategory: product.subcategory || '',\n        price: parseFloat(product.price),\n        confidence: parseFloat(suggestion.confidence || 0.75),\n        in_stock: product.in_stock,\n        stock_quantity: product.stock_quantity,\n        sku: product.sku,\n        compatibility_tags: product.compatibility_tags || [],\n        image_url: product.image_url || null\n      };\n    })\n    .filter(s => s !== null && s.in_stock)\n    .filter((s, index, self) =>\n      index === self.findIndex(t => t.product_id === s.product_id)\n    )\n    .filter(s => !cartData.cart_product_ids.includes(s.product_id))\n    .sort((a, b) => b.confidence - a.confidence)\n    .slice(0, 5);\n\n  console.log('Format Response: Final suggestions after validation:', enrichedSuggestions.length);\n\n  // IF NO VALID SUGGESTIONS, USE TOP 3 FROM COMPATIBLE_PRODUCTS (FALLBACK)\n  if (enrichedSuggestions.length === 0 && cartData.compatible_products.length > 0) {\n    console.log('Format Response: Ollama suggestions invalid, using fallback from compatible_products');\n\n    cartData.compatible_products.slice(0, 3).forEach(product => {\n      // Product is already from compatible_products, so it exists in productMap\n      const dbProduct = productMap[product.id];\n      // Check in_stock if available, default to true if not present (since compatible_products are pre-filtered)\n      const isInStock = dbProduct && (dbProduct.in_stock !== false);\n      \n      if (isInStock && !cartData.cart_product_ids.includes(product.id)) {\n        enrichedSuggestions.push({\n          product_id: product.id,\n          product_name: dbProduct.name || product.name,\n          description: dbProduct.description || product.description || '',\n          category: dbProduct.category || product.category,\n          subcategory: dbProduct.subcategory || product.subcategory || '',\n          price: parseFloat(dbProduct.price || product.price),\n          confidence: 0.70,\n          in_stock: true,\n          stock_quantity: dbProduct.stock_quantity || product.stock_quantity || 0,\n          sku: dbProduct.sku || product.sku || '',\n          compatibility_tags: dbProduct.compatibility_tags || product.compatibility_tags || [],\n          image_url: dbProduct.image_url || product.image_url || null\n        });\n      }\n    });\n\n    llmUsed = 'fallback';\n    console.log('Format Response: Using', enrichedSuggestions.length, 'fallback suggestions');\n  }\n\n  const suggestedTotal = enrichedSuggestions.reduce((sum, s) => sum + s.price, 0);\n\n  return {\n    success: true,\n    suggestions: enrichedSuggestions,\n    debug: {\n      total_products_in_map: Object.keys(productMap).length,\n      valid_ids_from_compatible: Array.from(validProductIds),\n      ollama_suggested_ids: suggestions.map(s => s.product_id),\n      enriched_count: enrichedSuggestions.length\n    },\n    analytics: {\n      cart_value: parseFloat(cartData.cart_total),\n      suggested_value: parseFloat(suggestedTotal.toFixed(2)),\n      potential_upsell: parseFloat(suggestedTotal.toFixed(2)),\n      suggestion_count: enrichedSuggestions.length,\n      cart_categories: cartData.cart_categories,\n      project_type: cartData.project_type\n    },\n    metadata: {\n      llm_used: llmUsed,\n      generated_at: new Date().toISOString(),\n      session_id: cartData.session_id\n    }\n  };\n\n} catch (error) {\n  console.error('Format Response: ERROR -', error.message);\n\n  return {\n    success: false,\n    suggestions: [],\n    error: error.message,\n    analytics: {\n      cart_value: parseFloat(cartData.cart_total),\n      suggested_value: 0,\n      potential_upsell: 0,\n      suggestion_count: 0,\n      cart_categories: cartData.cart_categories,\n      project_type: cartData.project_type\n    },\n    metadata: {\n      llm_used: 'error',\n      generated_at: new Date().toISOString(),\n      session_id: cartData.session_id,\n      error_details: error.message\n    }\n  };\n}"
+      },
+      "id": "88937bb4-e44a-489b-9118-d4b8c07ca77a",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Store result in cache and clear processing lock + Performance Metrics\nif (typeof global.suggestionCache === 'undefined') {\n  global.suggestionCache = {};\n}\nif (typeof global.processingRequests === 'undefined') {\n  global.processingRequests = {};\n}\nif (typeof global.performanceMetrics === 'undefined') {\n  global.performanceMetrics = {\n    total_requests: 0,\n    cache_hits: 0,\n    cache_misses: 0,\n    wait_requests: 0,\n    total_processing_time: 0,\n    recent_requests: []\n  };\n}\n\n// Get cache key from Check Cache node\nconst checkCacheNode = $node[\"Check Cache\"].json;\nconst cacheKey = checkCacheNode.cacheKey;\nconst requestId = checkCacheNode.body?.request_id || checkCacheNode.request_id || 'unknown';\nconst startTime = checkCacheNode.timestamp || Date.now();\nconst processingTime = Date.now() - startTime;\n\n// Update metrics\nglobal.performanceMetrics.cache_misses++;\nglobal.performanceMetrics.total_processing_time += processingTime;\n\n// Track recent request\nglobal.performanceMetrics.recent_requests.push({\n  timestamp: new Date().toISOString(),\n  request_id: requestId,\n  cache_key: cacheKey,\n  processing_time_ms: processingTime,\n  type: 'cache_miss'\n});\n\n// Keep only last 50 requests\nif (global.performanceMetrics.recent_requests.length > 50) {\n  global.performanceMetrics.recent_requests = global.performanceMetrics.recent_requests.slice(-50);\n}\n\nif (cacheKey && cacheKey !== 'unknown:unknown') {\n  global.suggestionCache[cacheKey] = {\n    data: $json,\n    timestamp: Date.now(),\n    request_id: requestId\n  };\n  \n  // Clear processing lock\n  if (global.processingRequests[cacheKey]) {\n    delete global.processingRequests[cacheKey];\n    console.log(`[Cache] Cleared processing lock for ${cacheKey}`);\n  }\n  \n  const avgTime = (global.performanceMetrics.total_processing_time / global.performanceMetrics.cache_misses / 1000).toFixed(2);\n  console.log(`[Cache] Stored result for key: ${cacheKey} (request: ${requestId}, processing: ${(processingTime/1000).toFixed(2)}s, avg: ${avgTime}s)`);\n  console.log(`[Metrics] Total: ${global.performanceMetrics.total_requests} | Hits: ${global.performanceMetrics.cache_hits} | Misses: ${global.performanceMetrics.cache_misses} | Waits: ${global.performanceMetrics.wait_requests}`);\n}\n\nreturn { \n  json: {\n    ...$json,\n    cached: false,\n    processing_time_ms: processingTime\n  }\n};"
+      },
+      "id": "store-cache-node",
+      "name": "Store in Cache",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200,
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "X-Powered-By",
+                "value": "n8n-hardware-demo"
+              },
+              {
+                "name": "X-Cache-Status",
+                "value": "MISS"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a5501c35-2835-458b-8152-640b40a614cb",
+      "name": "Return Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hardware-demo",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "916a9675-ee5a-484f-b979-8727acfeb561",
+      "name": "Informação carrinho",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "hardware-demo-webhook"
+    },
+    {
+      "parameters": {
+        "url": "https://skalacznbawxabpqplnt.supabase.co/rest/v1/produtos",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrYWxhY3puYmF3eGFicHFwbG50Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODQ5ODM3OSwiZXhwIjoyMDg0MDc0Mzc5fQ.WBx-Z3jJ-PC8kaDB5kVxDe8eTzs3OB6WI78pKSiG1CM"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNrYWxhY3puYmF3eGFicHFwbG50Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2ODQ5ODM3OSwiZXhwIjoyMDg0MDc0Mzc5fQ.WBx-Z3jJ-PC8kaDB5kVxDe8eTzs3OB6WI78pKSiG1CM"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -32,
+        208
+      ],
+      "id": "9ddb1818-e341-43da-84be-f9bfe4caba60",
+      "name": "Base de dados"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  id,\n  name,\n  description,\n  price,\n  category,\n  subcategory,\n  sku,\n  in_stock,\n  stock_quantity,\n  compatibility_tags,\n  image_url\nFROM demo_products\nWHERE in_stock = true\nORDER BY category, name",
+        "options": {}
+      },
+      "id": "e51643d0-a8df-41d2-a52f-f3b43b501ab1",
+      "name": "Get Products from Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.4,
+      "position": [
+        192,
+        0
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "acM3cJuEGq6fcPDx",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Check Cache": {
+      "main": [
+        [
+          {
+            "node": "Skip Processing?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Processing?": {
+      "main": [
+        [
+          {
+            "node": "Cache Hit or Wait?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get Products from Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cache Hit or Wait?": {
+      "main": [
+        [
+          {
+            "node": "Return Cached",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait for Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Result": {
+      "main": [
+        [
+          {
+            "node": "Return Cached",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare AI Context": {
+      "main": [
+        [
+          {
+            "node": "Validate Request Not Superseded",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Request Not Superseded": {
+      "main": [
+        [
+          {
+            "node": "Skip Ollama?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip Ollama?": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ollama Local AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Local AI": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Store in Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store in Cache": {
+      "main": [
+        [
+          {
+            "node": "Return Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Informação carrinho": {
+      "main": [
+        [
+          {
+            "node": "Check Cache",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Base de dados": {
+      "main": [
+        []
+      ]
+    },
+    "Get Products from Database": {
+      "main": [
+        [
+          {
+            "node": "Prepare AI Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "314b6ae2-c1b8-4b8b-bd29-d397f9af57fa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0ad473ca5f04731bc02a819377b7037140df61c07ce29e449d14e76e6e995ec1"
+  },
+  "id": "uPfn9kgJ9hL6495djjArE",
+  "tags": [
+    {
+      "updatedAt": "2026-01-15T00:30:13.181Z",
+      "createdAt": "2026-01-15T00:30:13.181Z",
+      "id": "hD3oTG7a5mRCEbJF",
+      "name": "demo"
+    }
+  ]
+}

@@ -1,0 +1,294 @@
+{
+  "name": "Vapi - Book Appointment",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "book-appointment-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "85977a67-ac24-4769-aa18-51adc0437f77",
+      "name": "Webhook - Receive from Vapi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        96,
+        0
+      ],
+      "webhookId": "efc2daba-74ac-472d-bb85-417c896042ca"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Required fields\n  const requiredFields = ['date', 'time', 'customer_name', 'customer_phone'];\n  const missingFields = requiredFields.filter(field => !body[field]);\n  if (missingFields.length > 0) {\n    return { _error: true, errorMessage: 'Faltam dados obrigatorios para a marcacao. Por favor, forneca o nome, telefone, data e hora.', toolCallId };\n  }\n\n  // Validate date format\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(body.date)) {\n    return { _error: true, errorMessage: 'Formato de data invalido. Por favor, indique a data novamente.', toolCallId };\n  }\n\n  // Validate time format\n  if (!/^\\d{2}:\\d{2}$/.test(body.time)) {\n    return { _error: true, errorMessage: 'Formato de hora invalido. Por favor, indique a hora novamente.', toolCallId };\n  }\n\n  // Parse date components\n  const [year, month, day] = body.date.split('-').map(Number);\n  const bookingDate = new Date(year, month - 1, day);\n  if (isNaN(bookingDate.getTime()) || bookingDate.getMonth() !== month - 1 || bookingDate.getDate() !== day) {\n    return { _error: true, errorMessage: 'Data invalida. Por favor, verifique o dia e mes.', toolCallId };\n  }\n\n  // Check past date\n  const now = new Date();\n  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n  if (bookingDate < today) {\n    return { _error: true, errorMessage: 'Nao e possivel marcar para uma data que ja passou. Por favor, escolha uma data futura.', toolCallId };\n  }\n\n  // Check weekend\n  const dayOfWeek = bookingDate.getDay();\n  if (dayOfWeek === 0 || dayOfWeek === 6) {\n    return { _error: true, errorMessage: 'Nao temos atendimento aos fins de semana. Por favor, escolha um dia util, de segunda a sexta-feira.', toolCallId };\n  }\n\n  // Validate business hours (9:00 - 18:00)\n  const [hour, minute] = body.time.split(':').map(Number);\n  if (hour < 9 || hour >= 18) {\n    return { _error: true, errorMessage: 'Esse horario esta fora do nosso periodo de atendimento. Estamos disponiveis das nove as dezoito horas, de segunda a sexta-feira.', toolCallId };\n  }\n\n  // Validate phone\n  const phone = body.customer_phone.toString().replace(/\\s+/g, '');\n  if (phone.replace(/[^0-9]/g, '').length < 9) {\n    return { _error: true, errorMessage: 'Numero de telefone invalido. Por favor, indique um numero valido.', toolCallId };\n  }\n\n  // Validate email if provided\n  if (body.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(body.customer_email)) {\n    return { _error: true, errorMessage: 'O endereco de email fornecido nao e valido.', toolCallId };\n  }\n\n  // Sanitize text inputs\n  function sanitize(text) {\n    if (!text) return '';\n    return String(text).replace(/[\\n\\r]/g, ' ').replace(/<[^>]*>/g, '').substring(0, 500);\n  }\n\n  // Format date for natural voice\n  const months = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];\n  const voiceDate = day + ' de ' + months[month - 1] + ' de ' + year;\n\n  // Format time for natural voice\n  let voiceTime;\n  if (minute === 0) {\n    voiceTime = hour + ' horas';\n  } else {\n    voiceTime = hour + ' e ' + minute;\n  }\n\n  return {\n    _error: false,\n    date: body.date,\n    time: body.time,\n    voiceDate: voiceDate,\n    voiceTime: voiceTime,\n    customer_name: sanitize(body.customer_name),\n    customer_phone: phone,\n    customer_email: body.customer_email || '',\n    service_type: sanitize(body.service_type) || 'Consulta',\n    duration: body.duration || 60,\n    notes: sanitize(body.notes) || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao processar o pedido de marcacao. Por favor, tente novamente.', toolCallId };\n}"
+      },
+      "id": "c69ea9e2-cbbd-4096-a323-139fe1574c2c",
+      "name": "Extract & Validate Booking",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-0001-4000-8000-000000000001",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "3f52b318-d386-40bc-86ef-8aa36785335f",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.errorMessage }] } }}",
+        "options": {}
+      },
+      "id": "343bcac3-4ded-40c3-8649-3dc4202f4c42",
+      "name": "Respond Error to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        624,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": "primary",
+        "start": "={{ $json.date }}T{{ $json.time }}:00",
+        "end": "={{ new Date(new Date($json.date + 'T' + $json.time + ':00').getTime() + $json.duration*60000).toISOString().slice(0, 19) }}",
+        "additionalFields": {
+          "attendees": "={{ $json.customer_email ? $json.customer_email : '' }}",
+          "description": "=Marcacao via Assistente Virtual\n\nCliente: {{ $json.customer_name }}\nTelemovel: {{ $json.customer_phone }}\n{{ $json.customer_email ? 'Email: ' + $json.customer_email : '' }}\nServico: {{ $json.service_type }}\n{{ $json.notes ? 'Notas: ' + $json.notes : '' }}",
+          "location": "",
+          "sendUpdates": "all",
+          "summary": "={{ $json.service_type }} - {{ $json.customer_name }}"
+        }
+      },
+      "id": "fedd1135-82e6-4d9c-a3da-f4d7f1b194c6",
+      "name": "Create Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [
+        624,
+        96
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "9Hmuua4o9ISXVo6x",
+          "name": "Google Calendar account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const calendarResult = $input.item.json;\nconst bookingData = $('Extract & Validate Booking').item.json;\n\n// Check if calendar creation succeeded\nif (calendarResult.error || !calendarResult.id) {\n  return {\n    success: false,\n    message: 'Desculpe, nao foi possivel confirmar a marcacao neste momento. Pode tentar novamente ou contactar-nos diretamente.',\n    toolCallId: bookingData.toolCallId,\n    customer_name: bookingData.customer_name,\n    date: bookingData.date,\n    time: bookingData.time,\n    voiceDate: bookingData.voiceDate,\n    voiceTime: bookingData.voiceTime,\n    service_type: bookingData.service_type\n  };\n}\n\nreturn {\n  success: true,\n  event_id: calendarResult.id,\n  message: 'Perfeito! A sua marcacao esta confirmada para ' + bookingData.voiceDate + ' as ' + bookingData.voiceTime + '. Recebera uma confirmacao por email em breve.',\n  toolCallId: bookingData.toolCallId,\n  customer_name: bookingData.customer_name,\n  customer_phone: bookingData.customer_phone,\n  customer_email: bookingData.customer_email,\n  date: bookingData.date,\n  time: bookingData.time,\n  voiceDate: bookingData.voiceDate,\n  voiceTime: bookingData.voiceTime,\n  service_type: bookingData.service_type,\n  duration: bookingData.duration,\n  notes: bookingData.notes\n};"
+      },
+      "id": "61e030b1-13bf-4f2c-a275-2562231b7f4d",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.message }] } }}",
+        "options": {}
+      },
+      "id": "57aeaee3-60dc-4d76-a0f2-3ee65c62638a",
+      "name": "Respond to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        992,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-0002-4000-8000-000000000001",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d074fc31-dc07-4559-bf7b-4e4ef3b118a2",
+      "name": "Check Booking Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1008,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "andrefloresbrasil@gmail.com",
+        "subject": "=Nova Marcacao: {{ $json.customer_name }} - {{ $json.voiceDate }} as {{ $json.voiceTime }}",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n  <div style=\"background-color: #27ae60; color: white; padding: 20px; text-align: center;\">\n    <h2 style=\"margin: 0;\">Nova Marcacao Recebida</h2>\n  </div>\n  \n  <div style=\"background-color: #f8f9fa; padding: 20px; margin: 20px 0;\">\n    <p style=\"margin: 5px 0;\"><strong>ID do Evento:</strong> {{ $json.event_id }}</p>\n    <p style=\"margin: 5px 0;\"><strong>Criado via:</strong> Assistente Virtual</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: white; border: 1px solid #dee2e6; margin: 20px 0;\">\n    <h3 style=\"color: #27ae60; border-bottom: 2px solid #2ecc71; padding-bottom: 10px;\">Detalhes da Marcacao</h3>\n    <p style=\"margin: 10px 0;\"><strong>Data:</strong> {{ $json.voiceDate }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Hora:</strong> {{ $json.voiceTime }} (Acores)</p>\n    <p style=\"margin: 10px 0;\"><strong>Servico:</strong> {{ $json.service_type }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Duracao:</strong> {{ $json.duration }} minutos</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: white; border: 1px solid #dee2e6; margin: 20px 0;\">\n    <h3 style=\"color: #27ae60; border-bottom: 2px solid #2ecc71; padding-bottom: 10px;\">Informacao do Cliente</h3>\n    <p style=\"margin: 10px 0;\"><strong>Nome:</strong> {{ $json.customer_name }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Telemovel:</strong> {{ $json.customer_phone }}</p>\n    <p style=\"margin: 10px 0;\"><strong>Email:</strong> {{ $json.customer_email || 'Nao fornecido' }}</p>\n  </div>\n  \n  <div style=\"padding: 20px; background-color: #fff3cd; border: 1px solid #ffc107; margin: 20px 0;\">\n    <h3 style=\"color: #856404; margin-top: 0;\">Notas Adicionais</h3>\n    <p style=\"margin: 0;\">{{ $json.notes || 'Nenhuma' }}</p>\n  </div>\n  \n  <div style=\"background-color: #d4edda; border: 1px solid #28a745; padding: 15px; margin: 20px 0; text-align: center;\">\n    <p style=\"margin: 0; color: #155724;\">Evento criado automaticamente no Google Calendar</p>\n  </div>\n</div>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1232,
+        -96
+      ],
+      "id": "eaae556b-fb9d-4dae-b9d1-7d170b3662af",
+      "name": "Send Notification Email",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "webhookId": "7d2e192e-6fcd-414b-b89d-be206a098f21",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Receive from Vapi": {
+      "main": [
+        [
+          {
+            "node": "Extract & Validate Booking",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Validate Booking": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Respond Error to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Vapi",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Check Booking Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Booking Success": {
+      "main": [
+        [
+          {
+            "node": "Send Notification Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "versionId": "4888b62b-4d86-4806-8184-15fef44fa54d",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "i4wTS1JXtSrfmEYIb9WrY",
+  "tags": []
+}

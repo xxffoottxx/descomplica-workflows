@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Orçamentos — descomplica</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green: #b5e04e;
+            --green-dark: #9bc73e;
+            --black: #000000;
+            --white: #ffffff;
+            --gray-100: #f7f7f7;
+            --gray-200: #e5e5e5;
+            --gray-300: #d4d4d4;
+            --gray-400: #a3a3a3;
+            --gray-500: #737373;
+            --gray-600: #525252;
+            --gray-800: #262626;
+            --gray-900: #171717;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.5;
+        }
+
+        /* -- App Header -- */
+        .app-header {
+            background: var(--black);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .app-header img { height: 28px; width: auto; }
+        .app-header span {
+            color: var(--gray-500);
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 1px solid var(--gray-600);
+            padding-left: 16px;
+        }
+
+        /* -- Layout -- */
+        .app-layout {
+            display: grid;
+            grid-template-columns: 480px 1fr;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* -- Form Panel -- */
+        .form-panel {
+            background: var(--white);
+            border-right: 1px solid var(--gray-200);
+            padding: 28px 24px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+        }
+        .form-section { margin-bottom: 24px; }
+        .form-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray-500);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--gray-800);
+            background: var(--white);
+            transition: border-color 0.15s;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 2px rgba(181, 224, 78, 0.15);
+        }
+        textarea { resize: vertical; min-height: 60px; }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .field-group { margin-bottom: 12px; }
+
+        /* -- Catalog Sections -- */
+        .catalog-section {
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .catalog-header {
+            padding: 10px 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            background: var(--gray-100);
+            transition: background 0.15s;
+        }
+        .catalog-header:hover { background: var(--gray-200); }
+        .catalog-header h3 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+        .catalog-header .toggle-icon {
+            font-size: 12px;
+            color: var(--gray-500);
+            transition: transform 0.15s;
+        }
+        .catalog-section.collapsed .toggle-icon { transform: rotate(-90deg); }
+        .catalog-section.collapsed .catalog-body { display: none; }
+        .catalog-body { padding: 12px 14px; }
+
+        .option-label-text { font-size: 13px; color: var(--gray-800); }
+        .sub-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--gray-500);
+            margin: 10px 0 6px;
+        }
+        .sub-label:first-child { margin-top: 0; }
+
+        /* Radio and checkbox options */
+        .radio-opt, .check-opt {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 7px 10px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        .radio-opt:hover, .check-opt:hover { border-color: var(--green); }
+        .radio-opt.selected { border-color: var(--green); background: rgba(181, 224, 78, 0.08); }
+        .check-opt.checked { border-color: var(--green); background: rgba(181, 224, 78, 0.08); }
+        .radio-opt input:not(.price-input-inline), .check-opt input:not(.price-input-inline) { display: none; }
+
+        .compact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+
+        .price-tag {
+            background: var(--gray-100);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--green-dark);
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+            border: 1px dashed var(--gray-300);
+        }
+        .price-tag:hover { background: var(--green); color: var(--black); }
+
+        .price-input-inline {
+            width: 65px;
+            padding: 2px 6px;
+            border: 1px solid var(--green);
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--green-dark);
+            text-align: right;
+            background: var(--white);
+        }
+        .price-input-inline:focus { outline: none; box-shadow: 0 0 0 2px rgba(181, 224, 78, 0.2); }
+
+        .section-subtotal {
+            text-align: right;
+            padding-top: 8px;
+            margin-top: 8px;
+            border-top: 1px dashed var(--gray-200);
+            font-size: 12px;
+            color: var(--gray-500);
+        }
+        .section-subtotal span { color: var(--green-dark); font-weight: 700; }
+
+        /* Toggle switch */
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            border: 1.5px solid var(--gray-200);
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 8px;
+            font-size: 13px;
+            transition: all 0.15s;
+        }
+        .toggle-row:hover { border-color: var(--green); }
+        .toggle-row.active { border-color: var(--green); background: rgba(181, 224, 78, 0.08); }
+        .switch-track {
+            position: relative;
+            width: 36px; height: 20px;
+            background: var(--gray-300);
+            border-radius: 10px;
+            transition: all 0.15s;
+            flex-shrink: 0;
+        }
+        .switch-track::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 16px; height: 16px;
+            background: var(--white);
+            border-radius: 50%;
+            transition: all 0.15s;
+        }
+        .toggle-row.active .switch-track { background: var(--green); }
+        .toggle-row.active .switch-track::after { left: 18px; }
+
+        /* Workflow items */
+        .wf-item {
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            padding: 8px 10px;
+            margin-bottom: 6px;
+        }
+        .wf-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .wf-complexity {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 4px;
+        }
+        .wf-complexity .radio-opt {
+            padding: 5px 6px;
+            font-size: 11px;
+            flex-direction: column;
+            text-align: center;
+            gap: 2px;
+        }
+        .wf-complexity .radio-opt .price-tag { font-size: 10px; padding: 1px 5px; }
+
+        .template-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+        }
+        .template-btn {
+            padding: 5px 8px;
+            border: 1px solid var(--gray-200);
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 11px;
+            background: var(--white);
+            transition: all 0.15s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .template-btn:hover { border-color: var(--green); background: rgba(181, 224, 78, 0.05); }
+        .template-btn .complexity-tag {
+            font-size: 10px;
+            color: var(--gray-500);
+            font-weight: 600;
+        }
+
+        .btn-add-wf {
+            width: 100%;
+            padding: 7px;
+            border: 1.5px dashed var(--gray-300);
+            background: none;
+            color: var(--gray-500);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            font-family: inherit;
+            transition: all 0.15s;
+            margin-top: 4px;
+        }
+        .btn-add-wf:hover { border-color: var(--green); color: var(--green-dark); }
+
+        .btn-remove-small {
+            background: none;
+            border: 1px solid var(--gray-200);
+            color: var(--gray-400);
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.15s;
+        }
+        .btn-remove-small:hover { border-color: #dc2626; color: #dc2626; }
+
+        /* Slider */
+        .slider-group {
+            padding: 10px 12px;
+            background: var(--gray-100);
+            border-radius: 6px;
+        }
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            font-size: 13px;
+        }
+        .slider-value { font-size: 15px; font-weight: 700; color: var(--green-dark); }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            background: var(--gray-200);
+            border-radius: 3px;
+            outline: none;
+            -webkit-appearance: none;
+            border: none;
+            padding: 0;
+        }
+        input[type="range"]:focus { box-shadow: none; }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px; height: 18px;
+            background: var(--green);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--white);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px; height: 18px;
+            background: var(--green);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid var(--white);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        /* -- Custom Line Items -- */
+        .line-items-header {
+            display: grid;
+            grid-template-columns: 1fr 50px 80px 70px 28px;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        .line-items-header span {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--gray-500);
+        }
+        .line-item {
+            display: grid;
+            grid-template-columns: 1fr 50px 80px 70px 28px;
+            gap: 6px;
+            margin-bottom: 4px;
+            align-items: center;
+        }
+        .line-item input { padding: 6px 8px; font-size: 12px; }
+        .line-item .row-total {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-800);
+            text-align: right;
+        }
+        .btn-remove {
+            width: 26px; height: 26px;
+            border: none; background: none;
+            color: var(--gray-300);
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .btn-remove:hover { background: #fee2e2; color: #dc2626; }
+
+        .btn-add-line {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border: 1px dashed var(--gray-300);
+            background: none;
+            color: var(--gray-500);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: 6px;
+            font-family: inherit;
+            transition: all 0.15s;
+            margin-top: 4px;
+        }
+        .btn-add-line:hover {
+            border-color: var(--green);
+            color: var(--green-dark);
+        }
+
+        /* Bullet points for line items */
+        .line-item-group { margin-bottom: 6px; }
+        .btn-toggle-bullets {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 8px;
+            border: none;
+            background: none;
+            color: var(--gray-500);
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-toggle-bullets:hover { color: var(--green-dark); }
+        .btn-toggle-bullets .arrow {
+            display: inline-block;
+            transition: transform 0.15s;
+            font-size: 9px;
+        }
+        .btn-toggle-bullets.open .arrow { transform: rotate(90deg); }
+
+        .line-item-bullets {
+            margin: 4px 0 4px 12px;
+            padding: 6px 10px;
+            border-left: 2px solid var(--gray-200);
+            background: var(--gray-100);
+            border-radius: 0 4px 4px 0;
+        }
+        .bullet-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+        .bullet-item:last-child { margin-bottom: 0; }
+        .bullet-marker { color: var(--gray-400); font-size: 14px; line-height: 1; flex-shrink: 0; }
+        .bullet-item input { flex: 1; padding: 4px 8px; font-size: 11px; }
+        .btn-remove-bullet {
+            width: 20px; height: 20px;
+            border: none; background: none;
+            color: var(--gray-300); font-size: 14px;
+            cursor: pointer; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-remove-bullet:hover { background: #fee2e2; color: #dc2626; }
+        .btn-add-bullet {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            border: none;
+            background: none;
+            color: var(--gray-500);
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn-add-bullet:hover { color: var(--green-dark); }
+
+        /* -- Totals in form -- */
+        .form-totals {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 2px solid var(--gray-200);
+        }
+        .form-totals-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 3px 0;
+            font-size: 13px;
+        }
+        .form-totals-row.total {
+            font-size: 17px;
+            font-weight: 800;
+            color: var(--black);
+            padding-top: 8px;
+            margin-top: 4px;
+            border-top: 2px solid var(--black);
+        }
+        .form-totals-row.monthly-total {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--green-dark);
+            padding-top: 6px;
+            margin-top: 2px;
+        }
+        .form-totals-row .label { color: var(--gray-500); font-weight: 500; }
+        .form-totals-row .value { font-weight: 600; }
+
+        /* -- Generate Button -- */
+        .btn-generate {
+            width: 100%;
+            padding: 14px 20px;
+            background: var(--green);
+            color: var(--black);
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s;
+            margin-top: 20px;
+        }
+        .btn-generate:hover { background: var(--green-dark); }
+        .btn-generate:active { transform: scale(0.98); }
+
+        /* -- Preview Panel -- */
+        .preview-panel {
+            padding: 32px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .preview-wrapper {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--white);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+            border-radius: 4px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        /* -- PDF Content Styles -- */
+        .pdf-content {
+            font-family: 'Inter', Arial, Helvetica, sans-serif;
+            color: var(--gray-800);
+            font-size: 13px;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 297mm;
+        }
+        .pdf-header {
+            background: var(--black);
+            padding: 28px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pdf-header img { height: 30px; width: auto; }
+        .pdf-header .doc-type {
+            color: var(--green);
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .pdf-body { padding: 36px 40px 24px; flex: 1; }
+        .pdf-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            gap: 40px;
+        }
+        .pdf-info-block h3 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+        .pdf-info-block p {
+            font-size: 13px;
+            color: var(--gray-800);
+            margin-bottom: 2px;
+        }
+        .pdf-info-block p strong { font-weight: 700; }
+
+        .pdf-meta {
+            display: flex;
+            gap: 28px;
+            margin-bottom: 28px;
+            padding: 12px 16px;
+            background: var(--gray-100);
+            border-radius: 6px;
+        }
+        .pdf-meta-item { font-size: 12px; color: var(--gray-600); }
+        .pdf-meta-item strong {
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-left: 4px;
+        }
+
+        /* -- PDF Table -- */
+        .pdf-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 24px;
+        }
+        .pdf-table thead th {
+            background: var(--gray-900);
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 10px 14px;
+            text-align: left;
+        }
+        .pdf-table thead th:last-child,
+        .pdf-table thead th:nth-child(3),
+        .pdf-table thead th:nth-child(4) { text-align: right; }
+        .pdf-table thead th:nth-child(2) { text-align: center; }
+
+        .pdf-table tbody td {
+            padding: 10px 14px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .pdf-table tbody tr:nth-child(even) td { background: var(--gray-100); }
+        .pdf-table tbody td:last-child,
+        .pdf-table tbody td:nth-child(3),
+        .pdf-table tbody td:nth-child(4) {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+        .pdf-table tbody td:nth-child(2) { text-align: center; }
+
+        .pdf-item-bullets {
+            margin: 4px 0 0 4px;
+            padding: 0;
+            list-style: none;
+        }
+        .pdf-item-bullets li {
+            font-size: 11px;
+            color: var(--gray-600);
+            padding: 1px 0;
+            line-height: 1.4;
+        }
+        .pdf-item-bullets li::before {
+            content: '\2022';
+            color: var(--gray-400);
+            margin-right: 6px;
+        }
+
+        /* -- PDF Totals -- */
+        .pdf-totals {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 32px;
+        }
+        .pdf-totals-box { width: 260px; }
+        .pdf-totals-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+        .pdf-totals-row .label { color: var(--gray-500); }
+        .pdf-totals-row .value {
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
+        }
+        .pdf-totals-row.grand-total {
+            border-top: 2px solid var(--black);
+            margin-top: 6px;
+            padding-top: 10px;
+            font-size: 18px;
+            font-weight: 800;
+        }
+        .pdf-totals-row.grand-total .label { color: var(--black); font-weight: 800; }
+        .pdf-totals-row.grand-total .value { color: var(--black); }
+
+        /* -- PDF Notes -- */
+        .pdf-notes {
+            padding: 16px 20px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            margin-bottom: 24px;
+            border-left: 3px solid var(--green);
+        }
+        .pdf-notes h4 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gray-500);
+            margin-bottom: 6px;
+        }
+        .pdf-notes p {
+            font-size: 12px;
+            color: var(--gray-600);
+            white-space: pre-wrap;
+        }
+
+        .pdf-totals-row.pdf-monthly-row {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed var(--gray-300);
+            font-size: 14px;
+        }
+        .pdf-totals-row.pdf-monthly-row .label { color: var(--green-dark); font-weight: 600; }
+        .pdf-totals-row.pdf-monthly-row .value { color: var(--green-dark); font-weight: 700; }
+
+        .pdf-footer {
+            background: var(--black);
+            padding: 18px 40px;
+            text-align: center;
+        }
+        .pdf-footer p {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-bottom: 2px;
+        }
+        .pdf-footer p.tagline {
+            font-style: italic;
+            color: var(--white);
+            margin-bottom: 6px;
+        }
+        .pdf-footer a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* -- Responsive -- */
+        @media (max-width: 1200px) {
+            .app-layout { grid-template-columns: 1fr; }
+            .form-panel {
+                max-height: none;
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+            }
+            .preview-panel { max-height: none; padding: 24px 16px; }
+            .preview-wrapper { width: 100%; min-height: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- App Header -->
+    <div class="app-header">
+        <img src="https://descomplicador.pt/images/logo-footer.png" alt="descomplica">
+        <span>Gerador de Orçamentos</span>
+    </div>
+
+    <div class="app-layout">
+
+        <!-- FORM PANEL -->
+        <div class="form-panel">
+
+            <!-- Client Info -->
+            <div class="form-section">
+                <div class="form-section-title">Dados do Cliente</div>
+                <div class="field-group">
+                    <label for="client-name">Nome / Empresa</label>
+                    <input type="text" id="client-name" placeholder="Ex: Hotel do Livro">
+                </div>
+                <div class="field-group">
+                    <label for="client-contact">Contacto (opcional)</label>
+                    <input type="text" id="client-contact" placeholder="Ex: Lara Martinho">
+                </div>
+            </div>
+
+            <!-- Date & Validity -->
+            <div class="form-section">
+                <div class="form-section-title">Detalhes</div>
+                <div class="field-row">
+                    <div class="field-group" style="margin-bottom:0">
+                        <label for="quote-date">Data</label>
+                        <input type="date" id="quote-date">
+                    </div>
+                    <div class="field-group" style="margin-bottom:0">
+                        <label for="quote-validity">Validade (dias)</label>
+                        <input type="number" id="quote-validity" value="30" min="1">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SERVICE CATALOG -->
+            <div class="form-section">
+                <div class="form-section-title">Catálogo de Serviços</div>
+
+                <!-- Website -->
+                <div class="catalog-section" data-cat="website">
+                    <div class="catalog-header" onclick="toggleCatalog('website')">
+                        <h3>Website</h3>
+                        <span class="toggle-icon">&#9660;</span>
+                    </div>
+                    <div class="catalog-body">
+                        <span class="sub-label">Tipo de Website</span>
+                        <div class="radio-opt" onclick="selectCatRadio(this, 'websiteType', 'landing')">
+                            <span class="option-label-text">Landing Page (1-3 páginas)</span>
+                            <span class="price-tag" onclick="editCatPrice(event, 'website-landing')"><span id="p-website-landing">800</span>€</span>
+                        </div>
+                        <div class="radio-opt" onclick="selectCatRadio(this, 'websiteType', 'brochure')">
+                            <span class="option-label-text">Site Institucional (4-8 páginas)</span>
+                            <span class="price-tag" onclick="editCatPrice(event, 'website-brochure')"><span id="p-website-brochure">1500</span>€</span>
+                        </div>
+                        <div class="radio-opt" onclick="selectCatRadio(this, 'websiteType', 'dynamic')">
+                            <span class="option-label-text">Site Dinâmico (com backend/CMS)</span>
+                            <span class="price-tag" onclick="editCatPrice(event, 'website-dynamic')"><span id="p-website-dynamic">2500</span>€</span>
+                        </div>
+                        <div class="radio-opt" onclick="selectCatRadio(this, 'websiteType', 'ecommerce')">
+                            <span class="option-label-text">E-commerce (Shopify/WooCommerce)</span>
+                            <span class="price-tag" onclick="editCatPrice(event, 'website-ecommerce')"><span id="p-website-ecommerce">3500</span>€</span>
+                        </div>
+
+                        <span class="sub-label">Extras</span>
+                        <div class="compact-grid">
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'website-animations')">
+                                <span class="option-label-text">Animações</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'addon-animations')"><span id="p-addon-animations">300</span>€</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'website-multilang')">
+                                <span class="option-label-text">Multilingue</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'addon-multilang')"><span id="p-addon-multilang">400</span>€</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'website-blog')">
+                                <span class="option-label-text">Blog / notícias</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'addon-blog')"><span id="p-addon-blog">350</span>€</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'website-gallery')">
+                                <span class="option-label-text">Galeria / portfólio</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'addon-gallery')"><span id="p-addon-gallery">250</span>€</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'website-booking')">
+                                <span class="option-label-text">Reservas online</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'addon-booking')"><span id="p-addon-booking">500</span>€</span>
+                            </div>
+                        </div>
+                        <div class="section-subtotal">Subtotal: <span id="sub-website">0€</span></div>
+                    </div>
+                </div>
+
+                <!-- Chatbot IA -->
+                <div class="catalog-section" data-cat="chatbot">
+                    <div class="catalog-header" onclick="toggleCatalog('chatbot')">
+                        <h3>Chatbot IA (Flowise)</h3>
+                        <span class="toggle-icon">&#9660;</span>
+                    </div>
+                    <div class="catalog-body">
+                        <span class="sub-label">Complexidade</span>
+                        <div class="radio-opt" onclick="selectCatRadio(this, 'chatbotType', 'basic')">
+                            <span class="option-label-text">Básico (apenas FAQ)</span>
+                            <span class="price-tag" onclick="editCatPrice(event, 'chatbot-basic')"><span id="p-chatbot-basic">500</span>€</span>
+                        </div>
+                        <div class="radio-opt" onclick="selectCatRadio(this, 'chatbotType', 'standard')">
+                            <span class="option-label-text">Standard (FAQ + dados do negócio)</span>
+                            <span class="price-tag" onclick="editCatPrice(event, 'chatbot-standard')"><span id="p-chatbot-standard">1000</span>€</span>
+                        </div>
+                        <div class="radio-opt" onclick="selectCatRadio(this, 'chatbotType', 'advanced')">
+                            <span class="option-label-text">Avançado (multi-namespace, routing)</span>
+                            <span class="price-tag" onclick="editCatPrice(event, 'chatbot-advanced')"><span id="p-chatbot-advanced">2000</span>€</span>
+                        </div>
+
+                        <span class="sub-label">Integrações</span>
+                        <div class="compact-grid">
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'chatbot-whatsapp')">
+                                <span class="option-label-text">WhatsApp</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'int-whatsapp')"><span id="p-int-whatsapp">300</span>€</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'chatbot-messenger')">
+                                <span class="option-label-text">Messenger</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'int-messenger')"><span id="p-int-messenger">250</span>€</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'chatbot-widget')">
+                                <span class="option-label-text">Widget no site</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'int-widget')"><span id="p-int-widget">200</span>€</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'chatbot-pipeline')">
+                                <span class="option-label-text">Pipeline (Crawl4AI + Pinecone)</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'int-pipeline')"><span id="p-int-pipeline">500</span>€</span>
+                            </div>
+                        </div>
+                        <div class="section-subtotal">Subtotal: <span id="sub-chatbot">0€</span></div>
+                    </div>
+                </div>
+
+                <!-- Automações (n8n) -->
+                <div class="catalog-section" data-cat="automations">
+                    <div class="catalog-header" onclick="toggleCatalog('automations')">
+                        <h3>Automações (n8n)</h3>
+                        <span class="toggle-icon">&#9660;</span>
+                    </div>
+                    <div class="catalog-body">
+                        <span class="sub-label">Workflows</span>
+                        <div id="wf-list"></div>
+                        <button type="button" class="btn-add-wf" onclick="addWorkflow()">+ Adicionar Workflow</button>
+
+                        <span class="sub-label" style="margin-top:12px">Templates (adição rápida)</span>
+                        <div class="template-grid">
+                            <div class="template-btn" onclick="addTemplateWorkflow('Confirmação de reservas', 'medium')">
+                                <span>Confirmação de reservas</span>
+                                <span class="complexity-tag">Médio</span>
+                            </div>
+                            <div class="template-btn" onclick="addTemplateWorkflow('Pedidos de avaliação', 'simple')">
+                                <span>Pedidos de avaliação</span>
+                                <span class="complexity-tag">Simples</span>
+                            </div>
+                            <div class="template-btn" onclick="addTemplateWorkflow('Notificação de leads', 'simple')">
+                                <span>Notificação de leads</span>
+                                <span class="complexity-tag">Simples</span>
+                            </div>
+                            <div class="template-btn" onclick="addTemplateWorkflow('Publicação redes sociais', 'medium')">
+                                <span>Publicação redes sociais</span>
+                                <span class="complexity-tag">Médio</span>
+                            </div>
+                            <div class="template-btn" onclick="addTemplateWorkflow('Alertas de pagamento', 'simple')">
+                                <span>Alertas de pagamento</span>
+                                <span class="complexity-tag">Simples</span>
+                            </div>
+                            <div class="template-btn" onclick="addTemplateWorkflow('Sync ERP (Artsoft/Primavera)', 'complex')">
+                                <span>Sync ERP</span>
+                                <span class="complexity-tag">Complexo</span>
+                            </div>
+                        </div>
+                        <div class="section-subtotal">Subtotal: <span id="sub-automations">0€</span></div>
+                    </div>
+                </div>
+
+                <!-- Assistente de Voz -->
+                <div class="catalog-section" data-cat="voice">
+                    <div class="catalog-header" onclick="toggleCatalog('voice')">
+                        <h3>Assistente de Voz (Vapi)</h3>
+                        <span class="toggle-icon">&#9660;</span>
+                    </div>
+                    <div class="catalog-body">
+                        <div class="toggle-row" id="voice-toggle" onclick="toggleVoice()">
+                            <span>Ativar assistente de voz</span>
+                            <div class="switch-track"></div>
+                        </div>
+                        <div id="voice-options" style="display:none;">
+                            <span class="sub-label">Complexidade</span>
+                            <div class="radio-opt" onclick="selectCatRadio(this, 'voiceType', 'basic')">
+                                <span class="option-label-text">Básico (saudação + encaminhamento)</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'voice-basic')"><span id="p-voice-basic">400</span>€</span>
+                            </div>
+                            <div class="radio-opt" onclick="selectCatRadio(this, 'voiceType', 'standard')">
+                                <span class="option-label-text">Standard (reservas/FAQ)</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'voice-standard')"><span id="p-voice-standard">800</span>€</span>
+                            </div>
+                            <div class="radio-opt" onclick="selectCatRadio(this, 'voiceType', 'advanced')">
+                                <span class="option-label-text">Avançado (concierge completo)</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'voice-advanced')"><span id="p-voice-advanced">1500</span>€</span>
+                            </div>
+                        </div>
+                        <div class="section-subtotal">Subtotal: <span id="sub-voice">0€</span></div>
+                    </div>
+                </div>
+
+                <!-- Recorrentes -->
+                <div class="catalog-section" data-cat="retainer">
+                    <div class="catalog-header" onclick="toggleCatalog('retainer')">
+                        <h3>Recorrentes</h3>
+                        <span class="toggle-icon">&#9660;</span>
+                    </div>
+                    <div class="catalog-body">
+                        <div class="compact-grid">
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'retainer-hosting')">
+                                <span class="option-label-text">Alojamento</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'ret-hosting')"><span id="p-ret-hosting">50</span>€/mês</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'retainer-chatbot')">
+                                <span class="option-label-text">Manutenção chatbot</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'ret-chatbot')"><span id="p-ret-chatbot">75</span>€/mês</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'retainer-workflows')">
+                                <span class="option-label-text">Monitorização workflows</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'ret-workflows')"><span id="p-ret-workflows">50</span>€/mês</span>
+                            </div>
+                            <div class="check-opt" onclick="toggleCatCheck(this, 'retainer-report')">
+                                <span class="option-label-text">Relatório mensal</span>
+                                <span class="price-tag" onclick="editCatPrice(event, 'ret-report')"><span id="p-ret-report">30</span>€/mês</span>
+                            </div>
+                        </div>
+
+                        <span class="sub-label" style="margin-top:10px">Horas de Suporte Prioritário</span>
+                        <div class="slider-group">
+                            <div class="slider-header">
+                                <span>Horas por mês</span>
+                                <span class="slider-value"><span id="support-hours-val">0</span>h</span>
+                            </div>
+                            <input type="range" id="support-hours" min="0" max="10" value="0" step="1" oninput="updateSupportHours()">
+                            <div style="margin-top:4px; color:var(--gray-500); font-size:11px;">
+                                <span class="price-tag" onclick="editCatPrice(event, 'ret-support')"><span id="p-ret-support">50</span>€/hora</span> = <span id="support-hours-cost">0</span>€/mês
+                            </div>
+                        </div>
+                        <div class="section-subtotal">Subtotal: <span id="sub-retainer">0€/mês</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Margin / Discount Slider -->
+            <div class="form-section">
+                <div class="form-section-title">Margem / Desconto</div>
+                <div class="slider-group">
+                    <div class="slider-header">
+                        <span id="margin-label">Sem ajuste</span>
+                        <span class="slider-value"><span id="margin-val">0</span>%</span>
+                    </div>
+                    <input type="range" id="margin-slider" min="-50" max="100" value="0" step="5" oninput="updateMargin()">
+                    <div style="margin-top:4px; display:flex; justify-content:space-between; font-size:10px; color:var(--gray-400);">
+                        <span>-50% desconto</span>
+                        <span>+100% margem</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Line Items -->
+            <div class="form-section">
+                <div class="form-section-title">Itens Personalizados</div>
+                <div class="line-items-header">
+                    <span>Descrição</span>
+                    <span>Qtd</span>
+                    <span>Preço (€)</span>
+                    <span>Total</span>
+                    <span></span>
+                </div>
+                <div id="line-items-container"></div>
+                <button type="button" class="btn-add-line" id="btn-add-line">+ Adicionar item</button>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-section">
+                <div class="form-section-title">Notas (opcional)</div>
+                <textarea id="quote-notes" placeholder="Ex: Inclui formação de 2 horas para utilização do painel de administração."></textarea>
+            </div>
+
+            <!-- Summary -->
+            <div class="form-section">
+                <div class="form-section-title">Resumo</div>
+                <div class="form-totals">
+                    <div class="form-totals-row">
+                        <span class="label">Subtotal serviços</span>
+                        <span class="value" id="f-sub-services">0,00 €</span>
+                    </div>
+                    <div class="form-totals-row">
+                        <span class="label">Subtotal itens personalizados</span>
+                        <span class="value" id="f-sub-custom">0,00 €</span>
+                    </div>
+                    <div class="form-totals-row" id="f-margin-row" style="display:none;">
+                        <span class="label" id="f-margin-label">Margem (0%)</span>
+                        <span class="value" id="f-margin-amount">0,00 €</span>
+                    </div>
+                    <div class="form-totals-row">
+                        <span class="label">Subtotal</span>
+                        <span class="value" id="f-subtotal">0,00 €</span>
+                    </div>
+                    <div class="form-totals-row">
+                        <span class="label">IVA (16%)</span>
+                        <span class="value" id="f-tax">0,00 €</span>
+                    </div>
+                    <div class="form-totals-row total">
+                        <span class="label">Total</span>
+                        <span class="value" id="f-total">0,00 €</span>
+                    </div>
+                    <div class="form-totals-row monthly-total" id="f-monthly-row" style="display:none;">
+                        <span class="label">Recorrentes</span>
+                        <span class="value" id="f-monthly">0,00 €/mês</span>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn-generate" id="btn-generate">Gerar PDF</button>
+        </div>
+
+        <!-- PREVIEW PANEL -->
+        <div class="preview-panel">
+            <div class="preview-wrapper">
+                <div class="pdf-content" id="pdf-content">
+
+                    <!-- Header -->
+                    <div class="pdf-header">
+                        <img src="data:image/png;base64,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" alt="descomplica" style="height:30px; width:auto;">
+                        <span class="doc-type">Orçamento</span>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="pdf-body">
+                        <div class="pdf-info">
+                            <div class="pdf-info-block">
+                                <h3>De</h3>
+                                <p><strong>André Brasil</strong></p>
+                                <p>Descomplica</p>
+                                <p>926 874 141</p>
+                                <p>apoio@descomplicador.pt</p>
+                            </div>
+                            <div class="pdf-info-block" style="text-align: right;">
+                                <h3>Para</h3>
+                                <p><strong id="pdf-client-name">—</strong></p>
+                                <p id="pdf-client-contact"></p>
+                            </div>
+                        </div>
+
+                        <div class="pdf-meta">
+                            <div class="pdf-meta-item">Data:<strong id="pdf-date">—</strong></div>
+                            <div class="pdf-meta-item">Válido até:<strong id="pdf-validity">—</strong></div>
+                        </div>
+
+                        <table class="pdf-table">
+                            <thead>
+                                <tr>
+                                    <th>Descrição</th>
+                                    <th>Qtd</th>
+                                    <th>Preço Unit.</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pdf-items-body">
+                                <tr><td colspan="4" style="text-align:center; color:#a3a3a3; padding:24px;">Configure os serviços no formulário</td></tr>
+                            </tbody>
+                        </table>
+
+                        <div class="pdf-totals">
+                            <div class="pdf-totals-box">
+                                <div class="pdf-totals-row">
+                                    <span class="label">Subtotal</span>
+                                    <span class="value" id="pdf-subtotal">0,00 €</span>
+                                </div>
+                                <div class="pdf-totals-row" id="pdf-margin-row" style="display:none;">
+                                    <span class="label" id="pdf-margin-label">Margem</span>
+                                    <span class="value" id="pdf-margin-amount">0,00 €</span>
+                                </div>
+                                <div class="pdf-totals-row">
+                                    <span class="label">IVA (16%)</span>
+                                    <span class="value" id="pdf-tax">0,00 €</span>
+                                </div>
+                                <div class="pdf-totals-row grand-total">
+                                    <span class="label">Total</span>
+                                    <span class="value" id="pdf-total">0,00 €</span>
+                                </div>
+                                <div class="pdf-totals-row pdf-monthly-row" id="pdf-monthly-block" style="display:none;">
+                                    <span class="label">Recorrentes</span>
+                                    <span class="value" id="pdf-monthly-value">0,00 €/mês</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="pdf-notes" id="pdf-notes-block" style="display:none;">
+                            <h4>Notas</h4>
+                            <p id="pdf-notes-text"></p>
+                        </div>
+
+                        <!-- Payment Terms -->
+                        <div class="pdf-notes">
+                            <h4>Condições de Pagamento</h4>
+                            <p>Pagamento de 25% para início de projeto (reembolsável em caso de incumprimento) com o restante devido apenas após a conclusão demonstrada do projeto.</p>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="pdf-footer">
+                        <p class="tagline">trabalho a fluir, negócio a crescer</p>
+                        <p><a href="https://descomplicador.pt">descomplicador.pt</a> &bull; 926 874 141</p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    (function() {
+        var TAX_RATE = 0.16;
+
+        // --- Catalog prices ---
+        var prices = {
+            website: { landing: 800, brochure: 1500, dynamic: 2500, ecommerce: 3500 },
+            addons: { animations: 300, multilang: 400, blog: 350, gallery: 250, booking: 500 },
+            chatbot: { basic: 500, standard: 1000, advanced: 2000 },
+            integrations: { whatsapp: 300, messenger: 250, widget: 200, pipeline: 500 },
+            workflow: { simple: 150, medium: 350, complex: 600 },
+            voice: { basic: 400, standard: 800, advanced: 1500 },
+            retainer: { hosting: 50, chatbot: 75, workflows: 50, report: 30, support: 50 }
+        };
+
+        var workflows = [];
+        var wfCounter = 0;
+        var voiceEnabled = false;
+
+        // --- Selections state ---
+        var selections = {
+            websiteType: null,
+            chatbotType: null,
+            voiceType: null,
+            checks: {}
+        };
+
+        // --- Elements ---
+        var clientNameInput    = document.getElementById('client-name');
+        var clientContactInput = document.getElementById('client-contact');
+        var dateInput          = document.getElementById('quote-date');
+        var validityInput      = document.getElementById('quote-validity');
+        var notesInput         = document.getElementById('quote-notes');
+        var lineItemsContainer = document.getElementById('line-items-container');
+        var btnAddLine         = document.getElementById('btn-add-line');
+        var btnGenerate        = document.getElementById('btn-generate');
+
+        // Init date
+        dateInput.value = new Date().toISOString().split('T')[0];
+
+        // --- Helpers ---
+        function fmt(value) {
+            return value.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' \u20AC';
+        }
+
+        function fmtDate(dateStr) {
+            if (!dateStr) return '\u2014';
+            var parts = dateStr.split('-');
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+
+        function addDays(dateStr, days) {
+            var d = new Date(dateStr);
+            d.setDate(d.getDate() + parseInt(days, 10));
+            return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+        }
+
+        function escapeHtml(str) {
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        function getPrice(id) {
+            var el = document.getElementById('p-' + id);
+            return el ? parseInt(el.textContent) || 0 : 0;
+        }
+
+        // --- Catalog interactions ---
+        window.toggleCatalog = function(cat) {
+            var el = document.querySelector('[data-cat="' + cat + '"]');
+            el.classList.toggle('collapsed');
+        };
+
+        function clickedPriceTag() {
+            var e = window.event;
+            if (!e || !e.target) return false;
+            var t = e.target;
+            return t.closest && t.closest('.price-tag, .price-input-inline');
+        }
+
+        window.selectCatRadio = function(el, group, value) {
+            if (clickedPriceTag()) return;
+            var parent = el.parentElement;
+            parent.querySelectorAll('.radio-opt').forEach(function(r) { r.classList.remove('selected'); });
+            el.classList.add('selected');
+            selections[group] = value;
+            recalc();
+        };
+
+        window.toggleCatCheck = function(el, id) {
+            if (clickedPriceTag()) return;
+            el.classList.toggle('checked');
+            selections.checks[id] = el.classList.contains('checked');
+            recalc();
+        };
+
+        window.toggleVoice = function() {
+            voiceEnabled = !voiceEnabled;
+            var toggle = document.getElementById('voice-toggle');
+            toggle.classList.toggle('active', voiceEnabled);
+            document.getElementById('voice-options').style.display = voiceEnabled ? 'block' : 'none';
+            if (!voiceEnabled) {
+                selections.voiceType = null;
+                var opts = document.querySelectorAll('[data-cat="voice"] .radio-opt');
+                opts.forEach(function(r) { r.classList.remove('selected'); });
+            }
+            recalc();
+        };
+
+        window.editCatPrice = function(event, id) {
+            event.stopPropagation();
+            event.preventDefault();
+
+            var el = document.getElementById('p-' + id);
+            // Already editing this price
+            if (el.style.display === 'none') return;
+
+            var tag = el.parentElement; // the .price-tag span
+            var val = el.textContent;
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'price-input-inline';
+            input.value = val;
+            input.onblur = function() {
+                var nv = parseInt(this.value) || 0;
+                el.textContent = nv;
+                el.style.display = 'inline';
+                this.remove();
+                syncPrices();
+                recalc();
+            };
+            input.onkeydown = function(e) { if (e.key === 'Enter') this.blur(); if (e.key === 'Escape') { this.value = val; this.blur(); } };
+            input.onmousedown = function(e) { e.stopPropagation(); };
+            input.onclick = function(e) { e.stopPropagation(); };
+            el.style.display = 'none';
+            tag.after(input);
+            setTimeout(function() { input.focus(); input.select(); }, 0);
+        };
+
+        function syncPrices() {
+            prices.website.landing = getPrice('website-landing');
+            prices.website.brochure = getPrice('website-brochure');
+            prices.website.dynamic = getPrice('website-dynamic');
+            prices.website.ecommerce = getPrice('website-ecommerce');
+            prices.addons.animations = getPrice('addon-animations');
+            prices.addons.multilang = getPrice('addon-multilang');
+            prices.addons.blog = getPrice('addon-blog');
+            prices.addons.gallery = getPrice('addon-gallery');
+            prices.addons.booking = getPrice('addon-booking');
+            prices.chatbot.basic = getPrice('chatbot-basic');
+            prices.chatbot.standard = getPrice('chatbot-standard');
+            prices.chatbot.advanced = getPrice('chatbot-advanced');
+            prices.integrations.whatsapp = getPrice('int-whatsapp');
+            prices.integrations.messenger = getPrice('int-messenger');
+            prices.integrations.widget = getPrice('int-widget');
+            prices.integrations.pipeline = getPrice('int-pipeline');
+            prices.voice.basic = getPrice('voice-basic');
+            prices.voice.standard = getPrice('voice-standard');
+            prices.voice.advanced = getPrice('voice-advanced');
+            prices.retainer.hosting = getPrice('ret-hosting');
+            prices.retainer.chatbot = getPrice('ret-chatbot');
+            prices.retainer.workflows = getPrice('ret-workflows');
+            prices.retainer.report = getPrice('ret-report');
+            prices.retainer.support = parseInt(document.getElementById('p-ret-support').textContent) || 50;
+        }
+
+        // --- Workflows ---
+        window.addWorkflow = function() {
+            wfCounter++;
+            workflows.push({ id: wfCounter, name: 'Workflow ' + wfCounter, complexity: 'simple' });
+            renderWorkflows();
+            recalc();
+        };
+
+        window.addTemplateWorkflow = function(name, complexity) {
+            wfCounter++;
+            workflows.push({ id: wfCounter, name: name, complexity: complexity });
+            renderWorkflows();
+            recalc();
+        };
+
+        window.removeWorkflow = function(id) {
+            workflows = workflows.filter(function(w) { return w.id !== id; });
+            renderWorkflows();
+            recalc();
+        };
+
+        window.setWfComplexity = function(id, complexity, el) {
+            var w = workflows.find(function(w) { return w.id === id; });
+            if (w) w.complexity = complexity;
+            el.parentElement.querySelectorAll('.radio-opt').forEach(function(r) { r.classList.remove('selected'); });
+            el.classList.add('selected');
+            recalc();
+        };
+
+        function renderWorkflows() {
+            var c = document.getElementById('wf-list');
+            c.innerHTML = workflows.map(function(w) {
+                return '<div class="wf-item">' +
+                    '<div class="wf-item-header">' +
+                        '<strong>' + escapeHtml(w.name) + '</strong>' +
+                        '<button class="btn-remove-small" onclick="removeWorkflow(' + w.id + ')">Remover</button>' +
+                    '</div>' +
+                    '<div class="wf-complexity">' +
+                        '<div class="radio-opt ' + (w.complexity === 'simple' ? 'selected' : '') + '" onclick="setWfComplexity(' + w.id + ', \'simple\', this)">' +
+                            '<span>Simples</span>' +
+                            '<span class="price-tag">' + prices.workflow.simple + '\u20AC</span>' +
+                        '</div>' +
+                        '<div class="radio-opt ' + (w.complexity === 'medium' ? 'selected' : '') + '" onclick="setWfComplexity(' + w.id + ', \'medium\', this)">' +
+                            '<span>Médio</span>' +
+                            '<span class="price-tag">' + prices.workflow.medium + '\u20AC</span>' +
+                        '</div>' +
+                        '<div class="radio-opt ' + (w.complexity === 'complex' ? 'selected' : '') + '" onclick="setWfComplexity(' + w.id + ', \'complex\', this)">' +
+                            '<span>Complexo</span>' +
+                            '<span class="price-tag">' + prices.workflow.complex + '\u20AC</span>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+        }
+
+        window.updateSupportHours = function() {
+            var hours = parseInt(document.getElementById('support-hours').value);
+            var rate = prices.retainer.support;
+            document.getElementById('support-hours-val').textContent = hours;
+            document.getElementById('support-hours-cost').textContent = hours * rate;
+            recalc();
+        };
+
+        window.updateMargin = function() {
+            var m = parseInt(document.getElementById('margin-slider').value);
+            document.getElementById('margin-val').textContent = m;
+            if (m === 0) document.getElementById('margin-label').textContent = 'Sem ajuste';
+            else if (m > 0) document.getElementById('margin-label').textContent = 'Margem';
+            else document.getElementById('margin-label').textContent = 'Desconto';
+            recalc();
+        };
+
+        // --- Custom line items ---
+        var lineCounter = 0;
+
+        function createBulletItem(container) {
+            var bullet = document.createElement('div');
+            bullet.className = 'bullet-item';
+            bullet.innerHTML = '<span class="bullet-marker">\u2022</span>' +
+                '<input type="text" class="bullet-desc" placeholder="Detalhe do item">' +
+                '<button type="button" class="btn-remove-bullet" title="Remover">&times;</button>';
+            bullet.querySelector('.bullet-desc').addEventListener('input', recalc);
+            bullet.querySelector('.btn-remove-bullet').addEventListener('click', function() {
+                bullet.remove();
+                recalc();
+            });
+            container.appendChild(bullet);
+            bullet.querySelector('.bullet-desc').focus();
+        }
+
+        function addLineItem() {
+            lineCounter++;
+            var group = document.createElement('div');
+            group.className = 'line-item-group';
+
+            var row = document.createElement('div');
+            row.className = 'line-item';
+            row.innerHTML = '<input type="text" class="item-desc" placeholder="Descrição">' +
+                '<input type="number" class="item-qty" value="1" min="0" step="1">' +
+                '<input type="number" class="item-price" placeholder="0" min="0" step="0.01">' +
+                '<span class="row-total">0,00 \u20AC</span>' +
+                '<button type="button" class="btn-remove" title="Remover">&times;</button>';
+
+            var toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'btn-toggle-bullets';
+            toggleBtn.innerHTML = '<span class="arrow">\u25B8</span> detalhes';
+
+            var bulletsSection = document.createElement('div');
+            bulletsSection.className = 'line-item-bullets';
+            bulletsSection.style.display = 'none';
+
+            var bulletsList = document.createElement('div');
+            bulletsList.className = 'bullets-list';
+
+            var addBulletBtn = document.createElement('button');
+            addBulletBtn.type = 'button';
+            addBulletBtn.className = 'btn-add-bullet';
+            addBulletBtn.textContent = '+ adicionar detalhe';
+
+            bulletsSection.appendChild(bulletsList);
+            bulletsSection.appendChild(addBulletBtn);
+
+            toggleBtn.addEventListener('click', function() {
+                var isOpen = bulletsSection.style.display !== 'none';
+                bulletsSection.style.display = isOpen ? 'none' : 'block';
+                toggleBtn.classList.toggle('open', !isOpen);
+                if (!isOpen && bulletsList.children.length === 0) createBulletItem(bulletsList);
+            });
+
+            addBulletBtn.addEventListener('click', function() { createBulletItem(bulletsList); });
+
+            row.querySelector('.item-desc').addEventListener('input', recalc);
+            row.querySelector('.item-qty').addEventListener('input', recalc);
+            row.querySelector('.item-price').addEventListener('input', recalc);
+            row.querySelector('.btn-remove').addEventListener('click', function() { group.remove(); recalc(); });
+
+            group.appendChild(row);
+            group.appendChild(toggleBtn);
+            group.appendChild(bulletsSection);
+            lineItemsContainer.appendChild(group);
+            row.querySelector('.item-desc').focus();
+            recalc();
+        }
+
+        function getCustomItems() {
+            var groups = lineItemsContainer.querySelectorAll('.line-item-group');
+            var items = [];
+            groups.forEach(function(group) {
+                var row = group.querySelector('.line-item');
+                var desc = row.querySelector('.item-desc').value.trim();
+                var qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                var price = parseFloat(row.querySelector('.item-price').value) || 0;
+                var total = qty * price;
+                var bullets = [];
+                group.querySelectorAll('.bullet-desc').forEach(function(input) {
+                    var val = input.value.trim();
+                    if (val) bullets.push(val);
+                });
+                items.push({ desc: desc, qty: qty, price: price, total: total, bullets: bullets });
+            });
+            return items;
+        }
+
+        // --- Build catalog line items for PDF ---
+        function getCatalogItems() {
+            var items = [];
+            var marginPct = parseInt(document.getElementById('margin-slider').value) || 0;
+            var applyMargin = function(p) { return Math.round(p * (1 + marginPct / 100)); };
+
+            // Website
+            if (selections.websiteType) {
+                var wLabels = { landing: 'Landing Page', brochure: 'Site Institucional', dynamic: 'Site Dinâmico', ecommerce: 'E-commerce' };
+                var wPrice = prices.website[selections.websiteType];
+                var wBullets = [];
+                var addonMap = {
+                    'website-animations': { label: 'Animações personalizadas', key: 'animations' },
+                    'website-multilang': { label: 'Multilingue', key: 'multilang' },
+                    'website-blog': { label: 'Blog / notícias', key: 'blog' },
+                    'website-gallery': { label: 'Galeria / portfólio', key: 'gallery' },
+                    'website-booking': { label: 'Reservas online', key: 'booking' }
+                };
+                Object.keys(addonMap).forEach(function(id) {
+                    if (selections.checks[id]) {
+                        wPrice += prices.addons[addonMap[id].key];
+                        wBullets.push(addonMap[id].label);
+                    }
+                });
+                items.push({ desc: 'Website \u2014 ' + wLabels[selections.websiteType], qty: 1, price: applyMargin(wPrice), total: applyMargin(wPrice), bullets: wBullets });
+            }
+
+            // Chatbot
+            if (selections.chatbotType) {
+                var cLabels = { basic: 'Básico', standard: 'Standard', advanced: 'Avançado' };
+                var cPrice = prices.chatbot[selections.chatbotType];
+                var cBullets = [];
+                var intMap = {
+                    'chatbot-whatsapp': { label: 'WhatsApp', key: 'whatsapp' },
+                    'chatbot-messenger': { label: 'Messenger', key: 'messenger' },
+                    'chatbot-widget': { label: 'Widget no site', key: 'widget' },
+                    'chatbot-pipeline': { label: 'Pipeline de dados (Crawl4AI + Pinecone)', key: 'pipeline' }
+                };
+                Object.keys(intMap).forEach(function(id) {
+                    if (selections.checks[id]) {
+                        cPrice += prices.integrations[intMap[id].key];
+                        cBullets.push(intMap[id].label);
+                    }
+                });
+                items.push({ desc: 'Chatbot IA \u2014 ' + cLabels[selections.chatbotType], qty: 1, price: applyMargin(cPrice), total: applyMargin(cPrice), bullets: cBullets });
+            }
+
+            // Automations
+            if (workflows.length > 0) {
+                var aPrice = 0;
+                var aBullets = [];
+                var cxLabels = { simple: 'Simples', medium: 'Médio', complex: 'Complexo' };
+                workflows.forEach(function(w) {
+                    aPrice += prices.workflow[w.complexity];
+                    aBullets.push(w.name + ' (' + cxLabels[w.complexity] + ')');
+                });
+                items.push({ desc: 'Automações (n8n)', qty: 1, price: applyMargin(aPrice), total: applyMargin(aPrice), bullets: aBullets });
+            }
+
+            // Voice
+            if (voiceEnabled && selections.voiceType) {
+                var vLabels = { basic: 'Básico', standard: 'Standard', advanced: 'Avançado' };
+                var vPrice = prices.voice[selections.voiceType];
+                items.push({ desc: 'Assistente de Voz \u2014 ' + vLabels[selections.voiceType], qty: 1, price: applyMargin(vPrice), total: applyMargin(vPrice), bullets: [] });
+            }
+
+            return items;
+        }
+
+        // --- Main recalculation ---
+        function recalc() {
+            var marginPct = parseInt(document.getElementById('margin-slider').value) || 0;
+
+            // Catalog subtotals (before margin)
+            var subWebsite = 0;
+            if (selections.websiteType) subWebsite += prices.website[selections.websiteType];
+            if (selections.checks['website-animations']) subWebsite += prices.addons.animations;
+            if (selections.checks['website-multilang']) subWebsite += prices.addons.multilang;
+            if (selections.checks['website-blog']) subWebsite += prices.addons.blog;
+            if (selections.checks['website-gallery']) subWebsite += prices.addons.gallery;
+            if (selections.checks['website-booking']) subWebsite += prices.addons.booking;
+
+            var subChatbot = 0;
+            if (selections.chatbotType) subChatbot += prices.chatbot[selections.chatbotType];
+            if (selections.checks['chatbot-whatsapp']) subChatbot += prices.integrations.whatsapp;
+            if (selections.checks['chatbot-messenger']) subChatbot += prices.integrations.messenger;
+            if (selections.checks['chatbot-widget']) subChatbot += prices.integrations.widget;
+            if (selections.checks['chatbot-pipeline']) subChatbot += prices.integrations.pipeline;
+
+            var subAutomations = 0;
+            workflows.forEach(function(w) { subAutomations += prices.workflow[w.complexity]; });
+
+            var subVoice = 0;
+            if (voiceEnabled && selections.voiceType) subVoice += prices.voice[selections.voiceType];
+
+            var subRetainer = 0;
+            if (selections.checks['retainer-hosting']) subRetainer += prices.retainer.hosting;
+            if (selections.checks['retainer-chatbot']) subRetainer += prices.retainer.chatbot;
+            if (selections.checks['retainer-workflows']) subRetainer += prices.retainer.workflows;
+            if (selections.checks['retainer-report']) subRetainer += prices.retainer.report;
+            var sh = parseInt(document.getElementById('support-hours').value) || 0;
+            subRetainer += sh * prices.retainer.support;
+            document.getElementById('support-hours-val').textContent = sh;
+            document.getElementById('support-hours-cost').textContent = sh * prices.retainer.support;
+
+            // Update section subtotals
+            document.getElementById('sub-website').textContent = subWebsite + '\u20AC';
+            document.getElementById('sub-chatbot').textContent = subChatbot + '\u20AC';
+            document.getElementById('sub-automations').textContent = subAutomations + '\u20AC';
+            document.getElementById('sub-voice').textContent = subVoice + '\u20AC';
+            document.getElementById('sub-retainer').textContent = subRetainer + '\u20AC/mês';
+
+            // Setup total (before margin)
+            var setupBase = subWebsite + subChatbot + subAutomations + subVoice;
+            var marginAmount = Math.round(setupBase * marginPct / 100);
+            var setupAfterMargin = setupBase + marginAmount;
+
+            // Custom items
+            var customItems = getCustomItems();
+            var customTotal = customItems.reduce(function(sum, i) { return sum + i.total; }, 0);
+
+            // Update custom line item row totals
+            lineItemsContainer.querySelectorAll('.line-item').forEach(function(row) {
+                var qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                var price = parseFloat(row.querySelector('.item-price').value) || 0;
+                row.querySelector('.row-total').textContent = fmt(qty * price);
+            });
+
+            // Grand totals
+            var subtotal = setupAfterMargin + customTotal;
+            var tax = subtotal * TAX_RATE;
+            var total = subtotal + tax;
+
+            // Monthly retainer with margin
+            var monthlyTotal = Math.round(subRetainer * (1 + marginPct / 100));
+
+            // Form summary
+            document.getElementById('f-sub-services').textContent = fmt(setupBase);
+            document.getElementById('f-sub-custom').textContent = fmt(customTotal);
+
+            var marginRow = document.getElementById('f-margin-row');
+            if (marginPct !== 0) {
+                marginRow.style.display = 'flex';
+                var sign = marginPct > 0 ? '+' : '';
+                document.getElementById('f-margin-label').textContent = (marginPct > 0 ? 'Margem' : 'Desconto') + ' (' + sign + marginPct + '%)';
+                document.getElementById('f-margin-amount').textContent = (marginAmount >= 0 ? '+' : '') + fmt(marginAmount);
+            } else {
+                marginRow.style.display = 'none';
+            }
+
+            document.getElementById('f-subtotal').textContent = fmt(subtotal);
+            document.getElementById('f-tax').textContent = fmt(tax);
+            document.getElementById('f-total').textContent = fmt(total);
+
+            var monthlyRow = document.getElementById('f-monthly-row');
+            if (monthlyTotal > 0) {
+                monthlyRow.style.display = 'flex';
+                document.getElementById('f-monthly').textContent = fmt(monthlyTotal) + '/mês';
+            } else {
+                monthlyRow.style.display = 'none';
+            }
+
+            // --- Update PDF preview ---
+            document.getElementById('pdf-client-name').textContent = clientNameInput.value.trim() || '\u2014';
+            document.getElementById('pdf-client-contact').textContent = clientContactInput.value.trim();
+            document.getElementById('pdf-date').textContent = fmtDate(dateInput.value);
+            var validDays = parseInt(validityInput.value, 10) || 30;
+            document.getElementById('pdf-validity').textContent = dateInput.value ? addDays(dateInput.value, validDays) : '\u2014';
+
+            // Build PDF table rows
+            var catalogItems = getCatalogItems();
+            var allItems = catalogItems.concat(
+                customItems.filter(function(i) { return i.desc || i.total > 0; })
+            );
+
+            var pdfBody = document.getElementById('pdf-items-body');
+            if (allItems.length === 0) {
+                pdfBody.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#a3a3a3; padding:24px;">Configure os serviços no formulário</td></tr>';
+            } else {
+                var html = '';
+                allItems.forEach(function(item) {
+                    var descHtml = escapeHtml(item.desc || '(sem descrição)');
+                    if (item.bullets && item.bullets.length > 0) {
+                        descHtml += '<ul class="pdf-item-bullets">';
+                        item.bullets.forEach(function(b) { descHtml += '<li>' + escapeHtml(b) + '</li>'; });
+                        descHtml += '</ul>';
+                    }
+                    html += '<tr><td>' + descHtml + '</td><td>' + item.qty + '</td><td>' + fmt(item.price) + '</td><td>' + fmt(item.total) + '</td></tr>';
+                });
+                pdfBody.innerHTML = html;
+            }
+
+            // PDF totals
+            document.getElementById('pdf-subtotal').textContent = fmt(subtotal);
+
+            var pdfMarginRow = document.getElementById('pdf-margin-row');
+            if (marginPct !== 0) {
+                // Margin is already applied in item prices, so we show the info but the totals already include it
+                // Actually, we should NOT show a separate margin row in PDF since it's baked into unit prices
+                pdfMarginRow.style.display = 'none';
+            } else {
+                pdfMarginRow.style.display = 'none';
+            }
+
+            document.getElementById('pdf-tax').textContent = fmt(tax);
+            document.getElementById('pdf-total').textContent = fmt(total);
+
+            // Monthly retainer row in PDF totals box
+            var pdfMonthlyBlock = document.getElementById('pdf-monthly-block');
+            if (monthlyTotal > 0) {
+                pdfMonthlyBlock.style.display = 'flex';
+                document.getElementById('pdf-monthly-value').textContent = fmt(monthlyTotal) + '/mês';
+            } else {
+                pdfMonthlyBlock.style.display = 'none';
+            }
+
+            // Notes
+            var notes = notesInput.value.trim();
+            var pdfNotesBlock = document.getElementById('pdf-notes-block');
+            if (notes) {
+                pdfNotesBlock.style.display = 'block';
+                document.getElementById('pdf-notes-text').textContent = notes;
+            } else {
+                pdfNotesBlock.style.display = 'none';
+            }
+        }
+
+        // --- Event Listeners ---
+        clientNameInput.addEventListener('input', recalc);
+        clientContactInput.addEventListener('input', recalc);
+        dateInput.addEventListener('input', recalc);
+        validityInput.addEventListener('input', recalc);
+        notesInput.addEventListener('input', recalc);
+        btnAddLine.addEventListener('click', addLineItem);
+
+        // --- Smart PDF Generation with Element-Aware Page Breaks ---
+
+        /**
+         * Measures Y positions (in CSS px, relative to bodyEl top) where
+         * it is safe to split across pages. Safe zones are:
+         *  - after each table row
+         *  - before each major block (totals, monthly, notes, payment terms)
+         */
+        function getBreakSafeZones(bodyEl) {
+            var zones = [];
+            var bodyTop = bodyEl.getBoundingClientRect().top;
+
+            // After each table row
+            var rows = bodyEl.querySelectorAll('.pdf-table tbody tr');
+            rows.forEach(function(row) {
+                zones.push(row.getBoundingClientRect().bottom - bodyTop);
+            });
+
+            // Before major atomic blocks (these should never be split)
+            var blocks = [
+                bodyEl.querySelector('.pdf-totals'),
+                bodyEl.querySelector('#pdf-notes-block'),
+            ];
+            // Payment terms is the last .pdf-notes that is NOT #pdf-notes-block
+            var allNotes = bodyEl.querySelectorAll('.pdf-notes');
+            if (allNotes.length > 0) blocks.push(allNotes[allNotes.length - 1]);
+
+            blocks.forEach(function(block) {
+                if (block && block.offsetParent !== null) {
+                    var top = block.getBoundingClientRect().top - bodyTop;
+                    if (top > 0) zones.push(top);
+                }
+            });
+
+            // Sort and deduplicate (within 5px)
+            zones.sort(function(a, b) { return a - b; });
+            var unique = [];
+            zones.forEach(function(z) {
+                if (unique.length === 0 || z - unique[unique.length - 1] > 5) unique.push(z);
+            });
+            return unique;
+        }
+
+        /**
+         * Given break-safe zones (in canvas px), finds page split points
+         * that avoid cutting through elements.
+         * Returns array of { startPx, heightPx } for each page.
+         */
+        function calculateSmartPageBreaks(bodyAvailPx, bodyTotalPx, breakZonesPx, contPaddingPx) {
+            var pages = [];
+            var cursor = 0;
+
+            while (cursor < bodyTotalPx - 1) {
+                // Pages after the first get less space due to header padding
+                var avail = (pages.length === 0) ? bodyAvailPx : bodyAvailPx - contPaddingPx;
+                var idealEnd = cursor + avail;
+
+                // Last page — take the rest
+                if (idealEnd >= bodyTotalPx - 1) {
+                    pages.push({ startPx: cursor, heightPx: bodyTotalPx - cursor });
+                    break;
+                }
+
+                // Find the best break zone that doesn't exceed idealEnd
+                // (prefer breaking BEFORE the ideal end to avoid overflow)
+                var bestBreak = idealEnd; // fallback
+                var bestAbove = -1;
+
+                for (var i = 0; i < breakZonesPx.length; i++) {
+                    var z = breakZonesPx[i];
+                    if (z <= cursor) continue;
+                    if (z <= idealEnd) {
+                        bestAbove = z; // last zone that fits within the page
+                    }
+                }
+
+                // Use the last zone that fits; if none found, use idealEnd as fallback
+                if (bestAbove > cursor) {
+                    bestBreak = bestAbove;
+                }
+
+                pages.push({ startPx: cursor, heightPx: bestBreak - cursor });
+                cursor = bestBreak;
+            }
+
+            return pages;
+        }
+
+        btnGenerate.addEventListener('click', function() {
+            var clientSlug = (clientNameInput.value.trim() || 'cliente')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+            var dateSlug = dateInput.value || 'sem-data';
+            var filename = 'orcamento-' + clientSlug + '-' + dateSlug + '.pdf';
+
+            btnGenerate.textContent = 'A gerar...';
+            btnGenerate.disabled = true;
+
+            var headerEl = document.querySelector('#pdf-content .pdf-header');
+            var bodyEl   = document.querySelector('#pdf-content .pdf-body');
+            var footerEl = document.querySelector('#pdf-content .pdf-footer');
+
+            // Measure break-safe zones BEFORE rendering (in CSS px)
+            var breakZonesCSS = getBreakSafeZones(bodyEl);
+
+            var originalFlex = bodyEl.style.flex;
+            var originalMinHeight = document.querySelector('.pdf-content').style.minHeight;
+            bodyEl.style.flex = 'none';
+            document.querySelector('.pdf-content').style.minHeight = 'auto';
+
+            var H2C_SCALE = 2;
+            var h2cOpt = { scale: H2C_SCALE, letterRendering: true, scrollY: 0, scrollX: 0 };
+
+            // Convert break zones from CSS px to canvas px
+            var breakZonesPx = breakZonesCSS.map(function(z) { return Math.round(z * H2C_SCALE); });
+
+            Promise.all([
+                html2canvas(headerEl, h2cOpt),
+                html2canvas(bodyEl, h2cOpt),
+                html2canvas(footerEl, h2cOpt)
+            ]).then(function(canvases) {
+                bodyEl.style.flex = originalFlex;
+                document.querySelector('.pdf-content').style.minHeight = originalMinHeight;
+
+                var headerCanvas = canvases[0];
+                var bodyCanvas   = canvases[1];
+                var footerCanvas = canvases[2];
+
+                var pdf = new jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                var pw = 210;
+                var ph = 297;
+
+                var mmPerPx = pw / bodyCanvas.width;
+                var headerH = headerCanvas.height * mmPerPx;
+                var footerH = footerCanvas.height * mmPerPx;
+
+                var footerPadding = 8;
+                var headerPadding = 6; // extra gap between header and body on continuation pages
+                var bodyAvailH = ph - headerH - footerH - footerPadding;
+                var bodyAvailPx = bodyAvailH / mmPerPx;
+                var bodyTotalPx = bodyCanvas.height;
+
+                // Calculate smart page breaks (all in canvas px)
+                var contPaddingPx = headerPadding / mmPerPx;
+                var pages = calculateSmartPageBreaks(bodyAvailPx, bodyTotalPx, breakZonesPx, contPaddingPx);
+
+                for (var i = 0; i < pages.length; i++) {
+                    if (i > 0) pdf.addPage();
+
+                    // Header on every page
+                    var hImg = headerCanvas.toDataURL('image/jpeg', 0.98);
+                    pdf.addImage(hImg, 'JPEG', 0, 0, pw, headerH);
+
+                    // Body slice
+                    var srcY = pages[i].startPx;
+                    var srcH = pages[i].heightPx;
+
+                    var sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = bodyCanvas.width;
+                    sliceCanvas.height = srcH;
+                    var ctx = sliceCanvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                    ctx.drawImage(bodyCanvas, 0, srcY, bodyCanvas.width, srcH, 0, 0, bodyCanvas.width, srcH);
+                    var bImg = sliceCanvas.toDataURL('image/jpeg', 0.98);
+
+                    var actualBodyH = srcH * mmPerPx;
+                    var bodyTopY = headerH + (i > 0 ? headerPadding : 0);
+                    pdf.addImage(bImg, 'JPEG', 0, bodyTopY, pw, actualBodyH);
+
+                    // Footer on every page
+                    var fImg = footerCanvas.toDataURL('image/jpeg', 0.98);
+                    pdf.addImage(fImg, 'JPEG', 0, ph - footerH, pw, footerH);
+                }
+
+                pdf.save(filename);
+                btnGenerate.textContent = 'Gerar PDF';
+                btnGenerate.disabled = false;
+            }).catch(function(err) {
+                console.error('PDF generation error:', err);
+                btnGenerate.textContent = 'Gerar PDF';
+                btnGenerate.disabled = false;
+                alert('Erro ao gerar PDF: ' + (err.message || err));
+            });
+        });
+
+        // --- Init ---
+        recalc();
+    })();
+    </script>
+
+</body>
+</html>
