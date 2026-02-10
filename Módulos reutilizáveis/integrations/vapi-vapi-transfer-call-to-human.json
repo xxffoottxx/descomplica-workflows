@@ -11,7 +11,7 @@
     "requiredCredentials": [
       "vapi"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -34,7 +34,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  const reason = body.reason || 'Cliente solicitou atendimento humano';\n  const department = (body.department || 'geral').toLowerCase();\n\n  // Validate department\n  const validDepartments = ['geral', 'general', 'sales', 'vendas', 'support', 'suporte', 'technical', 'tecnico', 'billing', 'faturacao'];\n  const finalDepartment = validDepartments.includes(department) ? department : 'geral';\n\n  // Map departments to phone numbers\n  const defaultPhone = '+XX XXX XXX XXX';\n  const departmentPhones = {\n    'geral': defaultPhone, 'general': defaultPhone,\n    'sales': defaultPhone, 'vendas': defaultPhone,\n    'support': defaultPhone, 'suporte': defaultPhone,\n    'technical': defaultPhone, 'tecnico': defaultPhone,\n    'billing': defaultPhone, 'faturacao': defaultPhone\n  };\n  const transferNumber = departmentPhones[finalDepartment] || defaultPhone;\n\n  // Map department names to pt-PT\n  const departmentNames = {\n    'geral': 'Atendimento Geral', 'general': 'Atendimento Geral',\n    'sales': 'Vendas', 'vendas': 'Vendas',\n    'support': 'Suporte', 'suporte': 'Suporte',\n    'technical': 'Suporte Tecnico', 'tecnico': 'Suporte Tecnico',\n    'billing': 'Faturacao', 'faturacao': 'Faturacao'\n  };\n  const departmentName = departmentNames[finalDepartment] || 'Atendimento Geral';\n\n  return {\n    _error: false,\n    call_id: body.call_id || 'unknown',\n    reason: reason,\n    department: finalDepartment,\n    department_name: departmentName,\n    transfer_to: transferNumber,\n    customer_name: body.customer_name || '',\n    customer_phone: body.customer_phone || '',\n    context: body.context || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao processar a transferencia. Por favor, tente novamente.', toolCallId };\n}"
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\nconst expected = process.env.VAPI_WEBHOOK_SECRET;\nif (!expected) {\n  throw new Error('VAPI_WEBHOOK_SECRET not configured');\n}\nif (vapiSecret !== expected) {\n  return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  const reason = body.reason || 'Cliente solicitou atendimento humano';\n  const department = (body.department || 'geral').toLowerCase();\n\n  // Validate department\n  const validDepartments = ['geral', 'general', 'sales', 'vendas', 'support', 'apoio', 'technical', 'tecnico', 'billing', 'faturacao'];\n  const finalDepartment = validDepartments.includes(department) ? department : 'geral';\n\n  // Map departments to phone numbers\n  const defaultPhone = '+XX XXX XXX XXX';\n  const departmentPhones = {\n    'geral': defaultPhone, 'general': defaultPhone,\n    'sales': defaultPhone, 'vendas': defaultPhone,\n    'support': defaultPhone, 'apoio': defaultPhone,\n    'technical': defaultPhone, 'tecnico': defaultPhone,\n    'billing': defaultPhone, 'faturacao': defaultPhone\n  };\n  const transferNumber = departmentPhones[finalDepartment] || defaultPhone;\n\n  // Map department names to pt-PT\n  const departmentNames = {\n    'geral': 'Atendimento Geral', 'general': 'Atendimento Geral',\n    'sales': 'Vendas', 'vendas': 'Vendas',\n    'support': 'Apoio', 'apoio': 'Apoio',\n    'technical': 'Apoio Tecnico', 'tecnico': 'Apoio Tecnico',\n    'billing': 'Faturacao', 'faturacao': 'Faturacao'\n  };\n  const departmentName = departmentNames[finalDepartment] || 'Atendimento Geral';\n\n  return {\n    _error: false,\n    call_id: body.call_id || 'unknown',\n    reason: reason,\n    department: finalDepartment,\n    department_name: departmentName,\n    transfer_to: transferNumber,\n    customer_name: body.customer_name || '',\n    customer_phone: body.customer_phone || '',\n    context: body.context || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao processar a transferencia. Por favor, tente novamente.', toolCallId };\n}"
       },
       "id": "0331fce2-d720-4807-8975-b2756e5fe4f9",
       "name": "Extract & Validate Transfer",
@@ -140,7 +140,33 @@
       "continueOnFail": true
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook - Receive from Vapi": {
+      "main": [
+        [
+          {"node": "Extract & Validate Transfer", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Extract & Validate Transfer": {
+      "main": [
+        [
+          {"node": "Check for Errors", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {"node": "Respond Error to Vapi", "type": "main", "index": 0}
+        ],
+        [
+          {"node": "Respond to Vapi", "type": "main", "index": 0},
+          {"node": "Send Transfer Notification", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }

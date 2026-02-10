@@ -121,19 +121,19 @@ function extractPattern(nodes, connections, metadata) {
     return sanitizedNode;
   });
 
-  // Update connections with new IDs
+  // Copy connections as-is — n8n uses node names (not UUIDs) as keys and in conn.node
   const sanitizedConnections = {};
-  for (const [nodeId, nodeConnections] of Object.entries(connections)) {
-    const newNodeId = oldToNewId[nodeId];
-    if (!newNodeId) continue;
-
-    sanitizedConnections[newNodeId] = {};
+  for (const [nodeName, nodeConnections] of Object.entries(connections)) {
+    sanitizedConnections[nodeName] = {};
     for (const [connectionType, connectionsList] of Object.entries(nodeConnections)) {
-      sanitizedConnections[newNodeId][connectionType] = connectionsList.map(connGroup =>
-        connGroup.map(conn => ({
-          ...conn,
-          node: oldToNewId[conn.node] || conn.node
-        }))
+      sanitizedConnections[nodeName][connectionType] = connectionsList.map(connGroup =>
+        connGroup.map(conn => {
+          const sanitizedConn = {};
+          for (const [key, value] of Object.entries(conn)) {
+            sanitizedConn[key] = typeof value === 'string' ? sanitizeValue(key, value) : value;
+          }
+          return sanitizedConn;
+        })
       );
     }
   }

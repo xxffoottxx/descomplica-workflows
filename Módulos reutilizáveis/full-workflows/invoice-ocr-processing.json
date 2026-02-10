@@ -15,7 +15,7 @@
       "dropbox",
       "postgres"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -521,7 +521,129 @@
       "credentials": {}
     }
   ],
-  "connections": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          { "node": "List Folder", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "List Folder": {
+      "main": [
+        [
+          { "node": "Filter Invoices", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Filter Invoices": {
+      "main": [
+        [
+          { "node": "Loop Over Files", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Loop Over Files": {
+      "main": [
+        [
+          { "node": "Done", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Download PDF", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Download PDF": {
+      "main": [
+        [
+          { "node": "Prepare Gemini Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Prepare Gemini Request": {
+      "main": [
+        [
+          { "node": "Call Gemini Vision", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Call Gemini Vision": {
+      "main": [
+        [
+          { "node": "Business Logic", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Business Logic": {
+      "main": [
+        [
+          { "node": "Is Error?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Is Error?": {
+      "main": [
+        [
+          { "node": "Move to Errors", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Is Complete?", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Is Complete?": {
+      "main": [
+        [
+          { "node": "Move to Organized", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Move to Review", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Move to Organized": {
+      "main": [
+        [
+          { "node": "Log Success", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Move to Review": {
+      "main": [
+        [
+          { "node": "Log Review", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Move to Errors": {
+      "main": [
+        [
+          { "node": "Log Error", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Log Success": {
+      "main": [
+        [
+          { "node": "Loop Over Files", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Log Review": {
+      "main": [
+        [
+          { "node": "Loop Over Files", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Log Error": {
+      "main": [
+        [
+          { "node": "Loop Over Files", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }

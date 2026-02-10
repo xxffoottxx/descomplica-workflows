@@ -13,7 +13,7 @@
       "flowise",
       "http"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -61,7 +61,7 @@
         128
       ],
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const month = now.getUTCMonth();\n  const isDST = month >= 2 && month <= 9;\n  const offset = isDST ? 0 : -1;\n  const local = new Date(now.getTime() + offset * 3600000);\n  const days = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\n  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\n  return days[local.getUTCDay()] + ', ' + local.getUTCDate() + ' de ' + months[local.getUTCMonth()] + ' de ' + local.getUTCFullYear() + ', ' + String(local.getUTCHours()).padStart(2,'0') + ':' + String(local.getUTCMinutes()).padStart(2,'0');\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
+        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const formatter = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false });\n  return formatter.format(now);\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
       },
       "typeVersion": 2,
       "credentials": {}
@@ -76,7 +76,7 @@
         128
       ],
       "parameters": {
-        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_HR }}",
+        "url": "={{ $env.FLOWISE_HOST }}/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_HR }}",
         "method": "POST",
         "options": {
           "timeout": 15000
@@ -212,7 +212,7 @@
       "webhookId": "551f5c1a-fe31-4c9b-9139-78d3b20f7b61",
       "parameters": {
         "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
-        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#065f46;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#d1fae5;color:#065f46;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#065f46 0%,#10b981 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#f0fdf4;padding:15px;border-radius:6px;border-left:4px solid #10b981}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Pedido de Férias</h1><div class=\"badge\">{{ $json.vacationData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.vacationData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Funcionário:</span> <span class=\"value\">{{ $json.vacationData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.vacationData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes das Férias</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Data Início:</span> <span class=\"value\">{{ $json.vacationData.start_date }}</span></div><div class=\"info-row\"><span class=\"label\">Data Fim:</span> <span class=\"value\">{{ $json.vacationData.end_date }}</span></div><div class=\"info-row\"><span class=\"label\">Total Dias:</span> <span class=\"value\">{{ $json.vacationData.days_total }}</span></div><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.vacationData.vacation_type }}</span></div><div class=\"info-row\"><span class=\"label\">Notas:</span> <span class=\"value\">{{ $json.vacationData.notes || 'Nenhuma' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Acortec</strong> - RH Digital (Flowise)</p></div></div></body></html>",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#065f46;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#d1fae5;color:#065f46;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#065f46 0%,#10b981 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#f0fdf4;padding:15px;border-radius:6px;border-left:4px solid #10b981}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Pedido de Férias</h1><div class=\"badge\">{{ $json.vacationData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.vacationData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Número de funcionário:</span> <span class=\"value\">{{ $json.vacationData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.vacationData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes das Férias</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Data Início:</span> <span class=\"value\">{{ $json.vacationData.start_date }}</span></div><div class=\"info-row\"><span class=\"label\">Data Fim:</span> <span class=\"value\">{{ $json.vacationData.end_date }}</span></div><div class=\"info-row\"><span class=\"label\">Total Dias:</span> <span class=\"value\">{{ $json.vacationData.days_total }}</span></div><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.vacationData.vacation_type }}</span></div><div class=\"info-row\"><span class=\"label\">Notas:</span> <span class=\"value\">{{ $json.vacationData.notes || 'Nenhuma' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Your Company Name</strong> - RH Digital (Flowise)</p></div></div></body></html>",
         "options": {},
         "subject": "=Pedido de Férias - {{ $json.vacationData.reference_id }}"
       },
@@ -239,7 +239,7 @@
       "webhookId": "4d770a29-b8f9-4cc1-9d3e-69afb9620d18",
       "parameters": {
         "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
-        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#991b1b 0%,#ef4444 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #ef4444}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Notificação de Ausência</h1><div class=\"badge\">{{ $json.absenceData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.absenceData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Funcionário:</span> <span class=\"value\">{{ $json.absenceData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.absenceData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes da Ausência</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.absenceData.date }}</span></div><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.absenceData.absence_type }}</span></div><div class=\"info-row\"><span class=\"label\">Atestado Médico:</span> <span class=\"value\">{{ $json.absenceData.has_medical_certificate || 'Não indicado' }}</span></div><div class=\"info-row\"><span class=\"label\">Regresso Previsto:</span> <span class=\"value\">{{ $json.absenceData.expected_return || 'Não indicado' }}</span></div><div class=\"info-row\"><span class=\"label\">Notas:</span> <span class=\"value\">{{ $json.absenceData.notes || 'Nenhuma' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Acortec</strong> - RH Digital (Flowise)</p></div></div></body></html>",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#991b1b 0%,#ef4444 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #ef4444}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Notificação de Ausência</h1><div class=\"badge\">{{ $json.absenceData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.absenceData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Número de funcionário:</span> <span class=\"value\">{{ $json.absenceData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.absenceData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes da Ausência</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.absenceData.date }}</span></div><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.absenceData.absence_type }}</span></div><div class=\"info-row\"><span class=\"label\">Atestado Médico:</span> <span class=\"value\">{{ $json.absenceData.has_medical_certificate || 'Não indicado' }}</span></div><div class=\"info-row\"><span class=\"label\">Regresso Previsto:</span> <span class=\"value\">{{ $json.absenceData.expected_return || 'Não indicado' }}</span></div><div class=\"info-row\"><span class=\"label\">Notas:</span> <span class=\"value\">{{ $json.absenceData.notes || 'Nenhuma' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Your Company Name</strong> - RH Digital (Flowise)</p></div></div></body></html>",
         "options": {},
         "subject": "=Notificação de Ausência - {{ $json.absenceData.reference_id }}"
       },
@@ -266,7 +266,7 @@
       "webhookId": "6fdc441d-899a-4394-8e07-706353352832",
       "parameters": {
         "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
-        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#eff6ff;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Pedido Geral</h1><div class=\"badge\">{{ $json.requestData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.requestData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Funcionário:</span> <span class=\"value\">{{ $json.requestData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.requestData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.requestData.request_type }}</span></div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.requestData.description }}</span></div><div class=\"info-row\"><span class=\"label\">Urgência:</span> <span class=\"value\">{{ $json.requestData.urgency || 'Normal' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo Preferido:</span> <span class=\"value\">{{ $json.requestData.preferred_timeline || 'Não indicado' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Acortec</strong> - RH Digital (Flowise)</p></div></div></body></html>",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#eff6ff;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Pedido Geral</h1><div class=\"badge\">{{ $json.requestData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.requestData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Número de funcionário:</span> <span class=\"value\">{{ $json.requestData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.requestData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.requestData.request_type }}</span></div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.requestData.description }}</span></div><div class=\"info-row\"><span class=\"label\">Urgência:</span> <span class=\"value\">{{ $json.requestData.urgency || 'Normal' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo Preferido:</span> <span class=\"value\">{{ $json.requestData.preferred_timeline || 'Não indicado' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Your Company Name</strong> - RH Digital (Flowise)</p></div></div></body></html>",
         "options": {},
         "subject": "=Pedido Geral - {{ $json.requestData.reference_id }}"
       },
@@ -394,7 +394,101 @@
       "credentials": {}
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Validate Input", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          { "node": "Flowise API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Flowise API": {
+      "main": [
+        [
+          { "node": "Process Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          { "node": "Route Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Route Response": {
+      "main": [
+        [
+          { "node": "Email Vacation", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Email Absence", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Email Request", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Format Normal Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Email Vacation": {
+      "main": [
+        [
+          { "node": "Format Vacation Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Email Absence": {
+      "main": [
+        [
+          { "node": "Format Absence Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Email Request": {
+      "main": [
+        [
+          { "node": "Format Request Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Vacation Response": {
+      "main": [
+        [
+          { "node": "Respond Vacation", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Absence Response": {
+      "main": [
+        [
+          { "node": "Respond Absence", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Request Response": {
+      "main": [
+        [
+          { "node": "Respond Request", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Normal Response": {
+      "main": [
+        [
+          { "node": "Respond Normal", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }

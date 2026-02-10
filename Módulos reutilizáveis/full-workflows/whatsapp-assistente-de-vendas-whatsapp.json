@@ -11,7 +11,7 @@
     "requiredCredentials": [
       "whatsapp"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -34,7 +34,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body;\nconst entry = body && body.entry;\n\nif (!entry || !entry[0] || !entry[0].changes || !entry[0].changes[0]) {\n  return [];\n}\n\nconst change = entry[0].changes[0];\nconst value = change.value;\n\n// Skip non-message events (status updates, delivery receipts, etc.)\nif (!value.messages || value.messages.length === 0) {\n  return [];\n}\n\n// Process first message only\nconst message = value.messages[0];\nconst contact = (value.contacts && value.contacts[0]) || {};\nconst metadata = value.metadata || {};\n\n// Mark message as read (blue ticks)\ntry {\n  await fetch(\n    `https://your-api-domain.com/v21.0/${metadata.phone_number_id}/messages`,\n    {\n      method: 'POST',\n      headers: {\n        'Authorization': `Bearer ${$env.WHATSAPP_ACCESS_TOKEN}`,\n        'Content-Type': 'application/json'\n      },\n      body: JSON.stringify({\n        messaging_product: 'whatsapp',\n        status: 'read',\n        message_id: message.id\n      })\n    }\n  );\n} catch (e) { /* non-blocking */ }\n\n// Only process text messages; reply with guidance for other types\nif (message.type !== 'text') {\n  try {\n    await fetch(\n      `https://graph.facebook.com/v21.0/${metadata.phone_number_id}/messages`,\n      {\n        method: 'POST',\n        headers: {\n          'Authorization': `Bearer ${$env.WHATSAPP_ACCESS_TOKEN}`,\n          'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({\n          messaging_product: 'whatsapp',\n          to: message.from,\n          type: 'text',\n          text: { body: 'Ol\\u00e1! De momento, apenas consigo processar mensagens de texto. Por favor, envie a sua quest\\u00e3o por escrito.' }\n        })\n      }\n    );\n  } catch (e) { }\n  return [];\n}\n\nreturn [{\n  json: {\n    from: message.from,\n    messageId: message.id,\n    text: message.text.body,\n    contactName: (contact.profile && contact.profile.name) || '',\n    phoneNumberId: metadata.phone_number_id,\n    timestamp: message.timestamp\n  }\n}];"
+        "jsCode": "const body = $input.first().json.body;\nconst entry = body && body.entry;\n\nif (!entry || !entry[0] || !entry[0].changes || !entry[0].changes[0]) {\n  return [];\n}\n\nconst change = entry[0].changes[0];\nconst value = change.value;\n\n// Skip non-message events (status updates, delivery receipts, etc.)\nif (!value.messages || value.messages.length === 0) {\n  return [];\n}\n\n// Process first message only\nconst message = value.messages[0];\nconst contact = (value.contacts && value.contacts[0]) || {};\nconst metadata = value.metadata || {};\n\n// Mark message as read (blue ticks)\ntry {\n  await fetch(\n    `https://your-api-domain.com/v21.0/${metadata.phone_number_id}/messages`,\n    {\n      method: 'POST',\n      headers: {\n        'Authorization': `Bearer ${$env.WHATSAPP_ACCESS_TOKEN}`,\n        'Content-Type': 'application/json'\n      },\n      body: JSON.stringify({\n        messaging_product: 'whatsapp',\n        status: 'read',\n        message_id: message.id\n      })\n    }\n  );\n} catch (e) { /* non-blocking */ }\n\n// Only process text messages; reply with guidance for other types\nif (message.type !== 'text') {\n  try {\n    await fetch(\n      `https://your-api-domain.com/v21.0/${metadata.phone_number_id}/messages`,\n      {\n        method: 'POST',\n        headers: {\n          'Authorization': `Bearer ${$env.WHATSAPP_ACCESS_TOKEN}`,\n          'Content-Type': 'application/json'\n        },\n        body: JSON.stringify({\n          messaging_product: 'whatsapp',\n          to: message.from,\n          type: 'text',\n          text: { body: 'Ol\\u00e1! De momento, apenas consigo processar mensagens de texto. Por favor, envie a sua quest\\u00e3o por escrito.' }\n        })\n      }\n    );\n  } catch (e) { }\n  return [];\n}\n\nreturn [{\n  json: {\n    from: message.from,\n    messageId: message.id,\n    text: message.text.body,\n    contactName: (contact.profile && contact.profile.name) || '',\n    phoneNumberId: metadata.phone_number_id,\n    timestamp: message.timestamp\n  }\n}];"
       },
       "id": "525d4c7b-c274-42c9-9a11-a3e0e3858343",
       "name": "Extract Message",
@@ -62,7 +62,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// RAG Retrieval: Generate embedding + Query Pinecone + Build context\nconst userMessage = $('Validate Input').first().json.message;\nconst sessionId = $('Validate Input').first().json.session_id;\n\nlet contextText = '';\ntry {\n  // Step 1: Generate embedding via Google API\n  const embeddingResponse = await fetch(\n    `https://your-api-domain.com/v1beta/models/gemini-embedding-001:embedContent?key=${$env.GOOGLE_API_KEY}`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        model: 'models/gemini-embedding-001',\n        content: { parts: [{ text: userMessage }] },\n        taskType: 'RETRIEVAL_QUERY'\n      })\n    }\n  );\n  const embeddingData = await embeddingResponse.json();\n  const vector = embeddingData?.embedding?.values;\n\n  if (vector && vector.length > 0) {\n    // Step 2: Query Pinecone (index: borjareis, all namespaces)\n    const pineconeResponse = await fetch(\n      `${$env.PINECONE_HOST_BORJAREIS}/query`,\n      {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Api-Key': $env.PINECONE_API_KEY\n        },\n        body: JSON.stringify({\n          vector: vector,\n          topK: 5,\n          includeMetadata: true\n        })\n      }\n    );\n    const pineconeData = await pineconeResponse.json();\n    const matches = pineconeData?.matches || [];\n\n    // Step 3: Build context from matches\n    const contextParts = matches\n      .filter(m => m.score >= 0.7)\n      .map(m => m.metadata?.text || m.metadata?.content || m.metadata?.chunk || '')\n      .filter(t => t.length > 0);\n\n    if (contextParts.length > 0) {\n      contextText = '[CONTEXT]\\n' + contextParts.join('\\n---\\n') + '\\n[/CONTEXT]\\n\\n';\n    }\n  }\n} catch (err) {\n  // RAG failure is non-blocking — continue without context\n}\n\n// Add current date/time in Lisbon timezone\nconst lisbonTime = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Europe/Lisbon', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'long', hour12: false }).format(new Date());\nconst enrichedMessage = `[Data atual: ${lisbonTime}] ` + contextText + userMessage;\n\nreturn {\n  json: {\n    message: enrichedMessage,\n    original_message: userMessage,\n    session_id: sessionId,\n    has_context: contextText.length > 0\n  }\n};"
+        "jsCode": "// RAG Retrieval: Generate embedding + Query Pinecone + Build context\nconst userMessage = $('Validate Input').first().json.message;\nconst sessionId = $('Validate Input').first().json.session_id;\n\nlet contextText = '';\ntry {\n  // Step 1: Generate embedding via Google API\n  const embeddingResponse = await fetch(\n    `https://your-api-domain.com/v1beta/models/gemini-embedding-001:embedContent?key=${$env.GOOGLE_API_KEY}`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        model: 'models/gemini-embedding-001',\n        content: { parts: [{ text: userMessage }] },\n        taskType: 'RETRIEVAL_QUERY'\n      })\n    }\n  );\n  const embeddingData = await embeddingResponse.json();\n  const vector = embeddingData?.embedding?.values;\n\n  if (vector && vector.length > 0) {\n    // Step 2: Query Pinecone (all namespaces)\n    const pineconeResponse = await fetch(\n      `${$env.PINECONE_HOST}/query`,\n      {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Api-Key': $env.PINECONE_API_KEY\n        },\n        body: JSON.stringify({\n          vector: vector,\n          topK: 5,\n          includeMetadata: true\n        })\n      }\n    );\n    const pineconeData = await pineconeResponse.json();\n    const matches = pineconeData?.matches || [];\n\n    // Step 3: Build context from matches\n    const contextParts = matches\n      .filter(m => m.score >= 0.7)\n      .map(m => m.metadata?.text || m.metadata?.content || m.metadata?.chunk || '')\n      .filter(t => t.length > 0);\n\n    if (contextParts.length > 0) {\n      contextText = '[CONTEXT]\\n' + contextParts.join('\\n---\\n') + '\\n[/CONTEXT]\\n\\n';\n    }\n  }\n} catch (err) {\n  // RAG failure is non-blocking — continue without context\n}\n\n// Add current date/time in Atlantic/Azores timezone\nconst azoresTime = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'long', hour12: false }).format(new Date());\nconst enrichedMessage = `[Data atual: ${azoresTime}] ` + contextText + userMessage;\n\nreturn {\n  json: {\n    message: enrichedMessage,\n    original_message: userMessage,\n    session_id: sessionId,\n    has_context: contextText.length > 0\n  }\n};"
       },
       "id": "ebc0cf1e-90c4-4328-84c0-24f2c9b25fc1",
       "name": "RAG Retrieval",
@@ -77,7 +77,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_BORJAREIS }}",
+        "url": "={{ $env.FLOWISE_HOST }}/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_SALES }}",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({ question: $json.message, overrideConfig: { sessionId: $json.session_id } }) }}",
@@ -191,7 +191,7 @@
       "parameters": {
         "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
         "subject": "=Novo Pedido de Orcamento (WhatsApp) - {{ $json.quoteData.reference_id }}",
-        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.products{background-color:#f9fafb;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Orcamento<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.quoteData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.quoteData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.quoteData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Telefone:</span> <span class=\"value\">{{ $json.quoteData.customer_phone || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"products\"><div class=\"info-row\"><span class=\"label\">Produtos:</span> <span class=\"value\">{{ $json.quoteData.products_description }}</span></div><div class=\"info-row\"><span class=\"label\">Quantidades:</span> <span class=\"value\">{{ $json.quoteData.quantities || 'Nao especificado' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Informacoes do Projeto</div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.quoteData.project_description || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo:</span> <span class=\"value\">{{ $json.quoteData.timeline || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Requisitos Especiais:</span> <span class=\"value\">{{ $json.quoteData.special_requirements || 'Nenhum' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.quoteData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.products{background-color:#f9fafb;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Orcamento<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.quoteData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Dados do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.quoteData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.quoteData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Telefone:</span> <span class=\"value\">{{ $json.quoteData.customer_phone || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"products\"><div class=\"info-row\"><span class=\"label\">Produtos:</span> <span class=\"value\">{{ $json.quoteData.products_description }}</span></div><div class=\"info-row\"><span class=\"label\">Quantidades:</span> <span class=\"value\">{{ $json.quoteData.quantities || 'Nao especificado' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Dados do Projeto</div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.quoteData.project_description || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo:</span> <span class=\"value\">{{ $json.quoteData.timeline || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Requisitos Especiais:</span> <span class=\"value\">{{ $json.quoteData.special_requirements || 'Nenhum' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.quoteData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Your Business Name</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
         "options": {}
       },
       "id": "96167fa0-bab8-4f5f-9c39-63bcc692a3b4",
@@ -217,7 +217,7 @@
       "parameters": {
         "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
         "subject": "=Novo Pedido de Suporte (WhatsApp) - {{ $json.orderData.reference_id }}",
-        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.issue-box{background-color:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #dc2626}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Suporte<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.orderData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.orderData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.orderData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Referencia:</span> <span class=\"value\">{{ $json.orderData.order_id || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Problema</div><div class=\"issue-box\"><div class=\"info-row\"><span class=\"label\">Tipo de Problema:</span> <span class=\"value\">{{ $json.orderData.issue_type || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.orderData.issue_description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.orderData.created_at }}</span></div><div class=\"info-row\"><span class=\"label\">Estado:</span> <span class=\"value\">{{ $json.orderData.status }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.issue-box{background-color:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #dc2626}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Suporte<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.orderData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Dados do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.orderData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.orderData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Referencia:</span> <span class=\"value\">{{ $json.orderData.order_id || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Problema</div><div class=\"issue-box\"><div class=\"info-row\"><span class=\"label\">Tipo de Problema:</span> <span class=\"value\">{{ $json.orderData.issue_type || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.orderData.issue_description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.orderData.created_at }}</span></div><div class=\"info-row\"><span class=\"label\">Estado:</span> <span class=\"value\">{{ $json.orderData.status }}</span></div></div></div><div class=\"footer\"><p><strong>Your Business Name</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
         "options": {}
       },
       "id": "5f7f73a4-1f50-4c2c-987f-365c383fd146",
@@ -373,7 +373,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const config = $input.first().json;\n\n// Check if bot is globally disabled\nif (!config.enabled) return [];\n\n// Check schedule\nconst schedule = config.schedule || [];\nif (schedule.length === 0) return [{ json: { active: true } }];\n\n// Get current time in Lisbon\nconst now = new Date();\nconst lisbonOptions = { timeZone: 'Europe/Lisbon', hour: '2-digit', minute: '2-digit', hour12: false };\nconst lisbonTime = new Intl.DateTimeFormat('en-GB', lisbonOptions).format(now);\nconst [h, m] = lisbonTime.split(':').map(Number);\nconst currentMinutes = h * 60 + m;\n\nconst lisbonDayOptions = { timeZone: 'Europe/Lisbon', weekday: 'short' };\nconst dayName = new Intl.DateTimeFormat('en-GB', lisbonDayOptions).format(now);\nconst dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };\nconst currentDay = dayMap[dayName];\n\n// Check if current time falls within any schedule window\nconst inSchedule = schedule.some(rule => {\n  if (!rule.days || !rule.days.includes(currentDay)) return false;\n  const [sh, sm] = rule.start.split(':').map(Number);\n  const [eh, em] = rule.end.split(':').map(Number);\n  const startMin = sh * 60 + sm;\n  const endMin = eh * 60 + em;\n  if (endMin > startMin) {\n    return currentMinutes >= startMin && currentMinutes < endMin;\n  } else {\n    return currentMinutes >= startMin || currentMinutes < endMin;\n  }\n});\n\nif (!inSchedule) return [];\nreturn [{ json: { active: true } }];"
+        "jsCode": "const config = $input.first().json;\n\n// Check if bot is globally disabled\nif (!config.enabled) return [];\n\n// Check schedule\nconst schedule = config.schedule || [];\nif (schedule.length === 0) return [{ json: { active: true } }];\n\n// Get current time in Atlantic/Azores\nconst now = new Date();\nconst azoresOptions = { timeZone: 'Atlantic/Azores', hour: '2-digit', minute: '2-digit', hour12: false };\nconst azoresTime = new Intl.DateTimeFormat('en-GB', azoresOptions).format(now);\nconst [h, m] = azoresTime.split(':').map(Number);\nconst currentMinutes = h * 60 + m;\n\nconst azoresDayOptions = { timeZone: 'Atlantic/Azores', weekday: 'short' };\nconst dayName = new Intl.DateTimeFormat('en-GB', azoresDayOptions).format(now);\nconst dayMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };\nconst currentDay = dayMap[dayName];\n\n// Check if current time falls within any schedule window\nconst inSchedule = schedule.some(rule => {\n  if (!rule.days || !rule.days.includes(currentDay)) return false;\n  const [sh, sm] = rule.start.split(':').map(Number);\n  const [eh, em] = rule.end.split(':').map(Number);\n  const startMin = sh * 60 + sm;\n  const endMin = eh * 60 + em;\n  if (endMin > startMin) {\n    return currentMinutes >= startMin && currentMinutes < endMin;\n  } else {\n    return currentMinutes >= startMin || currentMinutes < endMin;\n  }\n});\n\nif (!inSchedule) return [];\nreturn [{ json: { active: true } }];"
       },
       "id": "192233f0-56bd-46ea-bb83-0f907963f52c",
       "name": "Evaluate Active",
@@ -442,7 +442,114 @@
       "credentials": {}
     }
   ],
-  "connections": {},
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          { "node": "Extract Message", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Extract Message": {
+      "main": [
+        [
+          { "node": "Validate Input", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          { "node": "Check Bot Config", "type": "main", "index": 0 },
+          { "node": "Log Incoming", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Check Bot Config": {
+      "main": [
+        [
+          { "node": "Evaluate Active", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Evaluate Active": {
+      "main": [
+        [
+          { "node": "Check Pause", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Check Pause": {
+      "main": [
+        [
+          { "node": "Is Paused", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Is Paused": {
+      "main": [
+        [
+          { "node": "RAG Retrieval", "type": "main", "index": 0 }
+        ],
+        []
+      ]
+    },
+    "RAG Retrieval": {
+      "main": [
+        [
+          { "node": "Flowise API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Flowise API": {
+      "main": [
+        [
+          { "node": "Process Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          { "node": "Route Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Route Response": {
+      "main": [
+        [
+          { "node": "Email Quote", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Email Order", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Send WA Reply", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Email Quote": {
+      "main": [
+        [
+          { "node": "Send WA Reply", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Email Order": {
+      "main": [
+        [
+          { "node": "Send WA Reply", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Send WA Reply": {
+      "main": [
+        [
+          { "node": "Log Outgoing", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }

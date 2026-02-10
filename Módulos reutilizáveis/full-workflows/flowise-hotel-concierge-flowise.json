@@ -13,7 +13,7 @@
       "flowise",
       "http"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -61,7 +61,7 @@
         96
       ],
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const month = now.getUTCMonth();\n  const isDST = month >= 2 && month <= 9;\n  const offset = isDST ? 0 : -1;\n  const local = new Date(now.getTime() + offset * 3600000);\n  const days = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\n  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\n  return days[local.getUTCDay()] + ', ' + local.getUTCDate() + ' de ' + months[local.getUTCMonth()] + ' de ' + local.getUTCFullYear() + ', ' + String(local.getUTCHours()).padStart(2,'0') + ':' + String(local.getUTCMinutes()).padStart(2,'0');\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
+        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const formatter = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit', hour12: false });\n  return formatter.format(now);\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
       },
       "typeVersion": 2,
       "credentials": {}
@@ -76,7 +76,7 @@
         96
       ],
       "parameters": {
-        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_HOTEL }}",
+        "url": "={{ $env.FLOWISE_HOST }}/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_HOTEL }}",
         "method": "POST",
         "options": {
           "timeout": 15000
@@ -190,7 +190,7 @@
       "webhookId": "5942fb0f-6a0e-491f-804c-ca1f42240ddd",
       "parameters": {
         "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
-        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a5f;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.booking-box{background:#eff6ff;padding:15px;border-radius:6px;border-left:4px solid #2563eb}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Reserva</h1><div class=\"badge\">{{ $json.bookingData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informações do Hóspede</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.bookingData.guest_name }}</span></div><div class=\"info-row\"><span class=\"label\">Quarto:</span> <span class=\"value\">{{ $json.bookingData.room_number || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes da Reserva</div><div class=\"booking-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.bookingData.booking_type }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.bookingData.date }}</span></div><div class=\"info-row\"><span class=\"label\">Hora:</span> <span class=\"value\">{{ $json.bookingData.time }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Pessoas:</span> <span class=\"value\">{{ $json.bookingData.num_guests || 'Não especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Detalhes:</span> <span class=\"value\">{{ $json.bookingData.details || '-' }}</span></div><div class=\"info-row\"><span class=\"label\">Pedidos Especiais:</span> <span class=\"value\">{{ $json.bookingData.special_requests || 'Nenhum' }}</span></div><div class=\"info-row\"><span class=\"label\">Dieta:</span> <span class=\"value\">{{ $json.bookingData.dietary || 'N/A' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.bookingData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Hotel Baia de Angra</strong> - Concierge Digital (Flowise)</p></div></div></body></html>",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a5f;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.booking-box{background:#eff6ff;padding:15px;border-radius:6px;border-left:4px solid #2563eb}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Reserva</h1><div class=\"badge\">{{ $json.bookingData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Dados do Hóspede</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.bookingData.guest_name }}</span></div><div class=\"info-row\"><span class=\"label\">Quarto:</span> <span class=\"value\">{{ $json.bookingData.room_number || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes da Reserva</div><div class=\"booking-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.bookingData.booking_type }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.bookingData.date }}</span></div><div class=\"info-row\"><span class=\"label\">Hora:</span> <span class=\"value\">{{ $json.bookingData.time }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Pessoas:</span> <span class=\"value\">{{ $json.bookingData.num_guests || 'Não especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Detalhes:</span> <span class=\"value\">{{ $json.bookingData.details || '-' }}</span></div><div class=\"info-row\"><span class=\"label\">Pedidos Especiais:</span> <span class=\"value\">{{ $json.bookingData.special_requests || 'Nenhum' }}</span></div><div class=\"info-row\"><span class=\"label\">Dieta:</span> <span class=\"value\">{{ $json.bookingData.dietary || 'N/A' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.bookingData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Your Hotel Name</strong> - Concierge Digital (Flowise)</p></div></div></body></html>",
         "options": {},
         "subject": "=Novo Pedido de Reserva - {{ $json.bookingData.reference_id }}"
       },
@@ -217,7 +217,7 @@
       "webhookId": "0bd77ed0-9d4f-4cb3-9dee-2e51d56ad798",
       "parameters": {
         "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
-        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.header{background:linear-gradient(135deg,#92400e 0%,#f59e0b 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#92400e;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.feedback-box{background:#fffbeb;padding:15px;border-radius:6px;border-left:4px solid #f59e0b}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#fef3c7;color:#92400e;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Feedback de Hóspede</h1><div class=\"badge\">{{ $json.feedbackData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informações do Hóspede</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.feedbackData.guest_name }}</span></div><div class=\"info-row\"><span class=\"label\">Quarto:</span> <span class=\"value\">{{ $json.feedbackData.room_number || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Feedback</div><div class=\"feedback-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.feedbackData.feedback_type }}</span></div><div class=\"info-row\"><span class=\"label\">Urgência:</span> <span class=\"value\">{{ $json.feedbackData.urgency || 'Normal' }}</span></div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.feedbackData.description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.feedbackData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Hotel Baia de Angra</strong> - Concierge Digital (Flowise)</p></div></div></body></html>",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.header{background:linear-gradient(135deg,#92400e 0%,#f59e0b 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#92400e;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.feedback-box{background:#fffbeb;padding:15px;border-radius:6px;border-left:4px solid #f59e0b}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#fef3c7;color:#92400e;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Feedback de Hóspede</h1><div class=\"badge\">{{ $json.feedbackData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Dados do Hóspede</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.feedbackData.guest_name }}</span></div><div class=\"info-row\"><span class=\"label\">Quarto:</span> <span class=\"value\">{{ $json.feedbackData.room_number || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Feedback</div><div class=\"feedback-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.feedbackData.feedback_type }}</span></div><div class=\"info-row\"><span class=\"label\">Urgência:</span> <span class=\"value\">{{ $json.feedbackData.urgency || 'Normal' }}</span></div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.feedbackData.description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.feedbackData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Your Hotel Name</strong> - Concierge Digital (Flowise)</p></div></div></body></html>",
         "options": {},
         "subject": "=Feedback de Hóspede - {{ $json.feedbackData.reference_id }}"
       },
@@ -269,7 +269,7 @@
         272
       ],
       "parameters": {
-        "jsCode": "let d; try { d = $('Process Response').first().json; } catch(e) { d = { output: 'Bem-vindo ao Hotel Baía de Angra.', sessionId: 'unknown', classifiedIntent: 'general' }; }\nreturn [{ json: { response: d.output, intent: d.classifiedIntent || 'general', session_id: d.sessionId, timestamp: new Date().toISOString() }}];"
+        "jsCode": "let d; try { d = $('Process Response').first().json; } catch(e) { d = { output: 'Bem-vindo ao Your Hotel Name.', sessionId: 'unknown', classifiedIntent: 'general' }; }\nreturn [{ json: { response: d.output, intent: d.classifiedIntent || 'general', session_id: d.sessionId, timestamp: new Date().toISOString() }}];"
       },
       "typeVersion": 2,
       "credentials": {}
@@ -317,7 +317,84 @@
       "credentials": {}
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          { "node": "Validate Input", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          { "node": "Flowise API", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Flowise API": {
+      "main": [
+        [
+          { "node": "Process Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Process Response": {
+      "main": [
+        [
+          { "node": "Route Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Route Response": {
+      "main": [
+        [
+          { "node": "Email Booking", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Email Feedback", "type": "main", "index": 0 }
+        ],
+        [
+          { "node": "Format Normal Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Email Booking": {
+      "main": [
+        [
+          { "node": "Format Booking Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Email Feedback": {
+      "main": [
+        [
+          { "node": "Format Feedback Response", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Booking Response": {
+      "main": [
+        [
+          { "node": "Respond Booking", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Feedback Response": {
+      "main": [
+        [
+          { "node": "Respond Feedback", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Format Normal Response": {
+      "main": [
+        [
+          { "node": "Respond Normal", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }

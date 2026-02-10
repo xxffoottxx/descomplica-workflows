@@ -11,7 +11,7 @@
     "requiredCredentials": [
       "vapi"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -34,7 +34,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Required fields\n  const requiredFields = ['date', 'time', 'customer_name', 'customer_phone'];\n  const missingFields = requiredFields.filter(field => !body[field]);\n  if (missingFields.length > 0) {\n    return { _error: true, errorMessage: 'Faltam dados obrigatorios para a marcacao. Por favor, forneca o nome, telefone, data e hora.', toolCallId };\n  }\n\n  // Validate date format\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(body.date)) {\n    return { _error: true, errorMessage: 'Formato de data invalido. Por favor, indique a data novamente.', toolCallId };\n  }\n\n  // Validate time format\n  if (!/^\\d{2}:\\d{2}$/.test(body.time)) {\n    return { _error: true, errorMessage: 'Formato de hora invalido. Por favor, indique a hora novamente.', toolCallId };\n  }\n\n  // Parse date components\n  const [year, month, day] = body.date.split('-').map(Number);\n  const bookingDate = new Date(year, month - 1, day);\n  if (isNaN(bookingDate.getTime()) || bookingDate.getMonth() !== month - 1 || bookingDate.getDate() !== day) {\n    return { _error: true, errorMessage: 'Data invalida. Por favor, verifique o dia e mes.', toolCallId };\n  }\n\n  // Check past date\n  const now = new Date();\n  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n  if (bookingDate < today) {\n    return { _error: true, errorMessage: 'Nao e possivel marcar para uma data que ja passou. Por favor, escolha uma data futura.', toolCallId };\n  }\n\n  // Check weekend\n  const dayOfWeek = bookingDate.getDay();\n  if (dayOfWeek === 0 || dayOfWeek === 6) {\n    return { _error: true, errorMessage: 'Nao temos atendimento aos fins de semana. Por favor, escolha um dia util, de segunda a sexta-feira.', toolCallId };\n  }\n\n  // Validate business hours (9:00 - 18:00)\n  const [hour, minute] = body.time.split(':').map(Number);\n  if (hour < 9 || hour >= 18) {\n    return { _error: true, errorMessage: 'Esse horario esta fora do nosso periodo de atendimento. Estamos disponiveis das nove as dezoito horas, de segunda a sexta-feira.', toolCallId };\n  }\n\n  // Validate phone\n  const phone = body.customer_phone.toString().replace(/\\s+/g, '');\n  if (phone.replace(/[^0-9]/g, '').length < 9) {\n    return { _error: true, errorMessage: 'Numero de telefone invalido. Por favor, indique um numero valido.', toolCallId };\n  }\n\n  // Validate email if provided\n  if (body.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(body.customer_email)) {\n    return { _error: true, errorMessage: 'O endereco de email fornecido nao e valido.', toolCallId };\n  }\n\n  // Sanitize text inputs\n  function sanitize(text) {\n    if (!text) return '';\n    return String(text).replace(/[\\n\\r]/g, ' ').replace(/<[^>]*>/g, '').substring(0, 500);\n  }\n\n  // Format date for natural voice\n  const months = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];\n  const voiceDate = day + ' de ' + months[month - 1] + ' de ' + year;\n\n  // Format time for natural voice\n  let voiceTime;\n  if (minute === 0) {\n    voiceTime = hour + ' horas';\n  } else {\n    voiceTime = hour + ' e ' + minute;\n  }\n\n  return {\n    _error: false,\n    date: body.date,\n    time: body.time,\n    voiceDate: voiceDate,\n    voiceTime: voiceTime,\n    customer_name: sanitize(body.customer_name),\n    customer_phone: phone,\n    customer_email: body.customer_email || '',\n    service_type: sanitize(body.service_type) || 'Consulta',\n    duration: body.duration || 60,\n    notes: sanitize(body.notes) || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao processar o pedido de marcacao. Por favor, tente novamente.', toolCallId };\n}"
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\nconst expected = process.env.VAPI_WEBHOOK_SECRET;\nif (!expected) {\n  throw new Error('VAPI_WEBHOOK_SECRET not configured');\n}\nif (vapiSecret !== expected) {\n  return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Required fields\n  const requiredFields = ['date', 'time', 'customer_name', 'customer_phone'];\n  const missingFields = requiredFields.filter(field => !body[field]);\n  if (missingFields.length > 0) {\n    return { _error: true, errorMessage: 'Faltam dados obrigatorios para a marcacao. Por favor, forneca o nome, telefone, data e hora.', toolCallId };\n  }\n\n  // Validate date format\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(body.date)) {\n    return { _error: true, errorMessage: 'Formato de data invalido. Por favor, indique a data novamente.', toolCallId };\n  }\n\n  // Validate time format\n  if (!/^\\d{2}:\\d{2}$/.test(body.time)) {\n    return { _error: true, errorMessage: 'Formato de hora invalido. Por favor, indique a hora novamente.', toolCallId };\n  }\n\n  // Parse date components\n  const [year, month, day] = body.date.split('-').map(Number);\n  const bookingDate = new Date(year, month - 1, day);\n  if (isNaN(bookingDate.getTime()) || bookingDate.getMonth() !== month - 1 || bookingDate.getDate() !== day) {\n    return { _error: true, errorMessage: 'Data invalida. Por favor, verifique o dia e mes.', toolCallId };\n  }\n\n  // Check past date\n  const now = new Date();\n  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n  if (bookingDate < today) {\n    return { _error: true, errorMessage: 'Nao e possivel marcar para uma data que ja passou. Por favor, escolha uma data futura.', toolCallId };\n  }\n\n  // Check weekend\n  const dayOfWeek = bookingDate.getDay();\n  if (dayOfWeek === 0 || dayOfWeek === 6) {\n    return { _error: true, errorMessage: 'Nao temos atendimento aos fins de semana. Por favor, escolha um dia util, de segunda a sexta-feira.', toolCallId };\n  }\n\n  // Validate business hours (9:00 - 18:00)\n  const [hour, minute] = body.time.split(':').map(Number);\n  if (hour < 9 || hour >= 18) {\n    return { _error: true, errorMessage: 'Esse horario esta fora do nosso periodo de atendimento. Estamos disponiveis das nove as dezoito horas, de segunda a sexta-feira.', toolCallId };\n  }\n\n  // Validate phone\n  const phone = body.customer_phone.toString().replace(/\\s+/g, '');\n  if (phone.replace(/[^0-9]/g, '').length < 9) {\n    return { _error: true, errorMessage: 'Numero de telefone invalido. Por favor, indique um numero valido.', toolCallId };\n  }\n\n  // Validate email if provided\n  if (body.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(body.customer_email)) {\n    return { _error: true, errorMessage: 'O endereco de email fornecido nao e valido.', toolCallId };\n  }\n\n  // Sanitize text inputs\n  function sanitize(text) {\n    if (!text) return '';\n    return String(text).replace(/[\\n\\r]/g, ' ').replace(/<[^>]*>/g, '').substring(0, 500);\n  }\n\n  // Format date for natural voice\n  const months = ['janeiro', 'fevereiro', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];\n  const voiceDate = day + ' de ' + months[month - 1] + ' de ' + year;\n\n  // Format time for natural voice\n  let voiceTime;\n  if (minute === 0) {\n    voiceTime = hour + ' horas';\n  } else {\n    voiceTime = hour + ' e ' + minute;\n  }\n\n  return {\n    _error: false,\n    date: body.date,\n    time: body.time,\n    voiceDate: voiceDate,\n    voiceTime: voiceTime,\n    customer_name: sanitize(body.customer_name),\n    customer_phone: phone,\n    customer_email: body.customer_email || '',\n    service_type: sanitize(body.service_type) || 'Consulta',\n    duration: body.duration || 60,\n    notes: sanitize(body.notes) || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao processar o pedido de marcacao. Por favor, tente novamente.', toolCallId };\n}"
       },
       "id": "a65ffc68-a930-4088-9bd0-2c3734fdf6fa",
       "name": "Extract & Validate Booking",
@@ -218,7 +218,55 @@
       "continueOnFail": true
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook - Receive from Vapi": {
+      "main": [
+        [
+          {"node": "Extract & Validate Booking", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Extract & Validate Booking": {
+      "main": [
+        [
+          {"node": "Check for Errors", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {"node": "Respond Error to Vapi", "type": "main", "index": 0}
+        ],
+        [
+          {"node": "Create Calendar Event", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Create Calendar Event": {
+      "main": [
+        [
+          {"node": "Format Response", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {"node": "Respond to Vapi", "type": "main", "index": 0},
+          {"node": "Check Booking Success", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Check Booking Success": {
+      "main": [
+        [
+          {"node": "Send Notification Email", "type": "main", "index": 0}
+        ],
+        []
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }

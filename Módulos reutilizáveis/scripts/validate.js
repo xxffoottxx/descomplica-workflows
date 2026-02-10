@@ -29,6 +29,14 @@ const patterns = {
     // Google Sheets IDs are 44 characters alphanumeric
     regex: /[A-Za-z0-9_-]{44}/g,
     exclude: ['YOUR_SHEET_ID']
+  },
+  companyNames: {
+    regex: /\b(Acortec|Descomplica|Borja\s*Reis|Baia\s*de\s*Angra)\b/gi,
+    exclude: []
+  },
+  apiDomains: {
+    regex: /graph\.facebook\.com|generativelanguage\.googleapis\.com/gi,
+    exclude: ['your-api-domain.com']
   }
 };
 

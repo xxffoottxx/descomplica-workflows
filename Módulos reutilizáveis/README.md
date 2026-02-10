@@ -1,24 +1,52 @@
-# Descomplica Workflows - Reusable n8n Components
+# Descomplica Workflows — Reusable n8n Component Library
 
 A curated library of production-tested n8n workflow components extracted from real-world deployments. All personal data, API keys, and client-specific information have been sanitized for safe reuse.
 
-## 📋 Quick Start
+---
+
+## Quick Start
 
 1. Browse the component categories below
 2. Download the JSON file you need
 3. Import into your n8n instance via **Workflows > Import from File**
 4. Configure credentials (see Required Credentials in each component's metadata)
-5. Customize parameters for your use case
+5. Set environment variables (see [Environment Variables Reference](#environment-variables-reference))
+6. Customize parameters for your use case
 
-## 🎯 Component Categories
+---
+
+## Environment Variables Reference
+
+All workflows rely on n8n environment variables. Set these in your n8n instance (Settings > Environment Variables, or via Docker environment).
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `FLOWISE_HOST` | Flowise API base URL | `http://flowise:3000` (Docker) or `https://flowise.yourdomain.com` |
+| `FLOWISE_CHATFLOW_CONVERSION` | Chatflow ID for sales conversion bot | `abc123-def456-...` |
+| `FLOWISE_CHATFLOW_HR` | Chatflow ID for HR assistant | `abc123-def456-...` |
+| `FLOWISE_CHATFLOW_HOTEL` | Chatflow ID for hotel concierge | `abc123-def456-...` |
+| `FLOWISE_CHATFLOW_SALES` | Chatflow ID for WhatsApp sales bot | `abc123-def456-...` |
+| `VAPI_WEBHOOK_SECRET` | Secret for authenticating Vapi webhook requests (**REQUIRED**) | `vapi_secret_...` |
+| `GOOGLE_API_KEY` | Google API key for Gemini embeddings | `AIza...` |
+| `PINECONE_HOST` | Pinecone index host URL | `https://index-abc123.svc.environment.pinecone.io` |
+| `WHATSAPP_VERIFY_TOKEN` | Token for WhatsApp webhook verification | Any random string you define |
+| `WHATSAPP_ACCESS_TOKEN` | WhatsApp Business API access token | `EAAx...` |
+| `WHATSAPP_PHONE_ID` | WhatsApp Business phone number ID | `123456789012345` |
+
+> Not every workflow needs all variables. Check each workflow's required credentials and nodes to determine which ones apply.
+
+---
+
+## Component Categories
 
 ### 1. Triggers
+
 Pre-built webhook and event triggers ready to start your workflows.
 
 - **whatsapp-whatsapp-webhook-verify.json**
   - WhatsApp webhook verification pattern
   - Handles GET requests for webhook verification token validation
-  - Simple 3-node pattern: Webhook → Verify Token → Respond
+  - Simple 3-node pattern: Webhook > Verify Token > Respond
   - **Required Credentials**: None
   - **Use Case**: WhatsApp Business API webhook setup
 
@@ -128,7 +156,60 @@ Pre-built webhook and event triggers ready to start your workflows.
     - Error handling and logging
     - Duplicate detection
 
-## 📦 Installation
+---
+
+## Deployment Checklist
+
+Use this checklist every time you deploy a workflow to a new environment:
+
+- [ ] Import workflow JSON into n8n
+- [ ] Set all required environment variables (see table above)
+- [ ] Create and assign credentials (Gmail, Google Calendar, PostgreSQL, etc.)
+- [ ] Update placeholder text (company name, contact info, business hours)
+- [ ] Activate the workflow
+- [ ] Test with sample data before going live
+
+---
+
+## Security Notes
+
+- **Vapi webhooks** require `VAPI_WEBHOOK_SECRET` — workflows will refuse to process requests without it.
+- **WhatsApp webhooks** should add Meta signature verification for production deployments.
+- **Flowise chatbots** are session-based and suitable for public-facing bots, but review your chatflow's system prompt and knowledge base access before exposing publicly.
+- **All workflows have been sanitized**: no API keys, credentials, personal phone numbers, emails, client-specific domains, or database connection strings remain.
+
+**Before deploying**:
+- Review all Code nodes for hardcoded values
+- Audit webhook paths for exposure
+- Enable authentication where needed
+- Use environment variables for all secrets
+- Test with non-production data first
+
+---
+
+## Timezone Note
+
+All workflows default to the `Atlantic/Azores` timezone. If deploying for a different region, update the timezone setting in any Schedule Trigger nodes and date/time formatting Code nodes.
+
+---
+
+## Customization Guide
+
+When deploying these workflows for a new client, update the following:
+
+| What to customize | Where to find it | Default |
+|-------------------|------------------|---------|
+| Company name and contact info | Email templates (Gmail nodes), response text in Code nodes | Placeholder text |
+| Business hours | Appointment and availability workflows (Code nodes with hour checks) | 9h-18h Mon-Fri |
+| Department names and phone numbers | Call transfer workflow (Switch node + transfer config) | Generic departments |
+| Flowise chatflow IDs | Environment variables (`FLOWISE_CHATFLOW_*`) | Each client gets their own chatflow |
+| Webhook paths | Webhook trigger nodes | `/your-webhook-path` |
+| Email recipients | Gmail nodes (to/cc fields) | `your-email@example.com` |
+| WhatsApp phone number | Environment variable (`WHATSAPP_PHONE_ID`) | Per client |
+
+---
+
+## Installation
 
 ### Option 1: Individual Components
 
@@ -146,7 +227,9 @@ git clone https://github.com/xxffoottxx/descomplica-workflows.git
 cd descomplica-workflows
 ```
 
-## 🔧 Configuration Guide
+---
+
+## Configuration Guide
 
 ### General Setup Steps
 
@@ -158,8 +241,8 @@ cd descomplica-workflows
    - Test connection
 4. **Update Parameters**:
    - Replace `YOUR_*` placeholders with actual values
-   - Update webhook paths: `/your-webhook-path` → `/your-actual-path`
-   - Set API endpoints: `https://your-domain.com` → your actual domain
+   - Update webhook paths: `/your-webhook-path` > `/your-actual-path`
+   - Set API endpoints: `https://your-domain.com` > your actual domain
 5. **Test**: Use "Execute Workflow" to test
 6. **Activate**: Toggle "Active" when ready for production
 
@@ -176,45 +259,49 @@ cd descomplica-workflows
 
 Replace these placeholders in imported workflows:
 
-- `YOUR_CREDENTIAL_NAME` → Your actual credential name in n8n
-- `YOUR_API_KEY` → Your service API key
-- `YOUR_CHATFLOW_ID` → Your Flowise chatflow ID
-- `YOUR_SHEET_ID` → Your Google Sheets ID
-- `/your-webhook-path` → Your webhook URL path
-- `https://your-domain.com` → Your actual domain
-- `your-email@example.com` → Your actual email
-- `+XX XXX XXX XXX` → Your phone number
+- `YOUR_CREDENTIAL_NAME` > Your actual credential name in n8n
+- `YOUR_API_KEY` > Your service API key
+- `YOUR_CHATFLOW_ID` > Your Flowise chatflow ID
+- `YOUR_SHEET_ID` > Your Google Sheets ID
+- `/your-webhook-path` > Your webhook URL path
+- `https://your-domain.com` > Your actual domain
+- `your-email@example.com` > Your actual email
+- `+XX XXX XXX XXX` > Your phone number
 
-## 🏗️ Architecture Patterns
+---
 
-### Pattern 1: Webhook → Process → Respond
+## Architecture Patterns
+
+### Pattern 1: Webhook > Process > Respond
 Simple synchronous request-response pattern.
 
 ```
-Webhook → Code/Processing → Respond to Webhook
+Webhook > Code/Processing > Respond to Webhook
 ```
 
 **Use Cases**: Vapi integrations, simple API endpoints
 
-### Pattern 2: Trigger → Transform → Multi-Action
+### Pattern 2: Trigger > Transform > Multi-Action
 Scheduled or event-driven workflows with multiple outputs.
 
 ```
-Schedule Trigger → Fetch Data → Split/Filter → [Gmail, Sheets, DB]
+Schedule Trigger > Fetch Data > Split/Filter > [Gmail, Sheets, DB]
 ```
 
 **Use Cases**: Invoice processing, batch operations
 
-### Pattern 3: Webhook → AI Agent → Conditional → Actions
+### Pattern 3: Webhook > AI Agent > Conditional > Actions
 AI-powered workflows with dynamic routing.
 
 ```
-Webhook → Flowise AI → Extract Intent → [Lead Capture, Email, Response]
+Webhook > Flowise AI > Extract Intent > [Lead Capture, Email, Response]
 ```
 
 **Use Cases**: Chatbots, intelligent assistants
 
-## 📊 Node Type Reference
+---
+
+## Node Type Reference
 
 | Node Type | Count | Purpose |
 |-----------|-------|---------|
@@ -230,23 +317,9 @@ Webhook → Flowise AI → Extract Intent → [Lead Capture, Email, Response]
 | Google Sheets | 3 | Spreadsheet integration |
 | Google Calendar | 2 | Calendar operations |
 
-## 🔒 Security & Privacy
+---
 
-✅ **All workflows have been sanitized**:
-- No API keys or credentials
-- No personal phone numbers or emails
-- No client-specific domains
-- No sensitive business data
-- No database connection strings
-
-⚠️ **Before deploying**:
-- Review all Code nodes for hardcoded values
-- Audit webhook paths for exposure
-- Enable authentication where needed
-- Use environment variables for secrets
-- Test with non-production data first
-
-## 🧪 Validation
+## Validation
 
 Run the validation script to check for personal data leaks:
 
@@ -261,43 +334,9 @@ This script checks for:
 - API keys
 - Google Sheets IDs
 
-## 🤝 Contributing
+---
 
-Have a reusable workflow pattern to share?
-
-1. Fork this repository
-2. Sanitize ALL personal data using `scripts/extract-patterns.js` as reference
-3. Add metadata to your workflow JSON
-4. Run `node scripts/validate.js` to ensure clean
-5. Update this README with your component description
-6. Submit a pull request
-
-## 📝 Component Metadata Structure
-
-Each component includes metadata for discoverability:
-
-```json
-{
-  "_metadata": {
-    "name": "Component Name",
-    "description": "What it does and why it's useful",
-    "category": "trigger|integration|ai-agent|utility|full-workflow",
-    "tags": ["tag1", "tag2"],
-    "requiredCredentials": ["credential_type"],
-    "source": "descomplica-production"
-  },
-  "nodes": [...],
-  "connections": {...}
-}
-```
-
-## 🛠️ Tools & Scripts
-
-- **scripts/analyze-workflows.js**: Analyze n8n workflows for patterns
-- **scripts/extract-patterns.js**: Extract and sanitize workflow components
-- **scripts/validate.js**: Validate workflows for personal data leaks
-
-## 📚 Use Cases
+## Use Cases
 
 ### 1. Voice AI Automation (Vapi)
 Build voice-first customer service with calendar booking, email sending, and human handoff.
@@ -311,7 +350,9 @@ Deploy conversational AI for HR, hospitality, and sales with pre-built patterns.
 ### 4. Document Processing
 Automate invoice and document extraction with OCR and database storage.
 
-## 🌟 Best Practices
+---
+
+## Best Practices
 
 1. **Start Simple**: Begin with single components, not full workflows
 2. **Test Credentials First**: Verify all integrations before activating
@@ -320,20 +361,64 @@ Automate invoice and document extraction with OCR and database storage.
 5. **Scale Gradually**: Test with low traffic before production deployment
 6. **Document Changes**: Note customizations for future reference
 
-## 📞 Support
+---
+
+## Component Metadata Structure
+
+Each component includes metadata for discoverability:
+
+```json
+{
+  "_metadata": {
+    "name": "Component Name",
+    "description": "What it does and why it's useful",
+    "category": "trigger|integration|ai-agent|utility|full-workflow",
+    "tags": ["tag1", "tag2"],
+    "requiredCredentials": ["credential_type"],
+    "source": "descomplica-production"
+  },
+  "nodes": [],
+  "connections": {}
+}
+```
+
+---
+
+## Tools and Scripts
+
+- **scripts/analyze-workflows.js**: Analyze n8n workflows for patterns
+- **scripts/extract-patterns.js**: Extract and sanitize workflow components
+- **scripts/validate.js**: Validate workflows for personal data leaks
+
+---
+
+## Contributing
+
+Have a reusable workflow pattern to share?
+
+1. Fork this repository
+2. Sanitize ALL personal data using `scripts/extract-patterns.js` as reference
+3. Add metadata to your workflow JSON
+4. Run `node scripts/validate.js` to ensure clean
+5. Update this README with your component description
+6. Submit a pull request
+
+---
+
+## Support
 
 - **Issues**: https://github.com/xxffoottxx/descomplica-workflows/issues
 - **n8n Community**: https://community.n8n.io
 - **n8n Docs**: https://docs.n8n.io
 
-## 📄 License
+## License
 
-MIT License - Free to use, modify, and distribute with attribution.
+MIT License — Free to use, modify, and distribute with attribution.
 
-## 🙏 Credits
+## Credits
 
 These workflows were extracted from production systems built by Descomplica and sanitized for public use. All sensitive data has been removed to protect client privacy.
 
 ---
 
-**⚡ Built with [n8n](https://n8n.io) - Fair-code workflow automation**
+**Built with [n8n](https://n8n.io) — Fair-code workflow automation**

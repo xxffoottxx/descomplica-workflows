@@ -11,7 +11,7 @@
     "requiredCredentials": [
       "whatsapp"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -65,7 +65,22 @@
       "credentials": {}
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook GET": {
+      "main": [
+        [
+          {"node": "Verify Token", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {"node": "Respond Challenge", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }

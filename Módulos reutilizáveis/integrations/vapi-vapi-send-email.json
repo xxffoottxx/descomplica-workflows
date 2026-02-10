@@ -11,7 +11,7 @@
     "requiredCredentials": [
       "vapi"
     ],
-    "source": "descomplica-production"
+    "source": "production"
   },
   "nodes": [
     {
@@ -34,7 +34,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Validate required fields\n  if (!body.subject || body.subject.trim().length === 0) {\n    return { _error: true, errorMessage: 'O assunto do email e obrigatorio. Qual o assunto da mensagem?', toolCallId };\n  }\n  if (!body.message || body.message.trim().length === 0) {\n    return { _error: true, errorMessage: 'A mensagem do email e obrigatoria. O que gostaria de comunicar?', toolCallId };\n  }\n  if (body.message.length > 5000) {\n    return { _error: true, errorMessage: 'A mensagem e demasiado longa. Por favor, resuma a mensagem.', toolCallId };\n  }\n\n  // Sanitize inputs\n  function sanitize(text) {\n    if (!text) return '';\n    return String(text).replace(/<[^>]*>/g, '').substring(0, 1000);\n  }\n\n  // All emails go to owner - custom_recipient removed for security\n  const recipientType = body.recipient_type || 'owner';\n\n  return {\n    _error: false,\n    recipient_type: recipientType,\n    subject: sanitize(body.subject.trim()),\n    message: sanitize(body.message.trim()),\n    customer_name: sanitize(body.customer_name || ''),\n    customer_email: body.customer_email || '',\n    customer_phone: body.customer_phone || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao preparar o email. Por favor, tente novamente.', toolCallId };\n}"
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\nconst expected = process.env.VAPI_WEBHOOK_SECRET;\nif (!expected) {\n  throw new Error('VAPI_WEBHOOK_SECRET not configured');\n}\nif (vapiSecret !== expected) {\n  return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Validate required fields\n  if (!body.subject || body.subject.trim().length === 0) {\n    return { _error: true, errorMessage: 'O assunto do email e obrigatorio. Qual o assunto da mensagem?', toolCallId };\n  }\n  if (!body.message || body.message.trim().length === 0) {\n    return { _error: true, errorMessage: 'A mensagem do email e obrigatoria. O que gostaria de comunicar?', toolCallId };\n  }\n  if (body.message.length > 5000) {\n    return { _error: true, errorMessage: 'A mensagem e demasiado longa. Por favor, resuma a mensagem.', toolCallId };\n  }\n\n  // Sanitize inputs\n  function sanitize(text) {\n    if (!text) return '';\n    return String(text).replace(/<[^>]*>/g, '').substring(0, 1000);\n  }\n\n  // All emails go to owner - custom_recipient removed for security\n  const recipientType = body.recipient_type || 'owner';\n\n  return {\n    _error: false,\n    recipient_type: recipientType,\n    subject: sanitize(body.subject.trim()),\n    message: sanitize(body.message.trim()),\n    customer_name: sanitize(body.customer_name || ''),\n    customer_email: body.customer_email || '',\n    customer_phone: body.customer_phone || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao preparar o email. Por favor, tente novamente.', toolCallId };\n}"
       },
       "id": "13433c09-67c5-4df4-86d4-bdef616674a8",
       "name": "Extract & Validate Email",
@@ -167,7 +167,53 @@
       "credentials": {}
     }
   ],
-  "connections": {},
+  "connections": {
+    "Webhook - Receive from Vapi": {
+      "main": [
+        [
+          {"node": "Extract & Validate Email", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Extract & Validate Email": {
+      "main": [
+        [
+          {"node": "Check for Errors", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {"node": "Respond Error to Vapi", "type": "main", "index": 0}
+        ],
+        [
+          {"node": "Prepare Email", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Prepare Email": {
+      "main": [
+        [
+          {"node": "Send Email via Gmail", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Send Email via Gmail": {
+      "main": [
+        [
+          {"node": "Handle Result", "type": "main", "index": 0}
+        ]
+      ]
+    },
+    "Handle Result": {
+      "main": [
+        [
+          {"node": "Respond to Vapi", "type": "main", "index": 0}
+        ]
+      ]
+    }
+  },
   "settings": {
     "executionOrder": "v1"
   }
