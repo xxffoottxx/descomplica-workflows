@@ -10,6 +10,9 @@
               "minutesInterval": 30
             }
           ]
+        },
+        "options": {
+          "timezone": "Atlantic/Azores"
         }
       },
       "name": "Schedule - Every 30 Minutes",
@@ -25,7 +28,8 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "dashboard-refresh",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
       },
       "name": "Webhook - Manual Refresh",
       "type": "n8n-nodes-base.webhook",
@@ -38,23 +42,12 @@
       "id": "webhook-trigger"
     },
     {
-      "parameters": {},
-      "name": "Merge Triggers",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 2,
-      "position": [
-        450,
-        400
-      ],
-      "id": "merge-triggers"
-    },
-    {
       "parameters": {
         "authentication": "oAuth2",
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "YOUR_SPREADSHEET_ID",
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
           "mode": "id"
         },
         "sheetName": {
@@ -74,7 +67,11 @@
         200
       ],
       "id": "sheets-vendas",
-      "notes": "PLACEHOLDER: Replace with ERP connector (Artsoft, Primavera, Sage, etc.)"
+      "notes": "PLACEHOLDER: Replace with ERP connector (Artsoft, Primavera, Sage, etc.)",
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -82,7 +79,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "YOUR_SPREADSHEET_ID",
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
           "mode": "id"
         },
         "sheetName": {
@@ -102,7 +99,11 @@
         350
       ],
       "id": "sheets-tarefas",
-      "notes": "PLACEHOLDER: Replace with Task Management System connector"
+      "notes": "PLACEHOLDER: Replace with Task Management System connector",
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -110,7 +111,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "YOUR_SPREADSHEET_ID",
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
           "mode": "id"
         },
         "sheetName": {
@@ -130,7 +131,11 @@
         500
       ],
       "id": "sheets-stock",
-      "notes": "PLACEHOLDER: Replace with Inventory System connector"
+      "notes": "PLACEHOLDER: Replace with Inventory System connector",
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -138,7 +143,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "YOUR_SPREADSHEET_ID",
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
           "mode": "id"
         },
         "sheetName": {
@@ -158,7 +163,11 @@
         650
       ],
       "id": "sheets-equipa",
-      "notes": "PLACEHOLDER: Replace with HR/Time Tracking System"
+      "notes": "PLACEHOLDER: Replace with HR/Time Tracking System",
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
@@ -166,7 +175,7 @@
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "YOUR_SPREADSHEET_ID",
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
           "mode": "id"
         },
         "sheetName": {
@@ -186,11 +195,15 @@
         800
       ],
       "id": "sheets-email",
-      "notes": "PLACEHOLDER: Replace with Email System connector (Gmail API, Outlook, etc.)"
+      "notes": "PLACEHOLDER: Replace with Email System connector (Gmail API, Outlook, etc.)",
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
-        "jsCode": "// Process and aggregate all data sources\n// NOTE: This code contains template literals - edit directly in n8n\n// See workflows/data-processor.js for the full unescaped code\nreturn { json: { message: 'Edit this node in n8n to add full data processing logic' } };"
+        "jsCode": "// Process and aggregate all data sources\n// Fixed: Detect datasets by column names instead of relying on input order\nconst now = new Date();\nconst today = now.toISOString().split('T')[0];\n\n// Detect which dataset is which by checking column names\nconst allItems = $input.all();\nlet vendasData = [];\nlet tarefasData = [];\nlet stockData = [];\nlet equipaData = [];\nlet emailData = [];\n\nfor (const item of allItems) {\n  const data = Array.isArray(item.json) ? item.json : [item.json];\n  if (data.length === 0) continue;\n  \n  const keys = Object.keys(data[0] || {});\n  \n  // Detect by distinctive column names\n  if (keys.includes('Amount') || keys.includes('OrderID')) {\n    vendasData = data;\n  } else if (keys.includes('Status') && keys.includes('Priority')) {\n    tarefasData = data;\n  } else if (keys.includes('Quantity') && keys.includes('MinQuantity')) {\n    stockData = data;\n  } else if (keys.includes('Role') && keys.includes('CheckIn')) {\n    equipaData = data;\n  } else if (keys.includes('Unread') || keys.includes('ResponseRate')) {\n    emailData = data;\n  }\n}\n\n// Process Sales Data\nfunction processVendas(data) {\n  const todayData = data.filter(row => row.Date === today);\n  const yesterdayDate = new Date(now);\n  yesterdayDate.setDate(yesterdayDate.getDate() - 1);\n  const yesterday = yesterdayDate.toISOString().split('T')[0];\n  const yesterdayData = data.filter(row => row.Date === yesterday);\n\n  const receitaHoje = todayData.reduce((sum, row) => sum + (parseFloat(row.Amount) || 0), 0);\n  const receitaOntem = yesterdayData.reduce((sum, row) => sum + (parseFloat(row.Amount) || 0), 0);\n  const receitaMudanca = receitaOntem > 0 ? ((receitaHoje - receitaOntem) / receitaOntem * 100).toFixed(1) : 0;\n\n  const pedidosHoje = todayData.length;\n  const pedidosOntem = yesterdayData.length;\n  const pedidosMudanca = pedidosOntem > 0 ? ((pedidosHoje - pedidosOntem) / pedidosOntem * 100).toFixed(1) : 0;\n\n  // Get week data\n  const weekData = [];\n  for (let i = 6; i >= 0; i--) {\n    const d = new Date(now);\n    d.setDate(d.getDate() - i);\n    const dateStr = d.toISOString().split('T')[0];\n    const dayData = data.filter(row => row.Date === dateStr);\n    const total = dayData.reduce((sum, row) => sum + (parseFloat(row.Amount) || 0), 0);\n    weekData.push(total);\n  }\n\n  const totalSemana = weekData.reduce((sum, val) => sum + val, 0);\n  const ticketMedio = pedidosHoje > 0 ? receitaHoje / pedidosHoje : 0;\n\n  // Get month data (last 4 weeks)\n  const monthData = [];\n  for (let week = 0; week < 4; week++) {\n    let weekTotal = 0;\n    for (let day = 0; day < 7; day++) {\n      const d = new Date(now);\n      d.setDate(d.getDate() - ((week * 7) + day));\n      const dateStr = d.toISOString().split('T')[0];\n      const dayData = data.filter(row => row.Date === dateStr);\n      weekTotal += dayData.reduce((sum, row) => sum + (parseFloat(row.Amount) || 0), 0);\n    }\n    monthData.unshift(weekTotal);\n  }\n\n  const totalMes = monthData.reduce((sum, val) => sum + val, 0);\n\n  return {\n    receitaHoje,\n    receitaMudanca: parseFloat(receitaMudanca),\n    pedidosHoje,\n    pedidosMudanca: parseFloat(pedidosMudanca),\n    ticketMedio,\n    totalSemana,\n    totalMes,\n    today: {\n      labels: ['9h', '10h', '11h', '12h', '13h', '14h', '15h', '16h', '17h', '18h'],\n      values: [\n        receitaHoje * 0.05,\n        receitaHoje * 0.14,\n        receitaHoje * 0.24,\n        receitaHoje * 0.36,\n        receitaHoje * 0.47,\n        receitaHoje * 0.60,\n        receitaHoje * 0.74,\n        receitaHoje * 0.86,\n        receitaHoje * 0.96,\n        receitaHoje\n      ]\n    },\n    week: {\n      labels: ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'],\n      values: weekData\n    },\n    month: {\n      labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4'],\n      values: monthData\n    }\n  };\n}\n\n// Process Tasks Data\nfunction processTarefas(data) {\n  const abertas = data.filter(row => row.Status === 'Open').length;\n  const concluidasHoje = data.filter(row => row.Status === 'Completed' && row.Date === today).length;\n  const atrasadas = data.filter(row => {\n    return row.Status === 'Open' && new Date(row.DueDate) < now;\n  }).length;\n\n  return { abertas, concluidasHoje, atrasadas };\n}\n\n// Process Stock Data\nfunction processStock(data) {\n  const baixoStock = data.filter(row => {\n    return parseInt(row.Quantity) < parseInt(row.MinQuantity);\n  }).map(row => ({\n    produto: row.Product,\n    quantidade: parseInt(row.Quantity),\n    minimo: parseInt(row.MinQuantity)\n  }));\n\n  const totalProdutos = data.length;\n  const valorTotal = data.reduce((sum, row) => {\n    return sum + (parseInt(row.Quantity) * parseFloat(row.UnitPrice));\n  }, 0);\n\n  return { baixoStock, totalProdutos, valorTotal };\n}\n\n// Process Team Data\nfunction processEquipa(data) {\n  const todayData = data.filter(row => row.Date === today && row.Status === 'Present');\n  const presentes = todayData.length;\n\n  const horasTrabalhadas = todayData.reduce((sum, row) => {\n    if (row.CheckIn && row.CheckOut) {\n      const checkIn = new Date(today + 'T' + row.CheckIn);\n      const checkOut = new Date(today + 'T' + row.CheckOut);\n      const hours = (checkOut - checkIn) / (1000 * 60 * 60);\n      return sum + hours;\n    }\n    return sum;\n  }, 0);\n\n  const membros = todayData.map(row => ({\n    nome: row.Name,\n    funcao: row.Role,\n    horas: row.CheckIn && row.CheckOut ?\n      Math.round((new Date(today + 'T' + row.CheckOut) - new Date(today + 'T' + row.CheckIn)) / (1000 * 60 * 60)) : 0\n  }));\n\n  return { presentes, horasTrabalhadas: Math.round(horasTrabalhadas), membros };\n}\n\n// Process Email Data\nfunction processEmail(data) {\n  const todayData = data.find(row => row.Date === today) || {};\n\n  return {\n    naoLidas: parseInt(todayData.Unread) || 0,\n    importantes: parseInt(todayData.Important) || 0,\n    enviadasHoje: parseInt(todayData.Sent) || 0,\n    taxaResposta: parseInt(todayData.ResponseRate) || 0\n  };\n}\n\n// Build final dashboard data structure\nconst vendas = processVendas(vendasData);\nconst tarefas = processTarefas(tarefasData);\nconst stock = processStock(stockData);\nconst equipa = processEquipa(equipaData);\nconst email = processEmail(emailData);\n\nconst dashboardData = {\n  timestamp: now.toISOString(),\n  metadata: {\n    generatedAt: now.toISOString(),\n    timezone: 'Atlantic/Azores'\n  },\n  resumo: {\n    receitaHoje: vendas.receitaHoje,\n    receitaMudanca: vendas.receitaMudanca,\n    pedidosHoje: vendas.pedidosHoje,\n    pedidosMudanca: vendas.pedidosMudanca,\n    tarefasAbertas: tarefas.abertas,\n    tarefasConcluidas: tarefas.concluidasHoje,\n    emailsNaoLidos: email.naoLidas,\n    emailsImportantes: email.importantes\n  },\n  vendas,\n  tarefas,\n  stock,\n  email,\n  equipa\n};\n\nreturn { json: dashboardData };"
       },
       "name": "Process & Aggregate Data",
       "type": "n8n-nodes-base.code",
@@ -200,7 +213,7 @@
         400
       ],
       "id": "process-data",
-      "notes": "IMPORTANT: Import this workflow in n8n and edit this Code node.\nFull processing logic available in docs/data-processor-code.md"
+      "notes": "Processes all data sources with automatic dataset detection by column names"
     },
     {
       "parameters": {
@@ -222,7 +235,27 @@
       "main": [
         [
           {
-            "node": "Merge Triggers",
+            "node": "Google Sheets - Vendas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets - Tarefas",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets - Stock",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets - Equipa",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Sheets - Email",
             "type": "main",
             "index": 0
           }
@@ -230,17 +263,6 @@
       ]
     },
     "Webhook - Manual Refresh": {
-      "main": [
-        [
-          {
-            "node": "Merge Triggers",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Merge Triggers": {
       "main": [
         [
           {
@@ -339,7 +361,9 @@
     }
   },
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "executionTimeout": 300,
+    "saveExecutionProgress": true
   },
   "staticData": null,
   "tags": [],

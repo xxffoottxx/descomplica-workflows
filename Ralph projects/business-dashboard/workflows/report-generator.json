@@ -1,11 +1,17 @@
 {
   "name": "Dashboard Report Generator",
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 300,
+    "saveExecutionProgress": true
+  },
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
         "path": "generate-report",
-        "responseMode": "responseNode"
+        "responseMode": "responseNode",
+        "authentication": "headerAuth"
       },
       "name": "Webhook - Generate Report",
       "type": "n8n-nodes-base.webhook",
@@ -15,7 +21,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const { startDate, endDate } = $input.first().json;\nreturn {\n  json: {\n    startDate,\n    endDate,\n    formattedStart: new Date(startDate).toLocaleDateString('pt-PT'),\n    formattedEnd: new Date(endDate).toLocaleDateString('pt-PT')\n  }\n};"
+        "jsCode": "const input = $input.first().json;\nconst { startDate, endDate } = input;\n\n// Validation\nif (!startDate || !endDate) {\n  return {\n    json: {\n      error: true,\n      message: 'startDate and endDate are required'\n    }\n  };\n}\n\nconst start = new Date(startDate);\nconst end = new Date(endDate);\n\n// Check if dates are valid\nif (isNaN(start.getTime()) || isNaN(end.getTime())) {\n  return {\n    json: {\n      error: true,\n      message: 'Invalid date format'\n    }\n  };\n}\n\n// Check startDate <= endDate\nif (start > end) {\n  return {\n    json: {\n      error: true,\n      message: 'startDate must be before or equal to endDate'\n    }\n  };\n}\n\nreturn {\n  json: {\n    error: false,\n    startDate,\n    endDate,\n    formattedStart: start.toLocaleDateString('pt-PT'),\n    formattedEnd: end.toLocaleDateString('pt-PT')\n  }\n};"
       },
       "name": "Parse Request",
       "type": "n8n-nodes-base.code",
@@ -24,11 +30,40 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Check Validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": $json.message } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
         "authentication": "oAuth2",
         "operation": "read",
         "documentId": {
           "__rl": true,
-          "value": "YOUR_SPREADSHEET_ID",
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
           "mode": "id"
         },
         "sheetName": {
@@ -40,17 +75,21 @@
       "name": "Fetch Sales Data",
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
-      "position": [650, 200],
-      "notes": "PLACEHOLDER: Replace with ERP system connector"
+      "position": [850, 200],
+      "notes": "PLACEHOLDER: Replace with ERP system connector",
+      "continueOnFail": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
-        "jsCode": "// Generate HTML report\nconst { startDate, endDate, formattedStart, formattedEnd } = $input.first().json;\nconst salesData = $input.all();\n\n// Calculate metrics\nconst totalRevenue = salesData.reduce((sum, row) => sum + (parseFloat(row.json.Amount) || 0), 0);\nconst totalOrders = salesData.length;\nconst avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Relatório de Negócios</title>\n  <style>\n    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }\n    .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }\n    h1 { color: #2563eb; margin: 0; }\n    .period { color: #666; font-size: 14px; margin-top: 10px; }\n    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0; }\n    .metric-card { background: #f3f4f6; padding: 20px; border-radius: 8px; }\n    .metric-label { font-size: 12px; color: #666; text-transform: uppercase; }\n    .metric-value { font-size: 28px; font-weight: bold; color: #111; margin-top: 10px; }\n    .section { margin: 40px 0; }\n    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-left: 4px solid #2563eb; padding-left: 10px; }\n    table { width: 100%; border-collapse: collapse; }\n    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e5e7eb; }\n    th { background: #f9fafb; font-weight: 600; color: #374151; }\n    .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #666; font-size: 12px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>Relatório de Negócios</h1>\n    <div class=\"period\">Período: ${formattedStart} - ${formattedEnd}</div>\n    <div class=\"period\">Gerado em: ${new Date().toLocaleString('pt-PT')}</div>\n  </div>\n\n  <div class=\"metrics\">\n    <div class=\"metric-card\">\n      <div class=\"metric-label\">Receita Total</div>\n      <div class=\"metric-value\">€${totalRevenue.toFixed(2)}</div>\n    </div>\n    <div class=\"metric-card\">\n      <div class=\"metric-label\">Total de Pedidos</div>\n      <div class=\"metric-value\">${totalOrders}</div>\n    </div>\n    <div class=\"metric-card\">\n      <div class=\"metric-label\">Ticket Médio</div>\n      <div class=\"metric-value\">€${avgTicket.toFixed(2)}</div>\n    </div>\n  </div>\n\n  <div class=\"section\">\n    <div class=\"section-title\">Vendas Detalhadas</div>\n    <table>\n      <thead>\n        <tr>\n          <th>Data</th>\n          <th>ID Pedido</th>\n          <th>Cliente</th>\n          <th>Valor</th>\n          <th>Estado</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${salesData.slice(0, 50).map(row => `\n          <tr>\n            <td>${row.json.Date || '-'}</td>\n            <td>${row.json.OrderID || '-'}</td>\n            <td>${row.json.Customer || '-'}</td>\n            <td>€${parseFloat(row.json.Amount || 0).toFixed(2)}</td>\n            <td>${row.json.Status || '-'}</td>\n          </tr>\n        `).join('')}\n      </tbody>\n    </table>\n  </div>\n\n  <div class=\"footer\">\n    <p>Dashboard de Negócios &copy; 2026 | Relatório gerado automaticamente</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn { json: { html, fileName: `relatorio-${startDate}-${endDate}.pdf` } };"
+        "jsCode": "// HTML escape helper\nfunction escapeHtml(text) {\n  if (!text) return '';\n  return String(text).replace(/[&<>\"']/g, m => ({\n    '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#039;'\n  }[m]));\n}\n\n// Generate HTML report\nconst { startDate, endDate, formattedStart, formattedEnd } = $input.first().json;\nconst salesData = $input.all();\n\n// Calculate metrics\nconst totalRevenue = salesData.reduce((sum, row) => sum + (parseFloat(row.json.Amount) || 0), 0);\nconst totalOrders = salesData.length;\nconst avgTicket = totalOrders > 0 ? totalRevenue / totalOrders : 0;\n\nconst html = `\n<!DOCTYPE html>\n<html>\n<head>\n  <meta charset=\"UTF-8\">\n  <title>Relatório de Negócios</title>\n  <style>\n    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }\n    .header { border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }\n    h1 { color: #2563eb; margin: 0; }\n    .period { color: #666; font-size: 14px; margin-top: 10px; }\n    .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin: 30px 0; }\n    .metric-card { background: #f3f4f6; padding: 20px; border-radius: 8px; }\n    .metric-label { font-size: 12px; color: #666; text-transform: uppercase; }\n    .metric-value { font-size: 28px; font-weight: bold; color: #111; margin-top: 10px; }\n    .section { margin: 40px 0; }\n    .section-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-left: 4px solid #2563eb; padding-left: 10px; }\n    table { width: 100%; border-collapse: collapse; }\n    th, td { text-align: left; padding: 12px; border-bottom: 1px solid #e5e7eb; }\n    th { background: #f9fafb; font-weight: 600; color: #374151; }\n    .footer { margin-top: 50px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center; color: #666; font-size: 12px; }\n  </style>\n</head>\n<body>\n  <div class=\"header\">\n    <h1>Relatório de Negócios</h1>\n    <div class=\"period\">Período: ${escapeHtml(formattedStart)} - ${escapeHtml(formattedEnd)}</div>\n    <div class=\"period\">Gerado em: ${escapeHtml(new Date().toLocaleString('pt-PT'))}</div>\n  </div>\n\n  <div class=\"metrics\">\n    <div class=\"metric-card\">\n      <div class=\"metric-label\">Receita Total</div>\n      <div class=\"metric-value\">€${totalRevenue.toFixed(2)}</div>\n    </div>\n    <div class=\"metric-card\">\n      <div class=\"metric-label\">Total de Pedidos</div>\n      <div class=\"metric-value\">${totalOrders}</div>\n    </div>\n    <div class=\"metric-card\">\n      <div class=\"metric-label\">Ticket Médio</div>\n      <div class=\"metric-value\">€${avgTicket.toFixed(2)}</div>\n    </div>\n  </div>\n\n  <div class=\"section\">\n    <div class=\"section-title\">Vendas Detalhadas</div>\n    <table>\n      <thead>\n        <tr>\n          <th>Data</th>\n          <th>ID Pedido</th>\n          <th>Cliente</th>\n          <th>Valor</th>\n          <th>Estado</th>\n        </tr>\n      </thead>\n      <tbody>\n        ${salesData.slice(0, 50).map(row => `\n          <tr>\n            <td>${escapeHtml(row.json.Date) || '-'}</td>\n            <td>${escapeHtml(row.json.OrderID) || '-'}</td>\n            <td>${escapeHtml(row.json.Customer) || '-'}</td>\n            <td>€${parseFloat(row.json.Amount || 0).toFixed(2)}</td>\n            <td>${escapeHtml(row.json.Status) || '-'}</td>\n          </tr>\n        `).join('')}\n      </tbody>\n    </table>\n  </div>\n\n  <div class=\"footer\">\n    <p>Dashboard de Negócios &copy; 2026 | Relatório gerado automaticamente</p>\n  </div>\n</body>\n</html>\n`;\n\nreturn { json: { html, fileName: `relatorio-${escapeHtml(startDate)}-${escapeHtml(endDate)}.pdf` } };"
       },
       "name": "Generate HTML Report",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [1050, 200]
     },
     {
       "parameters": {
@@ -69,8 +108,11 @@
       "name": "Convert to PDF",
       "type": "n8n-nodes-base.html",
       "typeVersion": 1,
-      "position": [1050, 300],
-      "notes": "Uses headless browser to convert HTML to PDF"
+      "position": [1250, 200],
+      "notes": "Uses headless browser to convert HTML to PDF",
+      "continueOnFail": true,
+      "retryOnFail": false,
+      "maxTries": 1
     },
     {
       "parameters": {
@@ -82,6 +124,14 @@
               {
                 "name": "Content-Disposition",
                 "value": "=attachment; filename=\"{{ $json.fileName }}\""
+              },
+              {
+                "name": "X-Content-Type-Options",
+                "value": "nosniff"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-store"
               }
             ]
           }
@@ -90,7 +140,7 @@
       "name": "Return PDF",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1250, 300]
+      "position": [1450, 200]
     }
   ],
   "connections": {
@@ -107,6 +157,24 @@
     },
     "Parse Request": {
       "main": [
+        [
+          {
+            "node": "Check Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Validation": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Fetch Sales Data",
