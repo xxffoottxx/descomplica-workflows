@@ -1,0 +1,88 @@
+{
+  "name": "WhatsApp Webhook Verify",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "whatsapp-sales",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "f1a2b3c4-wv01-4001-a001-000000000001",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "f1a2b3c4-wv01-4001-a001-aaaaaaaaaaaa"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $input.first().json.query || {};\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\n\nif (mode === 'subscribe' && token === $env.WHATSAPP_VERIFY_TOKEN) {\n  return [{ json: { challenge: String(challenge) } }];\n} else {\n  throw new Error('Webhook verification failed: token mismatch');\n}"
+      },
+      "id": "f1a2b3c4-wv01-4001-a001-000000000002",
+      "name": "Verify Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.challenge }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f1a2b3c4-wv01-4001-a001-000000000003",
+      "name": "Respond Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        0
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook GET": {
+      "main": [
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "Respond Challenge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "executionOrder": "v1"
+  },
+  "versionId": "a828864c-4666-4abc-b77e-cd44e4c6ecc1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "jzTgVLVM1SKzfT8N",
+  "tags": []
+}
