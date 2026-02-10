@@ -1,0 +1,528 @@
+{
+  "_metadata": {
+    "name": "Invoice OCR Processing",
+    "description": "Automated document processing workflow - Invoice OCR Processing",
+    "category": "automation",
+    "tags": [
+      "ocr",
+      "document-processing",
+      "gmail",
+      "dropbox",
+      "scheduled"
+    ],
+    "requiredCredentials": [
+      "gmail",
+      "dropbox",
+      "postgres"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {}
+          ]
+        }
+      },
+      "id": "33f79c80-b95e-421c-af5a-9af488fb7590",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -4912,
+        960
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "folder",
+        "operation": "list",
+        "path": "/_faturas",
+        "filters": {}
+      },
+      "id": "a7045442-4a77-4ddc-a8fe-f4490e216bf5",
+      "name": "List Folder",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -4672,
+        960
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const supportedExts = ['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.gif', '.tiff', '.tif'];\nreturn items.filter(item => {\n  const d = item.json;\n  const type = d.type || d['.tag'] || '';\n  if (type === 'folder') return false;\n  const name = (d.name || d.pathDisplay || d.path_display || '').toLowerCase();\n  return supportedExts.some(ext => name.endsWith(ext));\n});"
+      },
+      "id": "076fb537-d949-46a6-80fb-e4a77d86312f",
+      "name": "Filter Invoices",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -4432,
+        960
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "68bfd8fc-6b6c-41c6-a8bc-029587fbf55d",
+      "name": "Loop Over Files",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -4192,
+        960
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "download",
+        "path": "={{ $json.pathDisplay }}"
+      },
+      "id": "32a40bb6-8310-490a-8bd0-8654c961d128",
+      "name": "Download PDF",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -3952,
+        960
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract binary data and build Gemini API request body\nconst binaryKeys = Object.keys(items[0].binary || {});\nif (binaryKeys.length === 0) {\n  throw new Error('No binary data from Dropbox download');\n}\nconst binaryMeta = items[0].binary[binaryKeys[0]];\nconst buffer = await this.helpers.getBinaryDataBuffer(0, binaryKeys[0]);\nif (buffer.length > 10 * 1024 * 1024) {\n  throw new Error('File exceeds 10MB limit for Gemini Vision API: ' + (buffer.length / (1024*1024)).toFixed(1) + 'MB');\n}\nconst base64Data = buffer.toString('base64');\nconst originalPath = items[0].json.pathDisplay || items[0].json.path_display || items[0].json.pathLower || '';\nconst originalName = items[0].json.name || originalPath.split('/').pop() || 'unknown.pdf';\n\n// Detect MIME type from extension\nconst ext = originalName.split('.').pop().toLowerCase();\nconst mimeMap = { pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', tiff: 'image/tiff', tif: 'image/tiff' };\nconst mimeType = mimeMap[ext] || binaryMeta.mimeType || 'application/pdf';\n\nconst prompt = 'Extract the following from this Portuguese invoice and return ONLY a JSON object:\\n\\n' +\n  '1. vendor: The company NAME issuing the invoice (at the top, NOT the client)\\n' +\n  '2. date: The invoice/emission date in YYYY-MM-DD format (NOT due date)\\n' +\n  '3. amount: The total amount as a number (e.g., 123.45)\\n' +\n  '4. vat: The CLIENT/BUYER VAT number. ONLY return one of these exact values: 226887499 or 243863438. If neither is found, return null.\\n' +\n  '5. currency: The currency (default EUR)\\n\\n' +\n  'CRITICAL:\\n' +\n  '- For VAT: Look in sections labeled Cliente, Adquirente, Bill To, Destinatario. ONLY return 226887499 or 243863438. Strip any PT prefix or spaces.\\n' +\n  '- For amount: Return the FINAL total (Total a Pagar / Grand Total), not subtotals or tax amounts.\\n' +\n  '- For vendor: Return the company that ISSUED the invoice, not the buyer.\\n\\n' +\n  'Return ONLY valid JSON, no markdown.';\n\nconst requestBody = {\n  contents: [{\n    parts: [\n      { inline_data: { mime_type: mimeType, data: base64Data } },\n      { text: prompt }\n    ]\n  }],\n  generationConfig: {\n    temperature: 0.1,\n    responseMimeType: 'application/json'\n  }\n};\n\nreturn [{ json: { originalPath, originalName, requestBody } }];"
+      },
+      "id": "99224bdb-c478-43c1-aa04-66f507233e58",
+      "name": "Prepare Gemini Request",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3712,
+        960
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://your-api-domain.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + $env.GEMINI_API_KEY }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.requestBody) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "id": "609e3f9f-2f64-4844-8470-5863fd22c21b",
+      "name": "Call Gemini Vision",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -3472,
+        960
+      ],
+      "continueOnFail": true,
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gemini response and apply business logic\nvar item = items[0].json;\nvar metadata = $('Prepare Gemini Request').first().json;\nvar originalPath = metadata.originalPath;\nvar originalName = metadata.originalName;\n\n// Check if Gemini call failed (continueOnFail passes error data through)\nif (item.error || (item.statusCode && item.statusCode >= 400)) {\n  return [{\n    json: {\n      status: 'Error',\n      errorMessage: item.error || item.message || 'Gemini API call failed (status ' + (item.statusCode || 'unknown') + ')',\n      originalPath: originalPath,\n      originalName: originalName,\n      destinationPath: '/_Faturas/Erros/' + originalName,\n      vendor: 'N/A', date: 'N/A', amount: 0, vat: 'N/A',\n      processedAt: new Date().toISOString()\n    }\n  }];\n}\n\n// Validate Gemini response structure\nif (!item.candidates || item.candidates.length === 0) {\n  return [{\n    json: {\n      status: 'Error',\n      errorMessage: 'Gemini returned no candidates (possible safety/content filter block)',\n      originalPath: originalPath,\n      originalName: originalName,\n      destinationPath: '/_Faturas/Erros/' + originalName,\n      vendor: 'N/A', date: 'N/A', amount: 0, vat: 'N/A',\n      processedAt: new Date().toISOString()\n    }\n  }];\n}\n\nvar candidate = item.candidates[0];\nif (candidate.finishReason && candidate.finishReason !== 'STOP') {\n  return [{\n    json: {\n      status: 'Error',\n      errorMessage: 'Gemini stopped early: ' + candidate.finishReason,\n      originalPath: originalPath,\n      originalName: originalName,\n      destinationPath: '/_Faturas/Erros/' + originalName,\n      vendor: 'N/A', date: 'N/A', amount: 0, vat: 'N/A',\n      processedAt: new Date().toISOString()\n    }\n  }];\n}\n\nif (!candidate.content || !candidate.content.parts || candidate.content.parts.length === 0) {\n  return [{\n    json: {\n      status: 'Error',\n      errorMessage: 'Gemini response has no content parts',\n      originalPath: originalPath,\n      originalName: originalName,\n      destinationPath: '/_Faturas/Erros/' + originalName,\n      vendor: 'N/A', date: 'N/A', amount: 0, vat: 'N/A',\n      processedAt: new Date().toISOString()\n    }\n  }];\n}\n\n// Parse Gemini JSON response\nvar geminiResult;\ntry {\n  var responseText = candidate.content.parts[0].text;\n  geminiResult = JSON.parse(responseText);\n} catch (e) {\n  return [{\n    json: {\n      status: 'Error',\n      errorMessage: 'Failed to parse Gemini response: ' + e.message,\n      originalPath: originalPath,\n      originalName: originalName,\n      destinationPath: '/_Faturas/Erros/' + originalName,\n      vendor: 'N/A', date: 'N/A', amount: 0, vat: 'N/A',\n      processedAt: new Date().toISOString()\n    }\n  }];\n}\n\n// VAT-specific folder paths\nvar vatPaths = {\n  '226887499': {\n    reverse_charge: '/Andr\\u00e9/Profissional/O Ref\\u00fagio/Fiscalidade/Faturas/2 - Cobran\\u00e7a revers\\u00edvel',\n    national: '/Andr\\u00e9/Profissional/O Ref\\u00fagio/Fiscalidade/Faturas/1 - Despesas nacionais'\n  },\n  '243863438': {\n    reverse_charge: '/Andr\\u00e9/Profissional/Casca de Noz/Fiscalidade/Faturas/2 - Cobran\\u00e7a revers\\u00edvel',\n    national: '/Andr\\u00e9/Profissional/Casca de Noz/Fiscalidade/Faturas/1 - Despesas nacionais'\n  }\n};\n\nvar reverseChargeVendors = ['booking.com', 'booking', 'airbnb', 'vrbo', 'stripe'];\n\nfunction getQuarter(dateStr) {\n  var d = new Date(dateStr);\n  var month = d.getMonth() + 1;\n  var year = d.getFullYear();\n  if (month <= 3) return year + ' - 03T';\n  if (month <= 6) return year + ' - 06T';\n  if (month <= 9) return year + ' - 09T';\n  return year + ' - 12T';\n}\n\nfunction isReverseCharge(vendor) {\n  if (!vendor) return false;\n  var v = vendor.toLowerCase();\n  return reverseChargeVendors.some(function(rc) { return v.indexOf(rc) >= 0; });\n}\n\nfunction cleanString(s) {\n  if (!s) return '';\n  var result = s.replace(/ /g, '_');\n  result = result.replace(/[^a-zA-Z0-9_.-]/g, '_');\n  while (result.indexOf('__') >= 0) result = result.replace('__', '_');\n  if (result[0] === '_') result = result.substring(1);\n  if (result[result.length - 1] === '_') result = result.substring(0, result.length - 1);\n  return result;\n}\n\nfunction generateFilename(vendor, date, amount, ext) {\n  var v = cleanString(vendor || 'Unknown');\n  var d = date || 'NoDate';\n  var a = amount != null ? amount.toFixed(2).replace('.', ',') : '0,00';\n  var e = ext || '.pdf';\n  var f = v + '_' + d + '_' + a + e;\n  if (f.length > 200) f = f.substring(0, 200 - e.length) + e;\n  return f;\n}\n\nvar vendor = geminiResult.vendor;\nvar date = geminiResult.date;\nvar amount = geminiResult.amount;\nvar vat = geminiResult.vat;\nvar currency = geminiResult.currency;\nvar isComplete = vendor && date && amount != null && vat;\n\nvar destinationFolder;\nvar newFilename;\nvar status;\nvar errorMessage = '';\n\nif (isComplete) {\n  var cleanVat = String(vat).replace(/[^0-9]/g, '');\n  var isRC = isReverseCharge(vendor);\n  var category = isRC ? 'reverse_charge' : 'national';\n  if (vatPaths[cleanVat]) {\n    destinationFolder = vatPaths[cleanVat][category] + '/' + getQuarter(date);\n  } else {\n    destinationFolder = '/Andr\\u00e9/Profissional/Outros';\n  }\n  var origExt = '.' + originalName.split('.').pop().toLowerCase();\n  newFilename = generateFilename(vendor, date, amount, origExt);\n  status = 'Success';\n} else {\n  destinationFolder = '/_Faturas/Para Revis\\u00e3o';\n  newFilename = originalName;\n  status = 'Review Needed';\n  errorMessage = 'Missing fields - needs manual review';\n}\n\nreturn [{\n  json: {\n    status: status,\n    vendor: vendor || 'N/A',\n    date: date || 'N/A',\n    amount: amount || 0,\n    vat: vat || 'N/A',\n    currency: currency || 'EUR',\n    originalPath: originalPath,\n    originalName: originalName,\n    destinationPath: destinationFolder + '/' + newFilename,\n    errorMessage: errorMessage,\n    processedAt: new Date().toISOString()\n  }\n}];"
+      },
+      "id": "918a6667-2d7f-43e1-bf97-fba7fb3e01ce",
+      "name": "Business Logic",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3232,
+        960
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "cond-error",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Error",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b6440a85-ce8a-46f2-afa7-04aa6341db89",
+      "name": "Is Error?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2992,
+        960
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true
+          },
+          "conditions": [
+            {
+              "id": "cond-complete",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0a037529-1629-4d17-b60e-9819f8feaa1d",
+      "name": "Is Complete?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        -2752,
+        848
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "move",
+        "path": "={{ $json.originalPath }}",
+        "toPath": "={{ $json.destinationPath }}"
+      },
+      "id": "a36d7012-12ee-4e7e-9b76-11dea22d53b4",
+      "name": "Move to Organized",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -2512,
+        736
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "move",
+        "path": "={{ $json.originalPath }}",
+        "toPath": "={{ $json.destinationPath }}"
+      },
+      "id": "f63fb11a-5409-4fcf-9b90-8300fda8dc89",
+      "name": "Move to Review",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -2512,
+        944
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "move",
+        "path": "={{ $json.originalPath }}",
+        "toPath": "={{ $json.destinationPath }}"
+      },
+      "id": "49a534b6-ae07-4a1b-9977-175dccb2b7ba",
+      "name": "Move to Errors",
+      "type": "n8n-nodes-base.dropbox",
+      "typeVersion": 1,
+      "position": [
+        -2752,
+        1168
+      ],
+      "credentials": {
+        "dropboxOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Business Logic').first().json.processedAt }}",
+            "Original Filename": "={{ $('Business Logic').first().json.originalName }}",
+            "Vendor": "={{ $('Business Logic').first().json.vendor }}",
+            "Date": "={{ $('Business Logic').first().json.date }}",
+            "Amount": "={{ $('Business Logic').first().json.amount }}",
+            "VAT": "={{ $('Business Logic').first().json.vat }}",
+            "Status": "={{ $('Business Logic').first().json.status }}",
+            "Destination Path": "={{ $('Business Logic').first().json.destinationPath }}",
+            "Error Message": "={{ $('Business Logic').first().json.errorMessage }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "aab63b33-73df-4eaa-8ab6-3a5f5d976cb2",
+      "name": "Log Success",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2272,
+        736
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Business Logic').first().json.processedAt }}",
+            "Original Filename": "={{ $('Business Logic').first().json.originalName }}",
+            "Vendor": "={{ $('Business Logic').first().json.vendor }}",
+            "Date": "={{ $('Business Logic').first().json.date }}",
+            "Amount": "={{ $('Business Logic').first().json.amount }}",
+            "VAT": "={{ $('Business Logic').first().json.vat }}",
+            "Status": "={{ $('Business Logic').first().json.status }}",
+            "Destination Path": "={{ $('Business Logic').first().json.destinationPath }}",
+            "Error Message": "={{ $('Business Logic').first().json.errorMessage }}"
+          },
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "ce68e3bd-c928-4267-9ccd-d785def96b91",
+      "name": "Log Review",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2272,
+        944
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $('Business Logic').first().json.processedAt }}",
+            "Original Filename": "={{ $('Business Logic').first().json.originalName }}",
+            "Vendor": "={{ $('Business Logic').first().json.vendor }}",
+            "Date": "={{ $('Business Logic').first().json.date }}",
+            "Amount": "={{ $('Business Logic').first().json.amount }}",
+            "VAT": "={{ $('Business Logic').first().json.vat }}",
+            "Status": "={{ $('Business Logic').first().json.status }}",
+            "Destination Path": "={{ $('Business Logic').first().json.destinationPath }}",
+            "Error Message": "={{ $('Business Logic').first().json.errorMessage }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Original Filename",
+              "displayName": "Original Filename",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Vendor",
+              "displayName": "Vendor",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "VAT",
+              "displayName": "VAT",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Destination Path",
+              "displayName": "Destination Path",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Error Message",
+              "displayName": "Error Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "702e777e-5dcf-419c-bb68-e293c6301bae",
+      "name": "Log Error",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        -2512,
+        1168
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "972f4013-de61-4cc3-b670-57514de249ff",
+      "name": "Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -3952,
+        1168
+      ],
+      "credentials": {}
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,401 @@
+{
+  "_metadata": {
+    "name": "Assistente de RH - flowise",
+    "description": "Flowise AI assistant integration - Assistente de RH - flowise",
+    "category": "ai-integration",
+    "tags": [
+      "flowise",
+      "ai",
+      "chatbot",
+      "webhook"
+    ],
+    "requiredCredentials": [
+      "flowise",
+      "http"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "id": "ac05541b-78f5-4ac4-be02-6a79f24b48ea",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1200,
+        128
+      ],
+      "webhookId": "d4e5f6a7-2222-4bbb-e222-222222222222",
+      "parameters": {
+        "path": "rh-assistant-flowise",
+        "options": {
+          "allowedOrigins": "https://your-domain.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://your-domain.com"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        },
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "9824f614-ce04-43f1-8277-372a3d48290d",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -960,
+        128
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const month = now.getUTCMonth();\n  const isDST = month >= 2 && month <= 9;\n  const offset = isDST ? 0 : -1;\n  const local = new Date(now.getTime() + offset * 3600000);\n  const days = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\n  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\n  return days[local.getUTCDay()] + ', ' + local.getUTCDate() + ' de ' + months[local.getUTCMonth()] + ' de ' + local.getUTCFullYear() + ', ' + String(local.getUTCHours()).padStart(2,'0') + ':' + String(local.getUTCMinutes()).padStart(2,'0');\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "17a64768-ca98-4cf1-821a-889e6f26f734",
+      "name": "Flowise API",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -720,
+        128
+      ],
+      "parameters": {
+        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_HR }}",
+        "method": "POST",
+        "options": {
+          "timeout": 15000
+        },
+        "jsonBody": "={{ JSON.stringify({ question: $json.message, overrideConfig: { sessionId: $json.session_id } }) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.FLOWISE_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000,
+      "credentials": {}
+    },
+    {
+      "id": "0953808b-ca4d-4053-b9ac-3c4984d71425",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -480,
+        128
+      ],
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\nconst flowiseResponse = inputData.text || inputData.output || '';\nconst isFallback = !flowiseResponse || flowiseResponse.trim() === '';\n\nlet sessionId = 'unknown';\nlet empMsg = '';\ntry {\n  const validateData = $('Validate Input').first().json;\n  sessionId = validateData.session_id || 'unknown';\n  empMsg = validateData.message || '';\n} catch (e) {}\n\nlet output = flowiseResponse;\nif (isFallback) {\n  output = '[INTENT:error] Peço desculpa, mas não consegui processar o seu pedido neste momento. Por favor, tente novamente ou contacte o RH em your-email@example.com ou +XX XXX XXX XXX.';\n}\n\n// Extract [INTENT:xxx] tag\nlet llmIntent = null;\nconst intentMatch = output.match(/^\\s*\\[INTENT:(\\w+)\\]/);\nif (intentMatch) {\n  llmIntent = intentMatch[1].toLowerCase();\n  output = output.replace(/^\\s*\\[INTENT:\\w+\\]\\s*/, '');\n}\n\n// Check for VACATION_DATA\nlet vacationData = null;\nlet hasVacation = false;\nconst vacMatch = output.match(/\\[VACATION_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/VACATION_DATA\\]/);\nif (vacMatch) {\n  try {\n    vacationData = JSON.parse(vacMatch[1].trim());\n    if (!vacationData.employee_name || !vacationData.employee_id || !vacationData.department || !vacationData.start_date || !vacationData.end_date) {\n      vacationData = null;\n    } else {\n      // Validate dates\n      const startDate = new Date(vacationData.start_date);\n      const endDate = new Date(vacationData.end_date);\n      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()) || endDate <= startDate) {\n        vacationData = null;\n      } else {\n        vacationData.reference_id = 'VAC-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n        vacationData.session_id = sessionId;\n        vacationData.created_at = new Date().toISOString();\n        for (const k of Object.keys(vacationData)) {\n          if (typeof vacationData[k] === 'string') vacationData[k] = vacationData[k].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n        }\n        hasVacation = true;\n      }\n    }\n  } catch (e) { vacationData = null; }\n}\n\n// Check for ABSENCE_DATA\nlet absenceData = null;\nlet hasAbsence = false;\nconst absMatch = output.match(/\\[ABSENCE_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/ABSENCE_DATA\\]/);\nif (absMatch) {\n  try {\n    absenceData = JSON.parse(absMatch[1].trim());\n    if (!absenceData.employee_name || !absenceData.employee_id || !absenceData.department || !absenceData.date) {\n      absenceData = null;\n    } else {\n      absenceData.reference_id = 'ABS-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n      absenceData.session_id = sessionId;\n      absenceData.created_at = new Date().toISOString();\n      for (const k of Object.keys(absenceData)) {\n        if (typeof absenceData[k] === 'string') absenceData[k] = absenceData[k].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n      }\n      hasAbsence = true;\n    }\n  } catch (e) { absenceData = null; }\n}\n\n// Check for REQUEST_DATA\nlet requestData = null;\nlet hasRequest = false;\nconst reqMatch = output.match(/\\[REQUEST_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/REQUEST_DATA\\]/);\nif (reqMatch) {\n  try {\n    requestData = JSON.parse(reqMatch[1].trim());\n    if (!requestData.employee_name || !requestData.employee_id || !requestData.department || !requestData.request_type || !requestData.description) {\n      requestData = null;\n    } else {\n      requestData.reference_id = 'REQ-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n      requestData.session_id = sessionId;\n      requestData.created_at = new Date().toISOString();\n      for (const k of Object.keys(requestData)) {\n        if (typeof requestData[k] === 'string') requestData[k] = requestData[k].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n      }\n      hasRequest = true;\n    }\n  } catch (e) { requestData = null; }\n}\n\nlet cleanResponse = output\n  .replace(/\\[VACATION_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/VACATION_DATA\\]/, '')\n  .replace(/\\[ABSENCE_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/ABSENCE_DATA\\]/, '')\n  .replace(/\\[REQUEST_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/REQUEST_DATA\\]/, '')\n  .trim();\n\nlet classifiedIntent = 'general';\nif (hasVacation) classifiedIntent = 'vacation_request';\nelse if (hasAbsence) classifiedIntent = 'absence_notification';\nelse if (hasRequest) classifiedIntent = 'general_request';\nelse if (llmIntent) classifiedIntent = llmIntent;\n\nreturn [{\n  json: {\n    output: cleanResponse,\n    hasVacation,\n    hasAbsence,\n    hasRequest,\n    vacationData,\n    absenceData,\n    requestData,\n    referenceId: hasVacation ? vacationData?.reference_id : (hasAbsence ? absenceData?.reference_id : (hasRequest ? requestData?.reference_id : null)),\n    sessionId,\n    originalMessage: empMsg,\n    classifiedIntent,\n    isFallback\n  }\n}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "e9275e44-7693-465f-84df-fff6243f7ce7",
+      "name": "Route Response",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -240,
+        176
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "hasVacation",
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasVacation }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "hasAbsence",
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasAbsence }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "hasRequest",
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasRequest }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "typeVersion": 3.2,
+      "credentials": {}
+    },
+    {
+      "id": "214d9743-0e42-4b61-b7fb-8c5f414b9a86",
+      "name": "Email Vacation",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "551f5c1a-fe31-4c9b-9139-78d3b20f7b61",
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#065f46;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#d1fae5;color:#065f46;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#065f46 0%,#10b981 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#f0fdf4;padding:15px;border-radius:6px;border-left:4px solid #10b981}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Pedido de Férias</h1><div class=\"badge\">{{ $json.vacationData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.vacationData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Funcionário:</span> <span class=\"value\">{{ $json.vacationData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.vacationData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes das Férias</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Data Início:</span> <span class=\"value\">{{ $json.vacationData.start_date }}</span></div><div class=\"info-row\"><span class=\"label\">Data Fim:</span> <span class=\"value\">{{ $json.vacationData.end_date }}</span></div><div class=\"info-row\"><span class=\"label\">Total Dias:</span> <span class=\"value\">{{ $json.vacationData.days_total }}</span></div><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.vacationData.vacation_type }}</span></div><div class=\"info-row\"><span class=\"label\">Notas:</span> <span class=\"value\">{{ $json.vacationData.notes || 'Nenhuma' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Acortec</strong> - RH Digital (Flowise)</p></div></div></body></html>",
+        "options": {},
+        "subject": "=Pedido de Férias - {{ $json.vacationData.reference_id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "81da5d53-4266-4ab2-9f3b-0fa9af642718",
+      "name": "Email Absence",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        0,
+        128
+      ],
+      "webhookId": "4d770a29-b8f9-4cc1-9d3e-69afb9620d18",
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#991b1b 0%,#ef4444 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #ef4444}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Notificação de Ausência</h1><div class=\"badge\">{{ $json.absenceData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.absenceData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Funcionário:</span> <span class=\"value\">{{ $json.absenceData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.absenceData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes da Ausência</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.absenceData.date }}</span></div><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.absenceData.absence_type }}</span></div><div class=\"info-row\"><span class=\"label\">Atestado Médico:</span> <span class=\"value\">{{ $json.absenceData.has_medical_certificate || 'Não indicado' }}</span></div><div class=\"info-row\"><span class=\"label\">Regresso Previsto:</span> <span class=\"value\">{{ $json.absenceData.expected_return || 'Não indicado' }}</span></div><div class=\"info-row\"><span class=\"label\">Notas:</span> <span class=\"value\">{{ $json.absenceData.notes || 'Nenhuma' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Acortec</strong> - RH Digital (Flowise)</p></div></div></body></html>",
+        "options": {},
+        "subject": "=Notificação de Ausência - {{ $json.absenceData.reference_id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "47457523-e944-4e0f-a316-26d0cc335559",
+      "name": "Email Request",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        0,
+        256
+      ],
+      "webhookId": "6fdc441d-899a-4394-8e07-706353352832",
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.data-box{background:#eff6ff;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Pedido Geral</h1><div class=\"badge\">{{ $json.requestData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Colaborador</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.requestData.employee_name }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Funcionário:</span> <span class=\"value\">{{ $json.requestData.employee_id }}</span></div><div class=\"info-row\"><span class=\"label\">Departamento:</span> <span class=\"value\">{{ $json.requestData.department }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"data-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.requestData.request_type }}</span></div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.requestData.description }}</span></div><div class=\"info-row\"><span class=\"label\">Urgência:</span> <span class=\"value\">{{ $json.requestData.urgency || 'Normal' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo Preferido:</span> <span class=\"value\">{{ $json.requestData.preferred_timeline || 'Não indicado' }}</span></div></div></div></div><div class=\"footer\"><p><strong>Acortec</strong> - RH Digital (Flowise)</p></div></div></body></html>",
+        "options": {},
+        "subject": "=Pedido Geral - {{ $json.requestData.reference_id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "00e10345-26e5-41bd-b583-55c55b73b207",
+      "name": "Format Vacation Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        208,
+        0
+      ],
+      "parameters": {
+        "jsCode": "let d;try{d=$('Process Response').first().json}catch(e){d={output:'Pedido processado.',sessionId:'unknown',referenceId:null}}\nconst ei=$input.first().json;const ok=ei&&!ei.error;\nreturn[{json:{response:d.output,intent:'vacation_request',session_id:d.sessionId,reference_id:d.referenceId,vacation_submitted:ok,email_error:ok?undefined:(ei?.error?.message||'Failed'),timestamp:new Date().toISOString()}}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "d92a913f-aee9-4c03-89c9-b25b0983c805",
+      "name": "Format Absence Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        208,
+        128
+      ],
+      "parameters": {
+        "jsCode": "let d;try{d=$('Process Response').first().json}catch(e){d={output:'Pedido processado.',sessionId:'unknown',referenceId:null}}\nconst ei=$input.first().json;const ok=ei&&!ei.error;\nreturn[{json:{response:d.output,intent:'absence_notification',session_id:d.sessionId,reference_id:d.referenceId,absence_submitted:ok,email_error:ok?undefined:(ei?.error?.message||'Failed'),timestamp:new Date().toISOString()}}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "7b73860c-1b32-4a1f-b560-c476bc4b996e",
+      "name": "Format Request Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        208,
+        256
+      ],
+      "parameters": {
+        "jsCode": "let d;try{d=$('Process Response').first().json}catch(e){d={output:'Pedido processado.',sessionId:'unknown',referenceId:null}}\nconst ei=$input.first().json;const ok=ei&&!ei.error;\nreturn[{json:{response:d.output,intent:'general_request',session_id:d.sessionId,reference_id:d.referenceId,request_submitted:ok,email_error:ok?undefined:(ei?.error?.message||'Failed'),timestamp:new Date().toISOString()}}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "1224c529-1e79-4e6d-884d-e7299942fa0b",
+      "name": "Format Normal Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "jsCode": "let d;try{d=$('Process Response').first().json}catch(e){d={output:'Em que posso ajudar?',sessionId:'unknown',classifiedIntent:'general'}}\nreturn[{json:{response:d.output,intent:d.classifiedIntent||'general',session_id:d.sessionId,timestamp:new Date().toISOString()}}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "acbbe00f-a221-4a62-ba03-9e0d5cc7b9a9",
+      "name": "Respond Vacation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    },
+    {
+      "id": "efb7c7f2-ba9f-42bf-bb68-b6a40b0e67b2",
+      "name": "Respond Absence",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        400,
+        128
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    },
+    {
+      "id": "539e5c42-5ebb-4141-a85e-ea4a3bb3a329",
+      "name": "Respond Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        400,
+        256
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    },
+    {
+      "id": "66b56f2d-9021-4af7-a74f-54b560b7363c",
+      "name": "Respond Normal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        208,
+        400
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

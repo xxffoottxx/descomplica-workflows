@@ -1,0 +1,72 @@
+{
+  "_metadata": {
+    "name": "WhatsApp Webhook Verify",
+    "description": "WhatsApp integration pattern - WhatsApp Webhook Verify",
+    "category": "integration",
+    "tags": [
+      "whatsapp",
+      "messaging",
+      "webhook"
+    ],
+    "requiredCredentials": [
+      "whatsapp"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "whatsapp-sales",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9e687896-5f76-4828-80d1-01dbf55a306c",
+      "name": "Webhook GET",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "f1a2b3c4-wv01-4001-a001-aaaaaaaaaaaa",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "const query = $input.first().json.query || {};\nconst mode = query['hub.mode'];\nconst token = query['hub.verify_token'];\nconst challenge = query['hub.challenge'];\n\nif (mode === 'subscribe' && token === $env.WHATSAPP_VERIFY_TOKEN) {\n  return [{ json: { challenge: String(challenge) } }];\n} else {\n  throw new Error('Webhook verification failed: token mismatch');\n}"
+      },
+      "id": "96284b74-7fd6-40e5-8657-41f498ea71b4",
+      "name": "Verify Token",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.challenge }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "77f73a2a-cd6d-4edf-8ed1-25d922cf3e2b",
+      "name": "Respond Challenge",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        480,
+        0
+      ],
+      "credentials": {}
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

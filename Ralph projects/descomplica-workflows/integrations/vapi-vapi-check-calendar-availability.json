@@ -1,0 +1,170 @@
+{
+  "_metadata": {
+    "name": "Vapi - Check Calendar Availability",
+    "description": "Vapi integration pattern for Vapi - Check Calendar Availability",
+    "category": "integration",
+    "tags": [
+      "vapi",
+      "voice",
+      "ai-calling"
+    ],
+    "requiredCredentials": [
+      "vapi"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "check-calendar-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "02c6349d-2dd2-45eb-9cd3-0f86460afdd6",
+      "name": "Webhook - Receive from Vapi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "0586d2e9-5e32-4086-a91f-27372ea895f6",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Validate date\n  if (!body.date) {\n    return { _error: true, errorMessage: 'Por favor, indique a data para a qual pretende verificar a disponibilidade.', toolCallId };\n  }\n\n  // Parse date\n  let dateStr;\n  if (body.date.includes('T')) {\n    dateStr = body.date.split('T')[0];\n  } else {\n    dateStr = body.date;\n  }\n\n  if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(dateStr)) {\n    return { _error: true, errorMessage: 'Formato de data invalido. Por favor, indique a data novamente.', toolCallId };\n  }\n\n  // Validate date is real\n  const [year, month, day] = dateStr.split('-').map(Number);\n  const targetDate = new Date(year, month - 1, day);\n  if (isNaN(targetDate.getTime()) || targetDate.getMonth() !== month - 1 || targetDate.getDate() !== day) {\n    return { _error: true, errorMessage: 'Data invalida. Por favor, verifique o dia e mes.', toolCallId };\n  }\n\n  // Check past date\n  const now = new Date();\n  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n  if (targetDate < today) {\n    return { _error: true, errorMessage: 'Nao e possivel verificar disponibilidade para datas passadas. Por favor, escolha uma data futura.', toolCallId };\n  }\n\n  // Check weekend\n  const dayOfWeek = targetDate.getDay();\n  if (dayOfWeek === 0 || dayOfWeek === 6) {\n    return { _error: true, errorMessage: 'Nao temos atendimento aos fins de semana. Por favor, escolha um dia util, de segunda a sexta-feira.', toolCallId };\n  }\n\n  return {\n    _error: false,\n    date: dateStr,\n    timezone: 'Atlantic/Azores',\n    service_type: body.service_type || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao verificar a disponibilidade. Por favor, tente novamente.', toolCallId };\n}"
+      },
+      "id": "99b101ee-3784-4b4b-a005-95a0bf8330a2",
+      "name": "Extract & Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-0003-4000-8000-000000000001",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "443fabb8-97c6-4f2c-8bfe-8747b675852c",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.errorMessage }] } }}",
+        "options": {}
+      },
+      "id": "509555d4-b850-4d80-9642-0af3bfecaa4b",
+      "name": "Respond Error to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        672,
+        240
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "primary",
+          "mode": "list",
+          "cachedResultName": "Primary Calendar"
+        },
+        "returnAll": true,
+        "options": {
+          "timeMin": "={{ $json.date }}T00:00:00",
+          "timeMax": "={{ $json.date }}T23:59:59",
+          "singleEvents": true,
+          "orderBy": "startTime",
+          "timeZone": "Atlantic/Azores"
+        }
+      },
+      "id": "aa242a6d-5ee9-4d13-9195-04e047f2203b",
+      "name": "Get Calendar Events",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000,
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Define work hours (9h-18h)\nconst workStart = 9;\nconst workEnd = 18;\nconst slotDuration = 60; // minutes\n\n// Get data from previous nodes\nconst extractData = $('Extract & Validate').item.json;\nconst targetDate = extractData.date;\nconst toolCallId = extractData.toolCallId;\n\n// Check if calendar query failed\nconst allItems = $input.all();\nif (allItems.length === 1 && allItems[0].json.error) {\n  return {\n    message: 'Desculpe, nao foi possivel verificar a disponibilidade neste momento. Por favor, tente novamente mais tarde.',\n    toolCallId: toolCallId\n  };\n}\n\n// Generate all possible slots\nconst allSlots = [];\nfor (let hour = workStart; hour < workEnd; hour++) {\n  allSlots.push({\n    time: String(hour).padStart(2, '0') + ':00',\n    hour: hour,\n    duration: slotDuration\n  });\n}\n\n// Filter occupied slots\nconst availableSlots = allSlots.filter(slot => {\n  const slotStart = new Date(targetDate + 'T' + slot.time + ':00');\n  const slotEnd = new Date(slotStart.getTime() + slotDuration * 60000);\n\n  return !allItems.some(event => {\n    if (!event.json.start || !event.json.end) return false;\n    const eventStart = new Date(event.json.start.dateTime || event.json.start.date);\n    const eventEnd = new Date(event.json.end.dateTime || event.json.end.date);\n    return (slotStart < eventEnd && slotEnd > eventStart);\n  });\n});\n\n// Format voice-friendly response\nlet message;\nif (availableSlots.length === 0) {\n  message = 'Nao ha horarios disponiveis para esse dia. Por favor, escolha outra data.';\n} else {\n  // Format times for voice (e.g., '9 horas', '14 horas')\n  const voiceTimes = availableSlots.map(s => s.hour + ' horas');\n\n  if (availableSlots.length <= 3) {\n    // Few slots: list them all\n    message = 'Temos ' + availableSlots.length + (availableSlots.length === 1 ? ' horario disponivel' : ' horarios disponiveis') + ' para esse dia: ' + voiceTimes.join(', ') + '. Qual prefere?';\n  } else {\n    // Many slots: suggest first 3 and indicate more available\n    const firstThree = voiceTimes.slice(0, 3).join(', ');\n    message = 'Temos ' + availableSlots.length + ' horarios disponiveis para esse dia. As primeiras opcoes sao: ' + firstThree + '. Prefere um destes ou quer ouvir mais opcoes?';\n  }\n}\n\nreturn {\n  message: message,\n  toolCallId: toolCallId,\n  available: availableSlots.length > 0,\n  total_slots: availableSlots.length,\n  available_slots: availableSlots\n};"
+      },
+      "id": "dd3220ea-b6b7-467e-a803-80b6d04fd8c0",
+      "name": "Calculate Available Slots",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.message }] } }}",
+        "options": {}
+      },
+      "id": "69dc901b-fb70-4514-83b5-3d380c0f2c18",
+      "name": "Respond to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        0
+      ],
+      "credentials": {}
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

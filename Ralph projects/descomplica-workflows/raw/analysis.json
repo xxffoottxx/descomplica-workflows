@@ -1,0 +1,572 @@
+{
+  "workflows": [
+    {
+      "id": "FUvNw57SONy60FFLJAi9Y",
+      "name": "Vapi - Post Call Summary",
+      "active": true,
+      "nodeCount": 4,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.respondToWebhook",
+        "n8n-nodes-base.gmail"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook - Call Completed"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "IAUM92jTURfm-nwKuaUdp",
+      "name": "Invoice OCR Processing",
+      "active": true,
+      "nodeCount": 17,
+      "nodeTypes": [
+        "n8n-nodes-base.scheduleTrigger",
+        "n8n-nodes-base.dropbox",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.splitInBatches",
+        "n8n-nodes-base.httpRequest",
+        "n8n-nodes-base.if",
+        "n8n-nodes-base.googleSheets",
+        "n8n-nodes-base.noOp"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.scheduleTrigger",
+          "name": "Schedule Trigger"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "O98nfl3SRYQPRsOHVo5RI",
+      "name": "Vapi - Send Email",
+      "active": true,
+      "nodeCount": 8,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.if",
+        "n8n-nodes-base.respondToWebhook",
+        "n8n-nodes-base.gmail"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook - Receive from Vapi"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "doLSUTaivmnon3YZ4tf75",
+      "name": "Hotel Concierge - flowise",
+      "active": true,
+      "nodeCount": 13,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.httpRequest",
+        "n8n-nodes-base.switch",
+        "n8n-nodes-base.gmail",
+        "n8n-nodes-base.respondToWebhook"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "egu23cPoHpVByWwk",
+      "name": "Assistente de Vendas - WhatsApp",
+      "active": true,
+      "nodeCount": 16,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.httpRequest",
+        "n8n-nodes-base.switch",
+        "n8n-nodes-base.gmail",
+        "n8n-nodes-base.postgres",
+        "n8n-nodes-base.if"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "WhatsApp Webhook"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "ep9RmtOj5CE0okU4fDKln",
+      "name": "Assistente de Conversão - flowise",
+      "active": true,
+      "nodeCount": 10,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.httpRequest",
+        "n8n-nodes-base.switch",
+        "n8n-nodes-base.gmail",
+        "n8n-nodes-base.respondToWebhook"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "i4wTS1JXtSrfmEYIb9WrY",
+      "name": "Vapi - Book Appointment",
+      "active": true,
+      "nodeCount": 9,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.if",
+        "n8n-nodes-base.respondToWebhook",
+        "n8n-nodes-base.googleCalendar",
+        "n8n-nodes-base.gmail"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook - Receive from Vapi"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "je1TEagmmsdBMHddyHpgp",
+      "name": "Assistente de RH - flowise",
+      "active": true,
+      "nodeCount": 16,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.httpRequest",
+        "n8n-nodes-base.switch",
+        "n8n-nodes-base.gmail",
+        "n8n-nodes-base.respondToWebhook"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "jhJEokwjIIeyTw1L-qXsV",
+      "name": "Vapi - Transfer Call to Human",
+      "active": true,
+      "nodeCount": 6,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.if",
+        "n8n-nodes-base.respondToWebhook",
+        "n8n-nodes-base.gmail"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook - Receive from Vapi"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "jzTgVLVM1SKzfT8N",
+      "name": "WhatsApp Webhook Verify",
+      "active": true,
+      "nodeCount": 3,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.respondToWebhook"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook GET"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    },
+    {
+      "id": "nzVxLIOuleuyzgFS9H36m",
+      "name": "Vapi - Check Calendar Availability",
+      "active": true,
+      "nodeCount": 7,
+      "nodeTypes": [
+        "n8n-nodes-base.webhook",
+        "n8n-nodes-base.code",
+        "n8n-nodes-base.if",
+        "n8n-nodes-base.respondToWebhook",
+        "n8n-nodes-base.googleCalendar"
+      ],
+      "triggers": [
+        {
+          "type": "n8n-nodes-base.webhook",
+          "name": "Webhook - Receive from Vapi"
+        }
+      ],
+      "hasAIAgent": false,
+      "hasErrorHandling": false
+    }
+  ],
+  "nodeTypes": {
+    "n8n-nodes-base.webhook": 10,
+    "n8n-nodes-base.code": 33,
+    "n8n-nodes-base.respondToWebhook": 19,
+    "n8n-nodes-base.gmail": 12,
+    "n8n-nodes-base.scheduleTrigger": 1,
+    "n8n-nodes-base.dropbox": 5,
+    "n8n-nodes-base.splitInBatches": 1,
+    "n8n-nodes-base.httpRequest": 6,
+    "n8n-nodes-base.if": 8,
+    "n8n-nodes-base.googleSheets": 3,
+    "n8n-nodes-base.noOp": 1,
+    "n8n-nodes-base.switch": 4,
+    "n8n-nodes-base.postgres": 4,
+    "n8n-nodes-base.googleCalendar": 2
+  },
+  "triggerTypes": {
+    "n8n-nodes-base.webhook": 10,
+    "n8n-nodes-base.scheduleTrigger": 1
+  },
+  "patterns": {
+    "webhooks": [
+      {
+        "workflow": "Vapi - Post Call Summary",
+        "node": "Webhook - Call Completed",
+        "path": "vapi/call-completed-v3"
+      },
+      {
+        "workflow": "Vapi - Send Email",
+        "node": "Webhook - Receive from Vapi",
+        "path": "send-email"
+      },
+      {
+        "workflow": "Hotel Concierge - flowise",
+        "node": "Webhook",
+        "path": "hotel-concierge-flowise"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "WhatsApp Webhook",
+        "path": "whatsapp-sales"
+      },
+      {
+        "workflow": "Assistente de Conversão - flowise",
+        "node": "Webhook",
+        "path": "conversion-assistant-flowise"
+      },
+      {
+        "workflow": "Vapi - Book Appointment",
+        "node": "Webhook - Receive from Vapi",
+        "path": "book-appointment-v3"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Webhook",
+        "path": "rh-assistant-flowise"
+      },
+      {
+        "workflow": "Vapi - Transfer Call to Human",
+        "node": "Webhook - Receive from Vapi",
+        "path": "transfer-call-v3"
+      },
+      {
+        "workflow": "WhatsApp Webhook Verify",
+        "node": "Webhook GET",
+        "path": "whatsapp-sales"
+      },
+      {
+        "workflow": "Vapi - Check Calendar Availability",
+        "node": "Webhook - Receive from Vapi",
+        "path": "check-calendar-v3"
+      }
+    ],
+    "schedulers": [],
+    "aiAgents": [],
+    "integrations": [
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Log Success",
+        "type": "n8n-nodes-base.googleSheets"
+      },
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Log Review",
+        "type": "n8n-nodes-base.googleSheets"
+      },
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Log Error",
+        "type": "n8n-nodes-base.googleSheets"
+      },
+      {
+        "workflow": "Vapi - Book Appointment",
+        "node": "Create Calendar Event",
+        "type": "n8n-nodes-base.googleCalendar"
+      },
+      {
+        "workflow": "Vapi - Check Calendar Availability",
+        "node": "Get Calendar Events",
+        "type": "n8n-nodes-base.googleCalendar"
+      }
+    ],
+    "errorHandling": [],
+    "dataTransform": [
+      {
+        "workflow": "Vapi - Post Call Summary",
+        "node": "Process Call Data",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Filter Invoices",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Prepare Gemini Request",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Business Logic",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Is Error?",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "Invoice OCR Processing",
+        "node": "Is Complete?",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "Vapi - Send Email",
+        "node": "Extract & Validate Email",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Send Email",
+        "node": "Check for Errors",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "Vapi - Send Email",
+        "node": "Prepare Email",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Send Email",
+        "node": "Handle Result",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Hotel Concierge - flowise",
+        "node": "Validate Input",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Hotel Concierge - flowise",
+        "node": "Process Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Hotel Concierge - flowise",
+        "node": "Route Response",
+        "type": "n8n-nodes-base.switch"
+      },
+      {
+        "workflow": "Hotel Concierge - flowise",
+        "node": "Format Booking Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Hotel Concierge - flowise",
+        "node": "Format Feedback Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Hotel Concierge - flowise",
+        "node": "Format Normal Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "Extract Message",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "Validate Input",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "RAG Retrieval",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "Process Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "Route Response",
+        "type": "n8n-nodes-base.switch"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "Evaluate Active",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Vendas - WhatsApp",
+        "node": "Is Paused",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "Assistente de Conversão - flowise",
+        "node": "Validate Input",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Conversão - flowise",
+        "node": "Process Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Conversão - flowise",
+        "node": "Route Response",
+        "type": "n8n-nodes-base.switch"
+      },
+      {
+        "workflow": "Assistente de Conversão - flowise",
+        "node": "Format Lead Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de Conversão - flowise",
+        "node": "Format Normal Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Book Appointment",
+        "node": "Extract & Validate Booking",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Book Appointment",
+        "node": "Check for Errors",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "Vapi - Book Appointment",
+        "node": "Format Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Book Appointment",
+        "node": "Check Booking Success",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Validate Input",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Process Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Route Response",
+        "type": "n8n-nodes-base.switch"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Format Vacation Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Format Absence Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Format Request Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Assistente de RH - flowise",
+        "node": "Format Normal Response",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Transfer Call to Human",
+        "node": "Extract & Validate Transfer",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Transfer Call to Human",
+        "node": "Check for Errors",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "WhatsApp Webhook Verify",
+        "node": "Verify Token",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Check Calendar Availability",
+        "node": "Extract & Validate",
+        "type": "n8n-nodes-base.code"
+      },
+      {
+        "workflow": "Vapi - Check Calendar Availability",
+        "node": "Check for Errors",
+        "type": "n8n-nodes-base.if"
+      },
+      {
+        "workflow": "Vapi - Check Calendar Availability",
+        "node": "Calculate Available Slots",
+        "type": "n8n-nodes-base.code"
+      }
+    ]
+  }
+}
