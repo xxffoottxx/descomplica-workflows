@@ -1,0 +1,147 @@
+{
+  "_metadata": {
+    "name": "Vapi - Transfer Call to Human",
+    "description": "Vapi integration pattern for Vapi - Transfer Call to Human",
+    "category": "integration",
+    "tags": [
+      "vapi",
+      "voice",
+      "ai-calling"
+    ],
+    "requiredCredentials": [
+      "vapi"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "transfer-call-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "7df06e3e-c9df-4540-8a33-f614b72f5425",
+      "name": "Webhook - Receive from Vapi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "1c59058e-c738-4f33-b789-59f1b8b5b21f",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  const reason = body.reason || 'Cliente solicitou atendimento humano';\n  const department = (body.department || 'geral').toLowerCase();\n\n  // Validate department\n  const validDepartments = ['geral', 'general', 'sales', 'vendas', 'support', 'suporte', 'technical', 'tecnico', 'billing', 'faturacao'];\n  const finalDepartment = validDepartments.includes(department) ? department : 'geral';\n\n  // Map departments to phone numbers\n  const defaultPhone = '+XX XXX XXX XXX';\n  const departmentPhones = {\n    'geral': defaultPhone, 'general': defaultPhone,\n    'sales': defaultPhone, 'vendas': defaultPhone,\n    'support': defaultPhone, 'suporte': defaultPhone,\n    'technical': defaultPhone, 'tecnico': defaultPhone,\n    'billing': defaultPhone, 'faturacao': defaultPhone\n  };\n  const transferNumber = departmentPhones[finalDepartment] || defaultPhone;\n\n  // Map department names to pt-PT\n  const departmentNames = {\n    'geral': 'Atendimento Geral', 'general': 'Atendimento Geral',\n    'sales': 'Vendas', 'vendas': 'Vendas',\n    'support': 'Suporte', 'suporte': 'Suporte',\n    'technical': 'Suporte Tecnico', 'tecnico': 'Suporte Tecnico',\n    'billing': 'Faturacao', 'faturacao': 'Faturacao'\n  };\n  const departmentName = departmentNames[finalDepartment] || 'Atendimento Geral';\n\n  return {\n    _error: false,\n    call_id: body.call_id || 'unknown',\n    reason: reason,\n    department: finalDepartment,\n    department_name: departmentName,\n    transfer_to: transferNumber,\n    customer_name: body.customer_name || '',\n    customer_phone: body.customer_phone || '',\n    context: body.context || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao processar a transferencia. Por favor, tente novamente.', toolCallId };\n}"
+      },
+      "id": "0331fce2-d720-4807-8975-b2756e5fe4f9",
+      "name": "Extract & Validate Transfer",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-0007-4000-8000-000000000001",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9583009c-eef1-4142-990f-4cbf30ecb811",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.errorMessage }] } }}",
+        "options": {}
+      },
+      "id": "d9af8aec-7a08-48c9-9df6-d371987269bc",
+      "name": "Respond Error to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        672,
+        240
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: JSON.stringify({ transfer: true, destination: $json.transfer_to, department: $json.department_name, message: 'Vou transferir a sua chamada para ' + $json.department_name + '. Por favor, aguarde um momento.' }) }] } }}",
+        "options": {}
+      },
+      "id": "fc8f7cd9-2fa1-4366-9b86-a5e97413a1a7",
+      "name": "Respond to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        672,
+        0
+      ],
+      "notes": "Returns structured JSON in result field with transfer: true, destination number, and message. The Vapi assistant prompt should parse this to initiate the actual SIP transfer.",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "=Transferencia de Chamada - {{ $json.department_name }}",
+        "emailType": "text",
+        "message": "=Uma chamada foi transferida para atendimento humano.\n\nDETALHES DA TRANSFERENCIA:\nDepartamento: {{ $json.department_name }}\nNumero de destino: {{ $json.transfer_to }}\n\nMOTIVO DA TRANSFERENCIA:\n{{ $json.reason }}\n\n{{ $json.customer_name ? 'CLIENTE:\nNome: ' + $json.customer_name : '' }}\n{{ $json.customer_phone ? 'Telefone: ' + $json.customer_phone : '' }}\n\n{{ $json.context ? 'CONTEXTO DA CONVERSA:\n' + $json.context : 'Sem contexto adicional disponivel' }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        400
+      ],
+      "id": "f0ae64e6-2ac7-415f-87d3-01415ab4dd84",
+      "name": "Send Transfer Notification",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "webhookId": "25b3a70e-1f86-46d6-91ac-215c00f0cf0a",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

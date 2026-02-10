@@ -1,0 +1,324 @@
+{
+  "_metadata": {
+    "name": "Hotel Concierge - flowise",
+    "description": "Flowise AI assistant integration - Hotel Concierge - flowise",
+    "category": "ai-integration",
+    "tags": [
+      "flowise",
+      "ai",
+      "chatbot",
+      "webhook"
+    ],
+    "requiredCredentials": [
+      "flowise",
+      "http"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "id": "f0b9f053-0d13-4345-9a72-798b3d09aa67",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1200,
+        96
+      ],
+      "webhookId": "c3d4e5f6-2222-4bbb-d222-222222222222",
+      "parameters": {
+        "path": "hotel-concierge-flowise",
+        "options": {
+          "allowedOrigins": "https://your-domain.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://your-domain.com"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        },
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "2fe0f230-c484-482c-8adf-f800f57556fc",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -960,
+        96
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const month = now.getUTCMonth();\n  const isDST = month >= 2 && month <= 9;\n  const offset = isDST ? 0 : -1;\n  const local = new Date(now.getTime() + offset * 3600000);\n  const days = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\n  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\n  return days[local.getUTCDay()] + ', ' + local.getUTCDate() + ' de ' + months[local.getUTCMonth()] + ' de ' + local.getUTCFullYear() + ', ' + String(local.getUTCHours()).padStart(2,'0') + ':' + String(local.getUTCMinutes()).padStart(2,'0');\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "32f54bdb-b610-44aa-86ee-33580dffb066",
+      "name": "Flowise API",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -720,
+        96
+      ],
+      "parameters": {
+        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_HOTEL }}",
+        "method": "POST",
+        "options": {
+          "timeout": 15000
+        },
+        "jsonBody": "={{ JSON.stringify({ question: $json.message, overrideConfig: { sessionId: $json.session_id } }) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.FLOWISE_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000,
+      "credentials": {}
+    },
+    {
+      "id": "6d494c3d-6956-4f8c-8af8-24a72845eae4",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -480,
+        96
+      ],
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\nconst flowiseResponse = inputData.text || inputData.output || '';\nconst isFallback = !flowiseResponse || flowiseResponse.trim() === '';\n\nlet sessionId = 'unknown';\nlet guestMessage = '';\ntry {\n  const validateData = $('Validate Input').first().json;\n  sessionId = validateData.session_id || 'unknown';\n  guestMessage = validateData.message || '';\n} catch (e) {}\n\nlet output = flowiseResponse;\nif (isFallback) {\n  output = '[INTENT:error] Peço desculpa, mas não consegui processar o seu pedido neste momento. Por favor, tente novamente ou contacte a receção em +XX XXX XXX XXX ou your-email@example.com.';\n}\n\n// Extract [INTENT:xxx] tag\nlet llmIntent = null;\nconst intentMatch = output.match(/^\\s*\\[INTENT:(\\w+)\\]/);\nif (intentMatch) {\n  llmIntent = intentMatch[1].toLowerCase();\n  output = output.replace(/^\\s*\\[INTENT:\\w+\\]\\s*/, '');\n}\n\n// Check for BOOKING_DATA\nlet bookingData = null;\nlet hasBooking = false;\nconst bookingMatch = output.match(/\\[BOOKING_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/BOOKING_DATA\\]/);\nif (bookingMatch) {\n  try {\n    bookingData = JSON.parse(bookingMatch[1].trim());\n    if (!bookingData.guest_name || !bookingData.booking_type || !bookingData.date || !bookingData.time) {\n      bookingData = null;\n    } else {\n      bookingData.reference_id = 'BOOK-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n      bookingData.session_id = sessionId;\n      bookingData.created_at = new Date().toISOString();\n      for (const k of Object.keys(bookingData)) {\n        if (typeof bookingData[k] === 'string') bookingData[k] = bookingData[k].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n      }\n      hasBooking = true;\n    }\n  } catch (e) { bookingData = null; }\n}\n\n// Check for FEEDBACK_DATA\nlet feedbackData = null;\nlet hasFeedback = false;\nconst feedbackMatch = output.match(/\\[FEEDBACK_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/FEEDBACK_DATA\\]/);\nif (feedbackMatch) {\n  try {\n    feedbackData = JSON.parse(feedbackMatch[1].trim());\n    if (!feedbackData.guest_name || !feedbackData.feedback_type || !feedbackData.description) {\n      feedbackData = null;\n    } else {\n      feedbackData.reference_id = 'FDBK-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n      feedbackData.session_id = sessionId;\n      feedbackData.created_at = new Date().toISOString();\n      for (const k of Object.keys(feedbackData)) {\n        if (typeof feedbackData[k] === 'string') feedbackData[k] = feedbackData[k].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n      }\n      hasFeedback = true;\n    }\n  } catch (e) { feedbackData = null; }\n}\n\nlet cleanResponse = output\n  .replace(/\\[BOOKING_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/BOOKING_DATA\\]/, '')\n  .replace(/\\[FEEDBACK_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/FEEDBACK_DATA\\]/, '')\n  .trim();\n\nlet classifiedIntent = 'general';\nif (hasBooking) classifiedIntent = 'booking_request';\nelse if (hasFeedback) classifiedIntent = 'feedback';\nelse if (llmIntent) classifiedIntent = llmIntent;\n\nreturn [{\n  json: {\n    output: cleanResponse,\n    hasBooking,\n    hasFeedback,\n    bookingData,\n    feedbackData,\n    referenceId: hasBooking ? bookingData?.reference_id : (hasFeedback ? feedbackData?.reference_id : null),\n    sessionId,\n    originalMessage: guestMessage,\n    classifiedIntent,\n    isFallback\n  }\n}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "2e2ddb69-78ce-46f0-828f-5c0fe877192a",
+      "name": "Route Response",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -240,
+        144
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "hasBooking",
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasBooking }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true
+            },
+            {
+              "outputKey": "hasFeedback",
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasFeedback }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "typeVersion": 3.2,
+      "credentials": {}
+    },
+    {
+      "id": "7bc0ea7e-447d-4f16-9918-4f3fecb8fd01",
+      "name": "Email Booking",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "5942fb0f-6a0e-491f-804c-ca1f42240ddd",
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.header{background:linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a5f;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.booking-box{background:#eff6ff;padding:15px;border-radius:6px;border-left:4px solid #2563eb}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Reserva</h1><div class=\"badge\">{{ $json.bookingData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informações do Hóspede</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.bookingData.guest_name }}</span></div><div class=\"info-row\"><span class=\"label\">Quarto:</span> <span class=\"value\">{{ $json.bookingData.room_number || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes da Reserva</div><div class=\"booking-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.bookingData.booking_type }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.bookingData.date }}</span></div><div class=\"info-row\"><span class=\"label\">Hora:</span> <span class=\"value\">{{ $json.bookingData.time }}</span></div><div class=\"info-row\"><span class=\"label\">Nº Pessoas:</span> <span class=\"value\">{{ $json.bookingData.num_guests || 'Não especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Detalhes:</span> <span class=\"value\">{{ $json.bookingData.details || '-' }}</span></div><div class=\"info-row\"><span class=\"label\">Pedidos Especiais:</span> <span class=\"value\">{{ $json.bookingData.special_requests || 'Nenhum' }}</span></div><div class=\"info-row\"><span class=\"label\">Dieta:</span> <span class=\"value\">{{ $json.bookingData.dietary || 'N/A' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.bookingData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Hotel Baia de Angra</strong> - Concierge Digital (Flowise)</p></div></div></body></html>",
+        "options": {},
+        "subject": "=Novo Pedido de Reserva - {{ $json.bookingData.reference_id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "f2da74a3-6965-4232-a647-efe1fbb240f0",
+      "name": "Email Feedback",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        0,
+        128
+      ],
+      "webhookId": "0bd77ed0-9d4f-4cb3-9dee-2e51d56ad798",
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',sans-serif;background:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.1)}.header{background:linear-gradient(135deg,#92400e 0%,#f59e0b 100%);color:#fff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#92400e;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.feedback-box{background:#fffbeb;padding:15px;border-radius:6px;border-left:4px solid #f59e0b}.footer{background:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.badge{background:#fef3c7;color:#92400e;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Feedback de Hóspede</h1><div class=\"badge\">{{ $json.feedbackData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informações do Hóspede</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.feedbackData.guest_name }}</span></div><div class=\"info-row\"><span class=\"label\">Quarto:</span> <span class=\"value\">{{ $json.feedbackData.room_number || 'Não fornecido' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Feedback</div><div class=\"feedback-box\"><div class=\"info-row\"><span class=\"label\">Tipo:</span> <span class=\"value\">{{ $json.feedbackData.feedback_type }}</span></div><div class=\"info-row\"><span class=\"label\">Urgência:</span> <span class=\"value\">{{ $json.feedbackData.urgency || 'Normal' }}</span></div><div class=\"info-row\"><span class=\"label\">Descrição:</span> <span class=\"value\">{{ $json.feedbackData.description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.feedbackData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Hotel Baia de Angra</strong> - Concierge Digital (Flowise)</p></div></div></body></html>",
+        "options": {},
+        "subject": "=Feedback de Hóspede - {{ $json.feedbackData.reference_id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "4ec35b5a-ef74-46b0-a7ba-fddf868531c0",
+      "name": "Format Booking Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        208,
+        0
+      ],
+      "parameters": {
+        "jsCode": "let d; try { d = $('Process Response').first().json; } catch(e) { d = { output: 'Pedido processado.', sessionId: 'unknown', referenceId: null }; }\nconst ei = $input.first().json; const ok = ei && !ei.error;\nreturn [{ json: { response: d.output, intent: 'booking_request', session_id: d.sessionId, reference_id: d.referenceId, booking_submitted: ok, email_error: ok ? undefined : (ei?.error?.message || 'Failed'), timestamp: new Date().toISOString() }}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "86b4b948-8ce1-444e-8f4a-d59febdb808b",
+      "name": "Format Feedback Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        208,
+        128
+      ],
+      "parameters": {
+        "jsCode": "let d; try { d = $('Process Response').first().json; } catch(e) { d = { output: 'Feedback registado.', sessionId: 'unknown', referenceId: null }; }\nconst ei = $input.first().json; const ok = ei && !ei.error;\nreturn [{ json: { response: d.output, intent: 'feedback', session_id: d.sessionId, reference_id: d.referenceId, feedback_submitted: ok, email_error: ok ? undefined : (ei?.error?.message || 'Failed'), timestamp: new Date().toISOString() }}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "77f31da5-f6b8-4003-991e-6a9455e9966b",
+      "name": "Format Normal Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        0,
+        272
+      ],
+      "parameters": {
+        "jsCode": "let d; try { d = $('Process Response').first().json; } catch(e) { d = { output: 'Bem-vindo ao Hotel Baía de Angra.', sessionId: 'unknown', classifiedIntent: 'general' }; }\nreturn [{ json: { response: d.output, intent: d.classifiedIntent || 'general', session_id: d.sessionId, timestamp: new Date().toISOString() }}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "e5cd8bc2-961a-4571-b675-3572bf434964",
+      "name": "Respond Booking",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    },
+    {
+      "id": "ac72c8f3-2f86-4200-a81d-fb83fd7c6604",
+      "name": "Respond Feedback",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        400,
+        128
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    },
+    {
+      "id": "6dd67bdc-ae11-43ea-803a-711e230cfeff",
+      "name": "Respond Normal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        208,
+        272
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

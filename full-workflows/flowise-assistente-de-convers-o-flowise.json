@@ -1,0 +1,247 @@
+{
+  "_metadata": {
+    "name": "Assistente de Conversão - flowise",
+    "description": "Flowise AI assistant integration - Assistente de Conversão - flowise",
+    "category": "ai-integration",
+    "tags": [
+      "flowise",
+      "ai",
+      "chatbot",
+      "webhook"
+    ],
+    "requiredCredentials": [
+      "flowise",
+      "http"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "id": "03cc92e3-9fcc-439d-b75a-e78c9287a5a2",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "position": [
+        -1200,
+        16
+      ],
+      "webhookId": "a1b2c3d4-2222-4bbb-b222-222222222222",
+      "parameters": {
+        "path": "conversion-assistant-flowise",
+        "options": {
+          "allowedOrigins": "https://your-domain.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://your-domain.com"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        },
+        "httpMethod": "POST",
+        "responseMode": "responseNode"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "cfd8f1fb-ccea-410b-81e3-87f8eaca8df1",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -960,
+        16
+      ],
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst message = (typeof body.message === 'string') ? body.message : '';\nlet sessionId = (typeof body.session_id === 'string') ? body.session_id : '';\nif (!sessionId || sessionId.trim() === '') {\n  sessionId = 'SESSION-' + Date.now() + '-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 8);\n} else if (/\\.\\.[\\/\\\\]/.test(sessionId)) {\n  throw new Error('Invalid session_id format');\n}\nlet sanitizedMessage = message.replace(/<[^>]*>/g, '').trim();\nif (sanitizedMessage.length > 1500) {\n  sanitizedMessage = sanitizedMessage.substring(0, 1500);\n}\nreturn {\n  json: {\n    message: '[Data atual: ' + (() => {\n  const now = new Date();\n  const month = now.getUTCMonth();\n  const isDST = month >= 2 && month <= 9;\n  const offset = isDST ? 0 : -1;\n  const local = new Date(now.getTime() + offset * 3600000);\n  const days = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];\n  const months = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];\n  return days[local.getUTCDay()] + ', ' + local.getUTCDate() + ' de ' + months[local.getUTCMonth()] + ' de ' + local.getUTCFullYear() + ', ' + String(local.getUTCHours()).padStart(2,'0') + ':' + String(local.getUTCMinutes()).padStart(2,'0');\n})() + '] ' + (sanitizedMessage || 'hello'),\n    session_id: sessionId,\n    headers: $input.first().json.headers || {},\n    query: $input.first().json.query || {}\n  }\n};"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "74c2bd3e-c357-4076-8099-50df10338e71",
+      "name": "Flowise API",
+      "type": "n8n-nodes-base.httpRequest",
+      "maxTries": 3,
+      "position": [
+        -720,
+        16
+      ],
+      "parameters": {
+        "url": "=http://flowise:3000/api/v1/prediction/{{ $env.FLOWISE_CHATFLOW_CONVERSION }}",
+        "method": "POST",
+        "options": {
+          "timeout": 15000
+        },
+        "jsonBody": "={{ JSON.stringify({ question: $json.message, overrideConfig: { sessionId: $json.session_id } }) }}",
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.FLOWISE_API_KEY }}"
+            }
+          ]
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.2,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000,
+      "credentials": {}
+    },
+    {
+      "id": "d2e7948f-e8bf-4ba0-a68e-3ffbe2e65fad",
+      "name": "Process Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -480,
+        16
+      ],
+      "parameters": {
+        "jsCode": "const inputData = $input.first().json;\nconst flowiseResponse = inputData.text || inputData.output || '';\nconst isFallback = !flowiseResponse || flowiseResponse.trim() === '';\n\nlet sessionId = 'unknown';\nlet customerMessage = '';\ntry {\n  const validateData = $('Validate Input').first().json;\n  sessionId = validateData.session_id || 'unknown';\n  customerMessage = validateData.message || '';\n} catch (e) {}\n\nlet output = flowiseResponse;\nif (isFallback) {\n  output = '[INTENT:error] Peço desculpa, mas não consegui processar o seu pedido neste momento. Por favor, tente novamente ou entre em contacto connosco através de your-email@example.com ou +XX XXX XXX XXX.';\n}\n\n// Extract [INTENT:xxx] tag\nlet llmIntent = null;\nconst intentMatch = output.match(/^\\s*\\[INTENT:(\\w+)\\]/);\nif (intentMatch) {\n  llmIntent = intentMatch[1].toLowerCase();\n  output = output.replace(/^\\s*\\[INTENT:\\w+\\]\\s*/, '');\n}\n\n// Check for LEAD_DATA\nlet leadData = null;\nlet hasLead = false;\nconst leadMatch = output.match(/\\[LEAD_DATA\\]\\s*(\\{[\\s\\S]*?\\})\\s*\\[\\/LEAD_DATA\\]/);\nif (leadMatch) {\n  try {\n    leadData = JSON.parse(leadMatch[1].trim());\n    if (!leadData.customer_name || !leadData.customer_email || !leadData.business_type) {\n      leadData = null;\n    } else {\n      // Validate email\n      if (leadData.customer_email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(leadData.customer_email)) {\n        leadData = null;\n      } else {\n        leadData.reference_id = 'LEAD-' + Date.now() + '-' + Math.random().toString(36).substring(2, 10).toUpperCase();\n        leadData.session_id = sessionId;\n        leadData.created_at = new Date().toISOString();\n        for (const key of Object.keys(leadData)) {\n          if (typeof leadData[key] === 'string') {\n            leadData[key] = leadData[key].replace(/[\\n\\r]/g, ' ').substring(0, 500);\n          }\n        }\n        hasLead = true;\n      }\n    }\n  } catch (e) { leadData = null; }\n}\n\nlet cleanResponse = output.replace(/\\[LEAD_DATA\\]\\s*\\{[\\s\\S]*?\\}\\s*\\[\\/LEAD_DATA\\]/, '').trim();\nif (hasLead && leadData) {\n  cleanResponse = cleanResponse.replace(/LEAD-X+/g, leadData.reference_id);\n}\n\nlet classifiedIntent = 'general';\nif (hasLead) {\n  classifiedIntent = 'lead_capture';\n} else if (llmIntent) {\n  classifiedIntent = llmIntent;\n}\n\nreturn [{\n  json: {\n    output: cleanResponse,\n    hasLead,\n    leadData,\n    referenceId: hasLead ? leadData?.reference_id : null,\n    sessionId,\n    originalMessage: customerMessage,\n    classifiedIntent,\n    isFallback\n  }\n}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "d1b73dce-a27a-468b-8cc7-83bd36bdf3f4",
+      "name": "Route Response",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        -240,
+        64
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "outputKey": "hasLead",
+              "conditions": {
+                "options": {
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.hasLead }}",
+                    "rightValue": true
+                  }
+                ]
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "typeVersion": 3.2,
+      "credentials": {}
+    },
+    {
+      "id": "c76a33ba-a09e-4bc9-bfd9-5ffcb58e9db6",
+      "name": "Email Lead",
+      "type": "n8n-nodes-base.gmail",
+      "maxTries": 3,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "d05d112c-6c59-4a93-926e-040ea95b9e19",
+      "parameters": {
+        "sendTo": "={{ $env.NOTIFICATION_EMAIL || 'your-email@example.com' }}",
+        "message": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#059669 0%,#10b981 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#059669;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.lead-box{background-color:#f0fdf4;padding:15px;border-radius:6px;border-left:4px solid #10b981}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#d1fae5;color:#065f46;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Lead Capturado</h1><div class=\"reference-badge\">{{ $json.leadData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informações do Potencial Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.leadData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.leadData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Telefone:</span> <span class=\"value\">{{ $json.leadData.customer_phone || 'Não fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">Tipo de Negócio:</span> <span class=\"value\">{{ $json.leadData.business_type }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Lead</div><div class=\"lead-box\"><div class=\"info-row\"><span class=\"label\">Pontos de Dor:</span> <span class=\"value\">{{ $json.leadData.pain_points || 'Não especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Área de Interesse:</span> <span class=\"value\">{{ $json.leadData.interest_area || 'Não especificado' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.leadData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Descomplica</strong> - Consultoria e Automação de Negócios</p><p>Este email foi gerado automaticamente pelo assistente de conversão (Flowise).</p></div></div></body></html>",
+        "options": {},
+        "subject": "=Novo Lead - {{ $json.leadData.reference_id }}"
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 2.1,
+      "continueOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "id": "af8cf3ae-dbf6-423f-8c65-68ba89c2fdee",
+      "name": "Format Lead Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        208,
+        0
+      ],
+      "parameters": {
+        "jsCode": "let processData;\ntry { processData = $('Process Response').first().json; } catch (e) {\n  processData = { output: 'Pedido processado. Entre em contacto através de your-email@example.com.', sessionId: 'unknown', referenceId: null, classifiedIntent: 'lead_capture' };\n}\nconst emailInput = $input.first().json;\nconst emailSuccess = emailInput && !emailInput.error;\nreturn [{ json: {\n  response: processData.output,\n  intent: 'lead_capture',\n  session_id: processData.sessionId,\n  reference_id: processData.referenceId,\n  lead_submitted: emailSuccess,\n  email_error: emailSuccess ? undefined : (emailInput?.error?.message || 'Email delivery failed'),\n  timestamp: new Date().toISOString()\n}}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "9f67e7c2-a5b7-45ce-83e8-a3a4b3b951bc",
+      "name": "Respond Lead",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        400,
+        0
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    },
+    {
+      "id": "4e1d4068-8081-41fe-bf04-0d8e1f5b1c71",
+      "name": "Format Normal Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        0,
+        192
+      ],
+      "parameters": {
+        "jsCode": "let processData;\ntry { processData = $('Process Response').first().json; } catch (e) {\n  processData = { output: 'Em que posso ajudar?', sessionId: 'unknown', classifiedIntent: 'general' };\n}\nreturn [{ json: {\n  response: processData.output,\n  intent: processData.classifiedIntent || 'general',\n  session_id: processData.sessionId,\n  timestamp: new Date().toISOString()\n}}];"
+      },
+      "typeVersion": 2,
+      "credentials": {}
+    },
+    {
+      "id": "bf707d32-e11b-4f8c-9d43-ce5c1d983364",
+      "name": "Respond Normal",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [
+        208,
+        192
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "typeVersion": 1.1,
+      "credentials": {}
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

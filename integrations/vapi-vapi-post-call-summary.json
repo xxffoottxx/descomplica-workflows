@@ -1,0 +1,99 @@
+{
+  "_metadata": {
+    "name": "Vapi - Post Call Summary",
+    "description": "Vapi integration pattern for Vapi - Post Call Summary",
+    "category": "integration",
+    "tags": [
+      "vapi",
+      "voice",
+      "ai-calling"
+    ],
+    "requiredCredentials": [
+      "vapi"
+    ],
+    "source": "descomplica-production"
+  },
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi/call-completed-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "0c650281-2984-431f-b005-5e64de8bc2a3",
+      "name": "Webhook - Call Completed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "3bd2de76-c372-4249-8cc4-01bd93f6411d",
+      "notes": "Receives final call data from Vapi server-url event (not a tool call). Responds with simple acknowledgment.",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true };\n  }\n} catch (e) {}\n\ntry {\n  const raw = input.body || input;\n  const msg = raw.message || raw;\n  const call = msg.call || raw.call || {};\n\n  // Extract call metadata\n  const call_id = msg.call?.id || call.id || raw.call?.id || 'unknown';\n  const started_at = msg.startedAt || call.startedAt || '';\n  const ended_at = msg.endedAt || call.endedAt || '';\n  const ended_reason = msg.endedReason || call.endedReason || 'unknown';\n  const customer_phone = msg.customer?.number || call.customer?.number || 'Desconhecido';\n\n  // Extract analysis data\n  const analysis = msg.analysis || raw.analysis || {};\n  const structured = analysis.structuredData || {};\n\n  const intent = structured.intent || '';\n  const outcome = structured.outcome || '';\n  const customer_satisfaction = structured.customerSatisfaction || '';\n  const success = analysis.successEvaluation || '';\n  const summary = analysis.summary || 'Sem resumo disponivel';\n  const follow_up_needed = structured.followUpNeeded === true;\n\n  // Calculate duration\n  let duration_seconds = 0;\n  if (msg.durationSeconds) {\n    duration_seconds = Number(msg.durationSeconds);\n  } else if (ended_at && started_at) {\n    duration_seconds = Math.round((new Date(ended_at) - new Date(started_at)) / 1000);\n  }\n\n  // Detect bookings from tool calls in conversation\n  const messages = msg.artifact?.messagesOpenAIFormatted\n    || call.artifact?.messagesOpenAIFormatted\n    || [];\n\n  const bookings = [];\n  messages.forEach(m => {\n    try {\n      if (m.function_call?.name === 'book_appointment') {\n        const args = typeof m.function_call.arguments === 'string'\n          ? JSON.parse(m.function_call.arguments)\n          : m.function_call.arguments;\n        bookings.push(args);\n      }\n      if (Array.isArray(m.tool_calls)) {\n        m.tool_calls.forEach(tc => {\n          if (tc.function?.name === 'book_appointment') {\n            const args = typeof tc.function.arguments === 'string'\n              ? JSON.parse(tc.function.arguments)\n              : tc.function.arguments;\n            bookings.push(args);\n          }\n        });\n      }\n    } catch (parseErr) {\n      // Log parse error but continue processing other messages\n      console.log('Failed to parse tool call arguments:', parseErr.message);\n    }\n  });\n\n  return {\n    _error: false,\n    call_id,\n    started_at,\n    ended_at,\n    ended_reason,\n    customer_phone,\n    intent,\n    outcome,\n    customer_satisfaction,\n    success,\n    summary,\n    follow_up_needed,\n    duration_seconds,\n    bookings_made: bookings,\n    has_booking: bookings.length > 0,\n    booking_count: bookings.length\n  };\n} catch (err) {\n  console.log('Post Call Summary processing error:', err.message);\n  return {\n    _error: false,\n    call_id: 'error',\n    summary: 'Erro ao processar dados da chamada: ' + err.message,\n    duration_seconds: 0,\n    customer_phone: 'Desconhecido',\n    intent: '',\n    outcome: '',\n    follow_up_needed: false,\n    has_booking: false,\n    booking_count: 0,\n    bookings_made: []\n  };\n}"
+      },
+      "id": "524ac06c-f866-46ba-b25b-86c706b08aa2",
+      "name": "Process Call Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "notes": "Consolidated: auth check + data extraction + booking detection. Replaces old Set + Function nodes.",
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { received: true, status: 'success' } }}",
+        "options": {}
+      },
+      "id": "4e1b6e87-9a41-404f-a136-fb2a57c3f28c",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        448,
+        0
+      ],
+      "credentials": {}
+    },
+    {
+      "parameters": {
+        "sendTo": "your-email@example.com",
+        "subject": "={{ $json.has_booking ? 'Nova Marcacao (' + $json.booking_count + ')' : 'Chamada Recebida' }} - Assistente Virtual",
+        "message": "=<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;\">\n<h2>{{ $json.has_booking ? 'Nova Marcacao Realizada' : 'Resumo da Chamada' }}</h2>\n<p><strong>Numero:</strong> {{ $json.customer_phone }}</p>\n<p><strong>Duracao:</strong> {{ Math.floor($json.duration_seconds / 60) }}m {{ $json.duration_seconds % 60 }}s</p>\n<p><strong>Intencao:</strong> {{ $json.intent || 'N/A' }}</p>\n<p><strong>Resultado:</strong> {{ $json.outcome || 'N/A' }}</p>\n<p><strong>Follow-up:</strong> {{ $json.follow_up_needed ? 'Sim' : 'Nao' }}</p>\n<h3>Resumo</h3>\n<p>{{ $json.summary }}</p>\n{{ $json.has_booking ? '<h3>Marcacoes</h3>' + $json.bookings_made.map(function(b) { return '<p><strong>' + (b.customer_name || 'Cliente') + '</strong> - ' + (b.date || '') + ' as ' + (b.time || '') + '</p>'; }).join('') : '<p><em>Nenhuma marcacao realizada.</em></p>' }}\n</div>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        448,
+        208
+      ],
+      "id": "e897cee4-4eb5-493d-bfeb-89c2999c7188",
+      "name": "Send Call Summary Email",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "webhookId": "48105912-e33b-4f55-b919-1a40586e1eb1",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "YOUR_CREDENTIAL_ID",
+          "name": "YOUR_CREDENTIAL_NAME"
+        }
+      },
+      "continueOnFail": true
+    }
+  ],
+  "connections": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
