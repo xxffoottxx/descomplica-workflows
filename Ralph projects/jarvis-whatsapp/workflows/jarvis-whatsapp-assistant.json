@@ -116,7 +116,7 @@
         400
       ],
       "typeVersion": 3.2,
-      "notes": "TODO: Voice support - only enable if free STT is available in n8n"
+      "notes": "Audio path not connected — text messages only. Add STT node here if voice support is needed later."
     },
     {
       "parameters": {
