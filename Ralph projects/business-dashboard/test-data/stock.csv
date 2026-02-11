@@ -1,0 +1,66 @@
+Product,SKU,Quantity,MinQuantity,UnitPrice,Supplier
+Martelo de Carpinteiro 500g,FER-001,20,15,12.90,Bellota
+Chave de Fendas Phillips PH2,FER-002,90,25,4.50,Stanley Black & Decker
+Alicate Universal 200mm,FER-003,28,12,8.90,Stanley Black & Decker
+Chave Inglesa Ajustável 250mm,FER-004,25,10,14.50,Wurth Portugal
+Serrote Manual 500mm,FER-005,13,8,11.90,Stanley Black & Decker
+Fita Métrica 5m,FER-006,60,20,6.90,Stanley Black & Decker
+Nível de Bolha 60cm,FER-007,11,10,9.50,Bahco
+Conjunto Chaves Allen 9pcs,FER-008,42,15,7.90,Wurth Portugal
+Esquadro Metálico 300mm,FER-009,11,10,5.50,Bellota
+X-ato Profissional,FER-010,60,20,3.90,Stanley Black & Decker
+Berbequim Aparafusador 18V,ELE-001,6,5,89.90,Hilti Portugal
+Rebarbadora 125mm 750W,ELE-002,5,4,49.90,Stanley Black & Decker
+Serra Circular 185mm,ELE-003,9,3,79.90,Bosch Portugal
+Lixadora Orbital 240W,ELE-004,0,4,39.90,Bosch Portugal
+Pistola de Calor 2000W,ELE-005,2,3,34.90,Hilti Portugal
+Tinta Plástica Branca 15L,TIN-001,18,10,42.90,Barbot
+Tinta Plástica Branca 5L,TIN-002,2,15,18.90,Robbialac
+Esmalte Sintético 0.75L,TIN-003,31,12,12.50,CIN Tintas
+Primário Aderente 5L,TIN-004,0,8,24.90,Barbot
+Verniz Marítimo 0.75L,TIN-005,20,10,15.90,Robbialac
+Rolo de Pintura 220mm,TIN-006,100,25,4.90,Barbot
+Trincha Plana 70mm,TIN-007,37,20,3.50,CIN Tintas
+Fita de Mascarar 50m,TIN-008,43,30,2.90,CIN Tintas
+Diluente Celuloso 1L,TIN-009,17,15,5.90,Barbot
+Massa de Reparação 1kg,TIN-010,27,15,6.50,CIN Tintas
+Tubo PVC 50mm 3m,CAN-001,19,15,8.90,Grohe
+Tubo PVC 110mm 3m,CAN-002,25,10,14.90,Tigre Portugal
+Torneira Lavatório Monocomando,CAN-003,10,6,29.90,Tigre Portugal
+Sifão Lavatório Cromado,CAN-004,38,10,7.50,Grohe
+Vedante Teflon 12m,CAN-005,97,40,1.90,Grohe
+Cola PVC 250ml,CAN-006,19,15,6.90,Geberit
+Joelho PVC 90° 50mm,CAN-007,94,30,1.50,Tigre Portugal
+"Válvula de Esfera 1/2""",CAN-008,20,12,8.90,Geberit
+Cabo Elétrico H05VV 3x1.5 100m,ELC-001,4,5,45.90,Legrand
+Cabo Elétrico H05VV 3x2.5 100m,ELC-002,15,4,69.90,Schneider Electric
+Tomada Dupla Encastrar,ELC-003,52,20,5.90,Legrand
+Interruptor Simples Encastrar,ELC-004,44,20,4.50,Philips Iluminação
+Quadro Elétrico 12 Módulos,ELC-005,13,5,18.90,Legrand
+Disjuntor 16A,ELC-006,28,15,8.90,Philips Iluminação
+Lâmpada LED E27 10W,ELC-007,95,30,3.90,Schneider Electric
+Fita Isoladora Preta 20m,ELC-008,63,30,1.90,Schneider Electric
+Cimento Portland 25kg,CON-001,37,20,5.90,Secil
+Argamassa Cola 25kg,CON-002,0,15,7.90,Cimpor
+Betumadeira Inox 200mm,CON-003,40,10,6.90,Weber Saint-Gobain
+Balde Pedreiro 12L,CON-004,35,10,4.50,Secil
+Colher de Pedreiro 200mm,CON-005,36,10,5.90,Cimpor
+Reboco Projetável 25kg,CON-006,0,10,9.90,Weber Saint-Gobain
+Parafusos Madeira 4x40 cx200,FIX-001,40,20,5.90,Fischer Portugal
+Parafusos Madeira 5x60 cx100,FIX-002,36,20,6.50,Hilti Portugal
+Buchas Nylon 8mm cx100,FIX-003,66,25,4.90,Fischer Portugal
+Pregos Aço 50mm 1kg,FIX-004,0,15,3.90,Sika Portugal
+Silicone Transparente 280ml,FIX-005,31,20,5.50,Sika Portugal
+Espuma Poliuretano 750ml,FIX-006,18,12,7.90,Wurth Portugal
+Fita Adesiva Dupla Face 19mm,FIX-007,55,15,4.50,3M Portugal
+Abraçadeiras Plástico cx100,FIX-008,34,20,3.50,Sika Portugal
+Luvas de Trabalho Couro,SEG-001,40,15,6.90,3M Portugal
+Óculos de Proteção,SEG-002,39,12,4.50,Wurth Portugal
+Máscara Anti-Poeira FFP2 cx10,SEG-003,7,15,8.90,3M Portugal
+Capacete de Obra Branco,SEG-004,13,8,7.90,3M Portugal
+Botas de Segurança S3 nº42,SEG-005,6,4,39.90,Wurth Portugal
+"Mangueira 25m 1/2""",JAR-001,1,6,19.90,Husqvarna
+Tesoura de Poda,JAR-002,14,8,9.90,Gardena
+Pá de Jardim,JAR-003,3,6,12.90,Husqvarna
+Luvas de Jardim,JAR-004,22,10,4.90,Gardena
+Adubo Universal 5kg,JAR-005,34,10,8.90,Gardena

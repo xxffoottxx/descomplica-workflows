@@ -1,0 +1,961 @@
+Date,OrderID,Amount,Items,Customer,Status
+2025-12-02,ORD-0001,11.47,2,Obras & Reformas Lda.,completed
+2025-12-02,ORD-0002,75.14,4,Hugo Azevedo,completed
+2025-12-02,ORD-0003,8.95,2,Sara Teixeira,completed
+2025-12-02,ORD-0004,19.29,4,Luísa Martins,completed
+2025-12-02,ORD-0005,211.27,7,Junta de Freguesia Local,completed
+2025-12-02,ORD-0006,64.46,4,Susana Borges,completed
+2025-12-02,ORD-0007,17.98,3,Teresa Rodrigues,completed
+2025-12-02,ORD-0008,75.46,10,Pinturas Modernas Lda.,pending
+2025-12-02,ORD-0009,36.40,11,Empresa MegaConstruções Lda.,completed
+2025-12-02,ORD-0010,5.74,1,António Ferreira,completed
+2025-12-02,ORD-0011,77.49,5,Marta Vieira,completed
+2025-12-02,ORD-0012,246.95,9,Marta Vieira,completed
+2025-12-02,ORD-0013,102.97,14,Joana Cunha,completed
+2025-12-02,ORD-0014,429.20,16,Empreiteira do Norte S.A.,completed
+2025-12-02,ORD-0015,17.81,2,Carlos Almeida,completed
+2025-12-02,ORD-0016,17.18,2,Serralharia Central,completed
+2025-12-02,ORD-0017,166.98,11,Teresa Rodrigues,completed
+2025-12-02,ORD-0018,90.47,6,Pedro Gonçalves,completed
+2025-12-02,ORD-0019,149.03,15,José Mendes,completed
+2025-12-02,ORD-0020,3.61,2,Carpintaria São José,completed
+2025-12-02,ORD-0021,34.17,3,Catarina Gomes,completed
+2025-12-02,ORD-0022,121.01,6,Rui Lopes,completed
+2025-12-02,ORD-0023,33.46,6,Empreiteira do Norte S.A.,completed
+2025-12-03,ORD-0024,25.06,4,Helena Fernandes,completed
+2025-12-03,ORD-0025,16.08,4,Restaurante O Marinheiro,completed
+2025-12-03,ORD-0026,4.69,1,Restaurante O Marinheiro,completed
+2025-12-03,ORD-0027,67.17,5,João Silva,cancelled
+2025-12-03,ORD-0028,23.52,3,Empreiteira do Norte S.A.,cancelled
+2025-12-03,ORD-0029,71.43,5,Ana Costa,completed
+2025-12-03,ORD-0030,33.51,5,Restaurante O Marinheiro,completed
+2025-12-03,ORD-0031,172.04,2,Manuel Oliveira,completed
+2025-12-03,ORD-0032,86.48,2,António Ferreira,completed
+2025-12-03,ORD-0033,137.80,5,Marta Vieira,completed
+2025-12-03,ORD-0034,18.57,6,Beatriz Ribeiro,completed
+2025-12-03,ORD-0035,4.67,1,Rita Araújo,completed
+2025-12-03,ORD-0036,32.57,4,Francisco Sousa,completed
+2025-12-03,ORD-0037,254.11,12,Restaurante O Marinheiro,completed
+2025-12-04,ORD-0038,27.32,4,Empresa MegaConstruções Lda.,pending
+2025-12-04,ORD-0039,18.11,4,Isabel Pereira,completed
+2025-12-04,ORD-0040,165.73,10,Condomínio Bela Vista,pending
+2025-12-04,ORD-0041,12.01,2,Encanamentos Rápidos Lda.,completed
+2025-12-04,ORD-0042,71.63,8,Obras & Reformas Lda.,pending
+2025-12-04,ORD-0043,307.95,7,Restaurante O Marinheiro,completed
+2025-12-04,ORD-0044,23.24,3,Condomínio Bela Vista,completed
+2025-12-04,ORD-0045,25.55,4,Manuel Oliveira,pending
+2025-12-04,ORD-0046,17.22,3,Isabel Pereira,completed
+2025-12-04,ORD-0047,44.10,1,Cláudia Duarte,completed
+2025-12-04,ORD-0048,125.98,6,João Silva,completed
+2025-12-04,ORD-0049,79.86,10,Encanamentos Rápidos Lda.,completed
+2025-12-04,ORD-0050,115.27,6,Filipe Nunes,completed
+2025-12-04,ORD-0051,184.48,19,Diogo Tavares,completed
+2025-12-04,ORD-0052,382.22,11,Catarina Gomes,cancelled
+2025-12-04,ORD-0053,56.82,10,Luísa Martins,completed
+2025-12-04,ORD-0054,155.11,4,Junta de Freguesia Local,pending
+2025-12-04,ORD-0055,14.93,5,Joana Cunha,completed
+2025-12-04,ORD-0056,134.61,21,Hotel Praia Azul,completed
+2025-12-04,ORD-0057,74.18,8,Sofia Cardoso,completed
+2025-12-04,ORD-0058,90.32,6,Carpintaria São José,completed
+2025-12-04,ORD-0059,69.40,5,Paulo Monteiro,completed
+2025-12-04,ORD-0060,59.57,7,Restaurante O Marinheiro,completed
+2025-12-05,ORD-0061,53.36,5,Maria Santos,completed
+2025-12-05,ORD-0062,175.70,7,Encanamentos Rápidos Lda.,completed
+2025-12-05,ORD-0063,153.11,8,Joana Cunha,completed
+2025-12-05,ORD-0064,41.31,8,Sérgio Fonseca,completed
+2025-12-05,ORD-0065,66.12,9,Isabel Pereira,completed
+2025-12-05,ORD-0066,25.81,3,Hugo Azevedo,pending
+2025-12-05,ORD-0067,174.38,8,Carpintaria São José,completed
+2025-12-05,ORD-0068,45.72,4,Daniel Coelho,completed
+2025-12-05,ORD-0069,20.17,4,Paulo Monteiro,completed
+2025-12-05,ORD-0070,40.42,4,Cláudia Duarte,completed
+2025-12-05,ORD-0071,329.60,8,Lúcia Rocha,completed
+2025-12-05,ORD-0072,251.26,12,Nuno Pinto,completed
+2025-12-05,ORD-0073,134.67,3,Hugo Azevedo,completed
+2025-12-05,ORD-0074,8.63,2,Empreiteira do Norte S.A.,completed
+2025-12-05,ORD-0075,110.34,8,Teresa Rodrigues,completed
+2025-12-05,ORD-0076,20.21,7,André Moreira,completed
+2025-12-05,ORD-0077,63.35,9,Empreiteira do Norte S.A.,completed
+2025-12-05,ORD-0078,11.47,2,Ricardo Matos,completed
+2025-12-05,ORD-0079,241.92,5,Helena Fernandes,completed
+2025-12-06,ORD-0080,27.13,4,Francisco Sousa,completed
+2025-12-06,ORD-0081,192.48,12,Ana Costa,completed
+2025-12-06,ORD-0082,79.60,6,Inês Correia,completed
+2025-12-06,ORD-0083,9.25,2,Filipe Nunes,completed
+2025-12-06,ORD-0084,7.73,2,Beatriz Ribeiro,completed
+2025-12-06,ORD-0085,175.12,2,Vera Machado,completed
+2025-12-06,ORD-0086,34.86,4,José Mendes,completed
+2025-12-06,ORD-0087,8.05,1,Miguel Carvalho,completed
+2025-12-06,ORD-0088,133.73,7,Manuel Oliveira,completed
+2025-12-06,ORD-0089,212.09,11,Diogo Tavares,completed
+2025-12-06,ORD-0090,39.44,6,José Mendes,pending
+2025-12-06,ORD-0091,358.68,13,Cláudia Duarte,completed
+2025-12-06,ORD-0092,225.48,7,Encanamentos Rápidos Lda.,completed
+2025-12-06,ORD-0093,30.93,4,Marta Vieira,completed
+2025-12-06,ORD-0094,170.34,6,Imobiliária Atlântico,completed
+2025-12-06,ORD-0095,88.64,5,Rita Araújo,completed
+2025-12-06,ORD-0096,37.68,5,Tiago Marques,completed
+2025-12-06,ORD-0097,136.91,6,Teresa Rodrigues,completed
+2025-12-06,ORD-0098,466.72,14,Ricardo Matos,completed
+2025-12-06,ORD-0099,15.94,3,Condomínio Bela Vista,completed
+2025-12-06,ORD-0100,223.54,4,Hotel Praia Azul,completed
+2025-12-06,ORD-0101,364.20,18,José Mendes,completed
+2025-12-06,ORD-0102,91.46,8,Condomínio Bela Vista,completed
+2025-12-06,ORD-0103,118.42,13,Construções Silva & Filhos,pending
+2025-12-06,ORD-0104,139.40,3,Marta Vieira,completed
+2025-12-06,ORD-0105,74.60,8,Cláudia Duarte,pending
+2025-12-06,ORD-0106,243.35,5,Ana Costa,completed
+2025-12-06,ORD-0107,99.21,6,Teresa Rodrigues,completed
+2025-12-06,ORD-0108,23.51,4,Miguel Carvalho,completed
+2025-12-06,ORD-0109,76.14,8,Inês Correia,completed
+2025-12-06,ORD-0110,44.62,5,Restaurante O Marinheiro,completed
+2025-12-06,ORD-0111,18.57,3,Tiago Marques,completed
+2025-12-06,ORD-0112,68.81,12,Rui Lopes,completed
+2025-12-06,ORD-0113,366.90,8,Empreiteira do Norte S.A.,completed
+2025-12-09,ORD-0114,15.22,4,Rita Araújo,completed
+2025-12-09,ORD-0115,104.22,10,Empreiteira do Norte S.A.,completed
+2025-12-09,ORD-0116,87.39,5,Isabel Pereira,completed
+2025-12-09,ORD-0117,78.58,7,Vera Machado,completed
+2025-12-09,ORD-0118,76.08,7,António Ferreira,completed
+2025-12-09,ORD-0119,186.53,6,Encanamentos Rápidos Lda.,pending
+2025-12-09,ORD-0120,306.29,11,Rita Araújo,completed
+2025-12-09,ORD-0121,36.76,4,Construções Silva & Filhos,completed
+2025-12-09,ORD-0122,70.02,5,Construções Silva & Filhos,completed
+2025-12-09,ORD-0123,148.98,12,Condomínio Bela Vista,pending
+2025-12-09,ORD-0124,50.00,2,Junta de Freguesia Local,completed
+2025-12-09,ORD-0125,90.21,8,Miguel Carvalho,completed
+2025-12-09,ORD-0126,175.16,8,José Mendes,pending
+2025-12-09,ORD-0127,36.11,4,Maria Santos,completed
+2025-12-09,ORD-0128,19.91,5,Bruno Barbosa,completed
+2025-12-09,ORD-0129,23.97,1,Susana Borges,completed
+2025-12-09,ORD-0130,43.72,7,Cláudia Duarte,completed
+2025-12-10,ORD-0131,119.02,4,José Mendes,completed
+2025-12-10,ORD-0132,293.64,13,Electricista Pinto,pending
+2025-12-10,ORD-0133,89.29,1,Obras & Reformas Lda.,completed
+2025-12-10,ORD-0134,123.12,11,André Moreira,completed
+2025-12-10,ORD-0135,41.07,3,Vera Machado,completed
+2025-12-10,ORD-0136,53.75,6,Serralharia Central,completed
+2025-12-10,ORD-0137,47.27,6,Obras & Reformas Lda.,completed
+2025-12-10,ORD-0138,118.64,4,Sofia Cardoso,completed
+2025-12-10,ORD-0139,179.34,3,Susana Borges,completed
+2025-12-10,ORD-0140,17.97,4,Bruno Barbosa,completed
+2025-12-10,ORD-0141,103.97,3,Tiago Marques,completed
+2025-12-10,ORD-0142,37.11,6,Ana Costa,completed
+2025-12-10,ORD-0143,125.01,6,João Silva,completed
+2025-12-10,ORD-0144,54.85,5,Obras & Reformas Lda.,completed
+2025-12-10,ORD-0145,11.79,3,Daniel Coelho,completed
+2025-12-10,ORD-0146,138.66,6,Susana Borges,completed
+2025-12-10,ORD-0147,138.52,7,Raquel Lourenço,completed
+2025-12-10,ORD-0148,40.09,7,Câmara Municipal,completed
+2025-12-10,ORD-0149,77.85,2,Helena Fernandes,completed
+2025-12-10,ORD-0150,43.43,11,Empresa MegaConstruções Lda.,completed
+2025-12-10,ORD-0151,73.87,6,André Moreira,completed
+2025-12-10,ORD-0152,46.08,4,Manuel Oliveira,completed
+2025-12-10,ORD-0153,168.79,16,Bruno Barbosa,completed
+2025-12-10,ORD-0154,234.46,11,Susana Borges,completed
+2025-12-11,ORD-0155,94.79,12,Restaurante O Marinheiro,completed
+2025-12-11,ORD-0156,299.25,13,Construções Silva & Filhos,completed
+2025-12-11,ORD-0157,194.67,10,Imobiliária Atlântico,completed
+2025-12-11,ORD-0158,23.94,2,Restaurante O Marinheiro,completed
+2025-12-11,ORD-0159,49.62,6,Helena Fernandes,completed
+2025-12-11,ORD-0160,43.24,9,Susana Borges,completed
+2025-12-11,ORD-0161,47.46,9,Daniel Coelho,cancelled
+2025-12-11,ORD-0162,31.98,6,Junta de Freguesia Local,completed
+2025-12-11,ORD-0163,122.06,7,Diogo Tavares,completed
+2025-12-11,ORD-0164,31.13,4,Marta Vieira,completed
+2025-12-11,ORD-0165,262.27,3,Nuno Pinto,pending
+2025-12-11,ORD-0166,194.89,13,João Silva,pending
+2025-12-11,ORD-0167,60.09,2,Empreiteira do Norte S.A.,completed
+2025-12-11,ORD-0168,19.48,4,Paulo Monteiro,completed
+2025-12-11,ORD-0169,83.32,5,João Silva,completed
+2025-12-11,ORD-0170,9.15,2,Teresa Rodrigues,completed
+2025-12-11,ORD-0171,67.95,8,Filipe Nunes,cancelled
+2025-12-11,ORD-0172,27.47,3,André Moreira,completed
+2025-12-12,ORD-0173,77.48,8,Electricista Pinto,completed
+2025-12-12,ORD-0174,51.03,8,Condomínio Bela Vista,completed
+2025-12-12,ORD-0175,16.36,4,Sérgio Fonseca,completed
+2025-12-12,ORD-0176,19.22,3,Imobiliária Atlântico,completed
+2025-12-12,ORD-0177,493.54,12,Filipe Nunes,completed
+2025-12-12,ORD-0178,15.32,3,Raquel Lourenço,completed
+2025-12-12,ORD-0179,3.48,1,Câmara Municipal,completed
+2025-12-12,ORD-0180,39.21,1,Tiago Marques,completed
+2025-12-12,ORD-0181,29.66,8,André Moreira,completed
+2025-12-12,ORD-0182,43.36,7,Obras & Reformas Lda.,completed
+2025-12-12,ORD-0183,181.99,13,Electricista Pinto,completed
+2025-12-12,ORD-0184,20.49,5,Construções Silva & Filhos,completed
+2025-12-12,ORD-0185,223.55,15,Patrícia Reis,completed
+2025-12-12,ORD-0186,15.09,4,Carpintaria São José,completed
+2025-12-12,ORD-0187,5.82,3,Vera Machado,completed
+2025-12-12,ORD-0188,46.82,7,Maria Santos,completed
+2025-12-12,ORD-0189,57.68,2,Carpintaria São José,completed
+2025-12-12,ORD-0190,27.89,5,Bruno Barbosa,completed
+2025-12-12,ORD-0191,61.42,6,Ana Costa,completed
+2025-12-12,ORD-0192,29.53,5,José Mendes,completed
+2025-12-12,ORD-0193,306.77,10,Susana Borges,completed
+2025-12-12,ORD-0194,236.35,6,Paulo Monteiro,completed
+2025-12-12,ORD-0195,56.60,3,Junta de Freguesia Local,completed
+2025-12-13,ORD-0196,3.77,1,Paulo Monteiro,completed
+2025-12-13,ORD-0197,77.40,3,Nuno Pinto,completed
+2025-12-13,ORD-0198,115.06,10,Catarina Gomes,completed
+2025-12-13,ORD-0199,19.11,4,Pedro Gonçalves,completed
+2025-12-13,ORD-0200,95.57,13,Diogo Tavares,completed
+2025-12-13,ORD-0201,5.63,1,Patrícia Reis,completed
+2025-12-13,ORD-0202,227.65,12,Rita Araújo,completed
+2025-12-13,ORD-0203,19.60,3,Manuel Oliveira,completed
+2025-12-13,ORD-0204,54.12,3,Condomínio Bela Vista,cancelled
+2025-12-13,ORD-0205,119.40,6,António Ferreira,completed
+2025-12-13,ORD-0206,107.45,8,Susana Borges,completed
+2025-12-13,ORD-0207,28.18,4,Inês Correia,completed
+2025-12-13,ORD-0208,8.28,1,Lúcia Rocha,completed
+2025-12-13,ORD-0209,186.68,11,Electricista Pinto,completed
+2025-12-13,ORD-0210,59.77,5,Luísa Martins,completed
+2025-12-13,ORD-0211,36.93,4,Obras & Reformas Lda.,completed
+2025-12-13,ORD-0212,96.71,9,Sérgio Fonseca,completed
+2025-12-13,ORD-0213,109.13,4,Inês Correia,completed
+2025-12-13,ORD-0214,235.35,20,Electricista Pinto,completed
+2025-12-13,ORD-0215,103.20,8,Construções Silva & Filhos,completed
+2025-12-13,ORD-0216,159.99,5,Obras & Reformas Lda.,completed
+2025-12-13,ORD-0217,14.33,2,Paulo Monteiro,completed
+2025-12-13,ORD-0218,77.77,6,Ricardo Matos,completed
+2025-12-13,ORD-0219,13.21,3,Ana Costa,pending
+2025-12-13,ORD-0220,1.98,1,Helena Fernandes,completed
+2025-12-13,ORD-0221,62.62,8,Carlos Almeida,pending
+2025-12-13,ORD-0222,34.60,6,Junta de Freguesia Local,completed
+2025-12-13,ORD-0223,24.22,3,João Silva,completed
+2025-12-13,ORD-0224,39.80,8,Carlos Almeida,completed
+2025-12-15,ORD-0225,54.62,7,Serralharia Central,completed
+2025-12-15,ORD-0226,100.69,5,Isabel Pereira,completed
+2025-12-15,ORD-0227,27.21,3,Empresa MegaConstruções Lda.,pending
+2025-12-15,ORD-0228,15.69,2,Ricardo Matos,completed
+2025-12-15,ORD-0229,40.80,5,Raquel Lourenço,completed
+2025-12-15,ORD-0230,36.05,1,Diogo Tavares,completed
+2025-12-15,ORD-0231,20.26,5,Carpintaria São José,completed
+2025-12-15,ORD-0232,8.86,1,Diogo Tavares,completed
+2025-12-15,ORD-0233,54.14,5,João Silva,completed
+2025-12-15,ORD-0234,24.30,4,Ana Costa,pending
+2025-12-15,ORD-0235,19.48,1,Helena Fernandes,completed
+2025-12-15,ORD-0236,64.76,12,Encanamentos Rápidos Lda.,completed
+2025-12-15,ORD-0237,4.36,1,Sérgio Fonseca,completed
+2025-12-15,ORD-0238,7.69,1,Inês Correia,completed
+2025-12-15,ORD-0239,37.37,9,Rui Lopes,pending
+2025-12-16,ORD-0240,40.04,5,António Ferreira,completed
+2025-12-16,ORD-0241,58.03,10,Serralharia Central,completed
+2025-12-16,ORD-0242,25.99,3,Empreiteira do Norte S.A.,completed
+2025-12-16,ORD-0243,33.03,5,Raquel Lourenço,completed
+2025-12-16,ORD-0244,41.24,8,André Moreira,pending
+2025-12-16,ORD-0245,47.35,9,Sérgio Fonseca,completed
+2025-12-16,ORD-0246,240.26,14,Beatriz Ribeiro,completed
+2025-12-16,ORD-0247,25.61,3,Empreiteira do Norte S.A.,completed
+2025-12-16,ORD-0248,6.74,1,Rui Lopes,completed
+2025-12-16,ORD-0249,87.74,5,João Silva,completed
+2025-12-16,ORD-0250,178.71,4,Pinturas Modernas Lda.,completed
+2025-12-16,ORD-0251,21.27,3,Filipe Nunes,completed
+2025-12-16,ORD-0252,215.43,9,Empreiteira do Norte S.A.,completed
+2025-12-16,ORD-0253,37.48,6,Lúcia Rocha,completed
+2025-12-16,ORD-0254,64.71,5,Hotel Praia Azul,completed
+2025-12-16,ORD-0255,62.95,8,Empreiteira do Norte S.A.,completed
+2025-12-16,ORD-0256,26.88,2,Sérgio Fonseca,cancelled
+2025-12-16,ORD-0257,72.70,8,Joana Cunha,completed
+2025-12-16,ORD-0258,67.00,6,Empreiteira do Norte S.A.,completed
+2025-12-16,ORD-0259,239.42,11,Sara Teixeira,completed
+2025-12-16,ORD-0260,22.14,4,Pinturas Modernas Lda.,completed
+2025-12-16,ORD-0261,610.00,12,Ana Costa,completed
+2025-12-16,ORD-0262,273.89,5,Pinturas Modernas Lda.,completed
+2025-12-16,ORD-0263,23.81,4,Restaurante O Marinheiro,completed
+2025-12-17,ORD-0264,19.62,5,Daniel Coelho,completed
+2025-12-17,ORD-0265,20.70,3,André Moreira,completed
+2025-12-17,ORD-0266,34.59,7,Sara Teixeira,completed
+2025-12-17,ORD-0267,30.22,8,Lúcia Rocha,completed
+2025-12-17,ORD-0268,38.61,2,Teresa Rodrigues,completed
+2025-12-17,ORD-0269,59.94,6,João Silva,pending
+2025-12-17,ORD-0270,174.08,3,Bruno Barbosa,completed
+2025-12-17,ORD-0271,83.85,4,Hugo Azevedo,completed
+2025-12-17,ORD-0272,32.33,7,Teresa Rodrigues,completed
+2025-12-17,ORD-0273,12.53,6,Inês Correia,completed
+2025-12-17,ORD-0274,13.69,4,Inês Correia,completed
+2025-12-17,ORD-0275,18.19,2,Patrícia Reis,completed
+2025-12-17,ORD-0276,78.24,2,Marta Vieira,completed
+2025-12-17,ORD-0277,50.52,8,Pinturas Modernas Lda.,completed
+2025-12-17,ORD-0278,20.20,7,Condomínio Bela Vista,completed
+2025-12-17,ORD-0279,23.92,3,Sérgio Fonseca,completed
+2025-12-18,ORD-0280,79.31,2,Tiago Marques,completed
+2025-12-18,ORD-0281,30.46,4,Inês Correia,completed
+2025-12-18,ORD-0282,55.79,12,Pinturas Modernas Lda.,completed
+2025-12-18,ORD-0283,9.51,1,Catarina Gomes,completed
+2025-12-18,ORD-0284,41.02,7,Carlos Almeida,completed
+2025-12-18,ORD-0285,57.89,7,Electricista Pinto,completed
+2025-12-18,ORD-0286,31.84,5,Teresa Rodrigues,completed
+2025-12-18,ORD-0287,114.29,14,Pinturas Modernas Lda.,completed
+2025-12-18,ORD-0288,6.57,1,Sofia Cardoso,completed
+2025-12-18,ORD-0289,24.16,9,José Mendes,completed
+2025-12-18,ORD-0290,35.63,7,Filipe Nunes,completed
+2025-12-18,ORD-0291,5.95,1,Junta de Freguesia Local,completed
+2025-12-18,ORD-0292,11.75,2,Miguel Carvalho,completed
+2025-12-18,ORD-0293,12.31,5,Restaurante O Marinheiro,completed
+2025-12-18,ORD-0294,9.05,1,Nuno Pinto,completed
+2025-12-18,ORD-0295,35.11,6,Francisco Sousa,completed
+2025-12-18,ORD-0296,36.61,6,Helena Fernandes,completed
+2025-12-18,ORD-0297,31.90,5,Câmara Municipal,completed
+2025-12-18,ORD-0298,52.28,8,Bruno Barbosa,completed
+2025-12-18,ORD-0299,28.40,2,Sara Teixeira,completed
+2025-12-18,ORD-0300,31.76,4,Isabel Pereira,completed
+2025-12-19,ORD-0301,53.12,7,Construções Silva & Filhos,completed
+2025-12-19,ORD-0302,46.47,4,Câmara Municipal,completed
+2025-12-19,ORD-0303,231.23,10,Junta de Freguesia Local,completed
+2025-12-19,ORD-0304,27.61,6,Sara Teixeira,pending
+2025-12-19,ORD-0305,348.46,5,Construções Silva & Filhos,completed
+2025-12-19,ORD-0306,87.99,13,Manuel Oliveira,completed
+2025-12-19,ORD-0307,254.25,12,Restaurante O Marinheiro,completed
+2025-12-19,ORD-0308,67.52,10,Patrícia Reis,completed
+2025-12-19,ORD-0309,83.63,7,Restaurante O Marinheiro,completed
+2025-12-19,ORD-0310,32.55,5,Sara Teixeira,completed
+2025-12-19,ORD-0311,183.78,3,Inês Correia,completed
+2025-12-19,ORD-0312,405.05,7,Lúcia Rocha,completed
+2025-12-19,ORD-0313,194.67,10,Filipe Nunes,completed
+2025-12-19,ORD-0314,111.95,10,Daniel Coelho,completed
+2025-12-19,ORD-0315,151.88,10,Teresa Rodrigues,completed
+2025-12-19,ORD-0316,169.05,4,Cláudia Duarte,completed
+2025-12-19,ORD-0317,5.75,1,Hugo Azevedo,completed
+2025-12-20,ORD-0318,42.22,3,Hugo Azevedo,completed
+2025-12-20,ORD-0319,117.38,9,Empresa MegaConstruções Lda.,completed
+2025-12-20,ORD-0320,32.92,5,Hotel Praia Azul,completed
+2025-12-20,ORD-0321,23.00,2,João Silva,completed
+2025-12-20,ORD-0322,31.62,4,Empresa MegaConstruções Lda.,completed
+2025-12-20,ORD-0323,111.24,6,Diogo Tavares,pending
+2025-12-20,ORD-0324,116.86,13,Cláudia Duarte,completed
+2025-12-20,ORD-0325,17.95,4,Pedro Gonçalves,completed
+2025-12-20,ORD-0326,148.31,5,Sara Teixeira,completed
+2025-12-20,ORD-0327,44.84,3,Sara Teixeira,completed
+2025-12-20,ORD-0328,15.53,4,Rita Araújo,completed
+2025-12-20,ORD-0329,26.82,5,João Silva,completed
+2025-12-20,ORD-0330,25.84,3,Carpintaria São José,completed
+2025-12-20,ORD-0331,27.46,7,Manuel Oliveira,completed
+2025-12-20,ORD-0332,18.47,2,Raquel Lourenço,cancelled
+2025-12-20,ORD-0333,189.08,11,Condomínio Bela Vista,completed
+2025-12-20,ORD-0334,96.39,6,Paulo Monteiro,completed
+2025-12-20,ORD-0335,37.36,5,Empreiteira do Norte S.A.,completed
+2025-12-20,ORD-0336,27.58,4,Ana Costa,pending
+2025-12-20,ORD-0337,5.63,1,José Mendes,completed
+2025-12-20,ORD-0338,13.81,2,Empresa MegaConstruções Lda.,completed
+2025-12-20,ORD-0339,32.11,4,Francisco Sousa,completed
+2025-12-20,ORD-0340,7.75,4,Obras & Reformas Lda.,completed
+2025-12-20,ORD-0341,11.92,4,Lúcia Rocha,completed
+2025-12-20,ORD-0342,34.94,4,Isabel Pereira,completed
+2025-12-20,ORD-0343,191.58,8,Restaurante O Marinheiro,completed
+2025-12-20,ORD-0344,4.45,3,Ana Costa,completed
+2025-12-20,ORD-0345,3.03,1,Restaurante O Marinheiro,completed
+2025-12-20,ORD-0346,191.38,4,Hotel Praia Azul,completed
+2025-12-20,ORD-0347,35.15,4,Empresa MegaConstruções Lda.,pending
+2025-12-20,ORD-0348,43.71,1,Manuel Oliveira,completed
+2025-12-20,ORD-0349,95.89,6,Daniel Coelho,completed
+2025-12-22,ORD-0350,69.96,6,Helena Fernandes,completed
+2025-12-22,ORD-0351,67.49,5,Vera Machado,completed
+2025-12-22,ORD-0352,9.72,2,Construções Silva & Filhos,completed
+2025-12-22,ORD-0353,52.93,7,Patrícia Reis,completed
+2025-12-22,ORD-0354,26.20,5,Hugo Azevedo,completed
+2025-12-22,ORD-0355,60.23,7,Sara Teixeira,completed
+2025-12-22,ORD-0356,47.22,7,Nuno Pinto,completed
+2025-12-22,ORD-0357,123.17,9,António Ferreira,completed
+2025-12-22,ORD-0358,7.52,1,João Silva,completed
+2025-12-22,ORD-0359,64.16,5,Carpintaria São José,pending
+2025-12-22,ORD-0360,59.99,8,Francisco Sousa,pending
+2025-12-22,ORD-0361,57.23,7,Câmara Municipal,completed
+2025-12-22,ORD-0362,59.24,3,Daniel Coelho,completed
+2025-12-22,ORD-0363,101.57,13,Nuno Pinto,completed
+2025-12-22,ORD-0364,184.99,8,Condomínio Bela Vista,completed
+2025-12-22,ORD-0365,20.06,4,Pedro Gonçalves,completed
+2025-12-22,ORD-0366,31.50,5,Condomínio Bela Vista,completed
+2025-12-22,ORD-0367,37.22,5,Miguel Carvalho,pending
+2025-12-22,ORD-0368,13.53,4,Manuel Oliveira,completed
+2025-12-22,ORD-0369,269.41,12,Sofia Cardoso,completed
+2025-12-22,ORD-0370,134.91,3,Carlos Almeida,completed
+2025-12-22,ORD-0371,57.59,4,Teresa Rodrigues,completed
+2025-12-22,ORD-0372,190.09,5,Teresa Rodrigues,completed
+2025-12-22,ORD-0373,15.58,4,Encanamentos Rápidos Lda.,completed
+2025-12-23,ORD-0374,40.01,7,António Ferreira,completed
+2025-12-23,ORD-0375,151.02,3,Encanamentos Rápidos Lda.,completed
+2025-12-23,ORD-0376,71.31,12,Catarina Gomes,completed
+2025-12-23,ORD-0377,22.90,2,Serralharia Central,completed
+2025-12-23,ORD-0378,125.56,13,Miguel Carvalho,completed
+2025-12-23,ORD-0379,186.77,10,João Silva,completed
+2025-12-23,ORD-0380,60.17,4,Carlos Almeida,completed
+2025-12-23,ORD-0381,102.94,11,Luísa Martins,completed
+2025-12-23,ORD-0382,45.29,6,Sara Teixeira,completed
+2025-12-23,ORD-0383,26.11,3,Patrícia Reis,completed
+2025-12-23,ORD-0384,73.44,10,Hugo Azevedo,completed
+2025-12-23,ORD-0385,122.48,4,Serralharia Central,completed
+2025-12-23,ORD-0386,23.07,4,Marta Vieira,completed
+2025-12-23,ORD-0387,59.60,8,Rita Araújo,completed
+2025-12-23,ORD-0388,161.76,4,Isabel Pereira,completed
+2025-12-23,ORD-0389,49.94,4,Ricardo Matos,completed
+2025-12-23,ORD-0390,135.86,4,Ana Costa,completed
+2025-12-23,ORD-0391,73.07,4,Paulo Monteiro,completed
+2025-12-23,ORD-0392,112.03,9,Carpintaria São José,completed
+2025-12-23,ORD-0393,38.39,7,Inês Correia,completed
+2025-12-23,ORD-0394,160.58,11,Sara Teixeira,completed
+2025-12-23,ORD-0395,177.55,10,Empreiteira do Norte S.A.,completed
+2025-12-23,ORD-0396,256.30,8,António Ferreira,completed
+2025-12-24,ORD-0397,89.45,10,Francisco Sousa,completed
+2025-12-24,ORD-0398,138.60,7,Inês Correia,completed
+2025-12-24,ORD-0399,247.61,7,Rui Lopes,completed
+2025-12-24,ORD-0400,74.42,9,Daniel Coelho,completed
+2025-12-24,ORD-0401,208.72,14,Sara Teixeira,completed
+2025-12-24,ORD-0402,258.48,10,Ricardo Matos,completed
+2025-12-24,ORD-0403,27.90,3,Nuno Pinto,completed
+2025-12-24,ORD-0404,44.44,4,André Moreira,completed
+2025-12-24,ORD-0405,25.81,3,Câmara Municipal,completed
+2025-12-24,ORD-0406,111.10,12,Empreiteira do Norte S.A.,cancelled
+2025-12-24,ORD-0407,17.13,2,Carpintaria São José,completed
+2025-12-24,ORD-0408,8.98,1,Ana Costa,completed
+2025-12-24,ORD-0409,205.18,12,Miguel Carvalho,completed
+2025-12-24,ORD-0410,13.39,3,Carlos Almeida,completed
+2025-12-24,ORD-0411,51.65,4,Carlos Almeida,completed
+2025-12-24,ORD-0412,172.26,8,Hotel Praia Azul,completed
+2025-12-24,ORD-0413,22.90,3,Vera Machado,completed
+2025-12-24,ORD-0414,28.91,3,João Silva,completed
+2025-12-24,ORD-0415,495.72,15,Carlos Almeida,completed
+2025-12-24,ORD-0416,35.40,4,Encanamentos Rápidos Lda.,completed
+2025-12-24,ORD-0417,220.95,4,Helena Fernandes,completed
+2025-12-24,ORD-0418,320.53,8,Construções Silva & Filhos,completed
+2025-12-26,ORD-0419,15.17,2,Lúcia Rocha,completed
+2025-12-26,ORD-0420,36.10,7,Electricista Pinto,completed
+2025-12-26,ORD-0421,105.10,9,Miguel Carvalho,completed
+2025-12-26,ORD-0422,22.54,3,Pinturas Modernas Lda.,completed
+2025-12-26,ORD-0423,5.91,4,Electricista Pinto,completed
+2025-12-26,ORD-0424,9.64,1,Pedro Gonçalves,completed
+2025-12-26,ORD-0425,18.56,5,Sofia Cardoso,pending
+2025-12-26,ORD-0426,29.71,4,Catarina Gomes,completed
+2025-12-26,ORD-0427,230.87,8,Patrícia Reis,completed
+2025-12-26,ORD-0428,20.98,4,Vera Machado,completed
+2025-12-26,ORD-0429,18.08,2,Joana Cunha,pending
+2025-12-27,ORD-0430,84.02,9,José Mendes,completed
+2025-12-27,ORD-0431,25.78,2,Patrícia Reis,completed
+2025-12-27,ORD-0432,109.00,5,Marta Vieira,completed
+2025-12-27,ORD-0433,194.03,10,Diogo Tavares,completed
+2025-12-27,ORD-0434,52.79,6,Helena Fernandes,completed
+2025-12-27,ORD-0435,14.71,3,Filipe Nunes,completed
+2025-12-27,ORD-0436,38.95,10,Francisco Sousa,completed
+2025-12-27,ORD-0437,113.38,7,Electricista Pinto,completed
+2025-12-27,ORD-0438,53.64,8,Encanamentos Rápidos Lda.,completed
+2025-12-27,ORD-0439,25.08,6,Encanamentos Rápidos Lda.,completed
+2025-12-27,ORD-0440,14.97,3,Luísa Martins,completed
+2025-12-27,ORD-0441,129.69,8,Electricista Pinto,completed
+2025-12-27,ORD-0442,98.06,15,Ana Costa,completed
+2025-12-27,ORD-0443,9.37,2,Carpintaria São José,completed
+2025-12-27,ORD-0444,51.00,7,Electricista Pinto,completed
+2025-12-27,ORD-0445,168.99,11,Carpintaria São José,pending
+2025-12-27,ORD-0446,6.06,1,Empresa MegaConstruções Lda.,completed
+2025-12-27,ORD-0447,58.42,7,Condomínio Bela Vista,completed
+2025-12-27,ORD-0448,120.76,5,Encanamentos Rápidos Lda.,completed
+2025-12-27,ORD-0449,50.64,2,Bruno Barbosa,completed
+2025-12-27,ORD-0450,35.61,9,Empreiteira do Norte S.A.,completed
+2025-12-27,ORD-0451,100.63,9,Imobiliária Atlântico,completed
+2025-12-29,ORD-0452,90.00,7,Manuel Oliveira,completed
+2025-12-29,ORD-0453,22.60,3,Manuel Oliveira,completed
+2025-12-29,ORD-0454,209.49,12,Cláudia Duarte,completed
+2025-12-29,ORD-0455,56.92,2,Manuel Oliveira,completed
+2025-12-29,ORD-0456,46.81,4,Bruno Barbosa,completed
+2025-12-29,ORD-0457,135.51,11,Condomínio Bela Vista,completed
+2025-12-29,ORD-0458,201.75,6,Teresa Rodrigues,completed
+2025-12-29,ORD-0459,82.24,6,Hotel Praia Azul,completed
+2025-12-29,ORD-0460,38.55,4,Manuel Oliveira,completed
+2025-12-30,ORD-0461,37.21,4,André Moreira,completed
+2025-12-30,ORD-0462,194.34,9,Susana Borges,completed
+2025-12-30,ORD-0463,83.71,7,Condomínio Bela Vista,completed
+2025-12-30,ORD-0464,70.84,9,André Moreira,completed
+2025-12-30,ORD-0465,50.34,4,Francisco Sousa,completed
+2025-12-30,ORD-0466,4.05,1,Restaurante O Marinheiro,completed
+2025-12-30,ORD-0467,11.45,2,Vera Machado,completed
+2025-12-30,ORD-0468,122.91,11,Teresa Rodrigues,completed
+2025-12-30,ORD-0469,26.85,6,Daniel Coelho,pending
+2025-12-30,ORD-0470,66.47,7,Miguel Carvalho,completed
+2025-12-31,ORD-0471,67.49,6,Nuno Pinto,completed
+2025-12-31,ORD-0472,204.74,14,André Moreira,completed
+2025-12-31,ORD-0473,59.35,6,Manuel Oliveira,completed
+2025-12-31,ORD-0474,30.71,2,Hugo Azevedo,completed
+2025-12-31,ORD-0475,7.84,4,Empreiteira do Norte S.A.,completed
+2025-12-31,ORD-0476,61.36,7,Daniel Coelho,completed
+2025-12-31,ORD-0477,13.19,2,Miguel Carvalho,pending
+2025-12-31,ORD-0478,24.68,4,Hugo Azevedo,cancelled
+2025-12-31,ORD-0479,125.07,10,Hugo Azevedo,completed
+2026-01-02,ORD-0480,98.92,3,Diogo Tavares,completed
+2026-01-02,ORD-0481,193.68,8,Sérgio Fonseca,completed
+2026-01-02,ORD-0482,86.49,14,Junta de Freguesia Local,completed
+2026-01-02,ORD-0483,290.13,9,Teresa Rodrigues,completed
+2026-01-02,ORD-0484,76.06,7,Pinturas Modernas Lda.,completed
+2026-01-02,ORD-0485,202.35,7,Sérgio Fonseca,completed
+2026-01-02,ORD-0486,27.54,6,Vera Machado,completed
+2026-01-03,ORD-0487,57.95,6,Marta Vieira,completed
+2026-01-03,ORD-0488,99.92,10,Susana Borges,completed
+2026-01-03,ORD-0489,69.12,7,Cláudia Duarte,completed
+2026-01-03,ORD-0490,5.96,1,Empreiteira do Norte S.A.,completed
+2026-01-03,ORD-0491,193.34,16,Hugo Azevedo,completed
+2026-01-03,ORD-0492,37.10,5,Sara Teixeira,completed
+2026-01-03,ORD-0493,13.62,3,Manuel Oliveira,pending
+2026-01-03,ORD-0494,20.71,4,Marta Vieira,completed
+2026-01-03,ORD-0495,7.95,1,Diogo Tavares,completed
+2026-01-03,ORD-0496,83.28,16,Manuel Oliveira,completed
+2026-01-03,ORD-0497,38.36,8,Miguel Carvalho,completed
+2026-01-03,ORD-0498,6.94,1,Helena Fernandes,completed
+2026-01-03,ORD-0499,167.27,6,Catarina Gomes,completed
+2026-01-03,ORD-0500,61.37,7,Electricista Pinto,pending
+2026-01-03,ORD-0501,73.17,7,Patrícia Reis,completed
+2026-01-05,ORD-0502,58.97,9,Sérgio Fonseca,completed
+2026-01-05,ORD-0503,33.86,5,João Silva,completed
+2026-01-05,ORD-0504,236.38,3,Miguel Carvalho,completed
+2026-01-05,ORD-0505,292.42,4,Sofia Cardoso,completed
+2026-01-05,ORD-0506,60.26,6,Sara Teixeira,completed
+2026-01-05,ORD-0507,166.42,5,Restaurante O Marinheiro,completed
+2026-01-05,ORD-0508,65.54,4,Helena Fernandes,completed
+2026-01-05,ORD-0509,7.45,4,Vera Machado,completed
+2026-01-05,ORD-0510,152.77,2,Câmara Municipal,completed
+2026-01-05,ORD-0511,407.26,12,Isabel Pereira,completed
+2026-01-05,ORD-0512,54.87,10,Bruno Barbosa,completed
+2026-01-05,ORD-0513,90.05,4,Sofia Cardoso,completed
+2026-01-05,ORD-0514,198.72,7,Construções Silva & Filhos,completed
+2026-01-06,ORD-0515,299.01,11,Restaurante O Marinheiro,completed
+2026-01-06,ORD-0516,376.43,7,Ricardo Matos,completed
+2026-01-06,ORD-0517,3.75,1,Susana Borges,completed
+2026-01-06,ORD-0518,29.47,9,Francisco Sousa,completed
+2026-01-06,ORD-0519,36.99,3,Nuno Pinto,completed
+2026-01-06,ORD-0520,150.15,4,Joana Cunha,completed
+2026-01-06,ORD-0521,39.67,7,Rita Araújo,completed
+2026-01-06,ORD-0522,4.51,1,Serralharia Central,completed
+2026-01-07,ORD-0523,18.80,4,Ricardo Matos,completed
+2026-01-07,ORD-0524,116.38,9,Cláudia Duarte,completed
+2026-01-07,ORD-0525,19.05,4,Teresa Rodrigues,completed
+2026-01-07,ORD-0526,212.81,3,Sérgio Fonseca,completed
+2026-01-07,ORD-0527,27.58,5,Joana Cunha,completed
+2026-01-07,ORD-0528,25.34,2,Luísa Martins,completed
+2026-01-07,ORD-0529,132.25,6,Bruno Barbosa,completed
+2026-01-07,ORD-0530,15.89,1,Sofia Cardoso,completed
+2026-01-07,ORD-0531,64.65,5,Luísa Martins,completed
+2026-01-08,ORD-0532,38.57,2,Hotel Praia Azul,completed
+2026-01-08,ORD-0533,185.50,6,Bruno Barbosa,completed
+2026-01-08,ORD-0534,210.69,18,António Ferreira,completed
+2026-01-08,ORD-0535,192.33,7,Ana Costa,completed
+2026-01-08,ORD-0536,70.73,2,Nuno Pinto,completed
+2026-01-08,ORD-0537,53.79,6,Luísa Martins,completed
+2026-01-08,ORD-0538,18.80,4,Susana Borges,completed
+2026-01-08,ORD-0539,293.08,16,Maria Santos,completed
+2026-01-08,ORD-0540,49.09,5,Vera Machado,completed
+2026-01-08,ORD-0541,58.68,10,Hugo Azevedo,pending
+2026-01-09,ORD-0542,62.30,4,Miguel Carvalho,completed
+2026-01-09,ORD-0543,24.59,3,Rita Araújo,completed
+2026-01-09,ORD-0544,21.32,4,Electricista Pinto,completed
+2026-01-09,ORD-0545,34.31,7,Raquel Lourenço,completed
+2026-01-09,ORD-0546,39.21,2,Rui Lopes,completed
+2026-01-09,ORD-0547,48.35,4,Raquel Lourenço,completed
+2026-01-09,ORD-0548,27.49,3,Beatriz Ribeiro,completed
+2026-01-09,ORD-0549,359.33,9,Manuel Oliveira,pending
+2026-01-09,ORD-0550,201.81,14,Cláudia Duarte,completed
+2026-01-09,ORD-0551,23.61,4,Encanamentos Rápidos Lda.,completed
+2026-01-09,ORD-0552,117.51,18,Vera Machado,pending
+2026-01-09,ORD-0553,37.24,4,João Silva,completed
+2026-01-10,ORD-0554,41.10,4,Beatriz Ribeiro,completed
+2026-01-10,ORD-0555,11.32,2,Joana Cunha,completed
+2026-01-10,ORD-0556,19.27,2,Junta de Freguesia Local,completed
+2026-01-10,ORD-0557,101.86,7,Câmara Municipal,completed
+2026-01-10,ORD-0558,354.76,6,Sofia Cardoso,completed
+2026-01-10,ORD-0559,69.82,9,Daniel Coelho,completed
+2026-01-10,ORD-0560,74.45,5,Serralharia Central,completed
+2026-01-10,ORD-0561,48.34,7,Sofia Cardoso,completed
+2026-01-10,ORD-0562,33.65,4,Cláudia Duarte,completed
+2026-01-10,ORD-0563,50.30,4,Patrícia Reis,completed
+2026-01-10,ORD-0564,19.75,7,Daniel Coelho,completed
+2026-01-10,ORD-0565,50.67,8,Maria Santos,completed
+2026-01-10,ORD-0566,18.22,4,Bruno Barbosa,completed
+2026-01-10,ORD-0567,234.75,6,Câmara Municipal,completed
+2026-01-12,ORD-0568,165.25,8,Sérgio Fonseca,completed
+2026-01-12,ORD-0569,100.45,3,Encanamentos Rápidos Lda.,completed
+2026-01-12,ORD-0570,22.99,3,Pinturas Modernas Lda.,completed
+2026-01-12,ORD-0571,4.45,1,Sara Teixeira,completed
+2026-01-12,ORD-0572,274.30,14,Sérgio Fonseca,completed
+2026-01-12,ORD-0573,7.54,1,Raquel Lourenço,completed
+2026-01-12,ORD-0574,40.80,6,Inês Correia,completed
+2026-01-12,ORD-0575,153.36,15,Encanamentos Rápidos Lda.,completed
+2026-01-12,ORD-0576,44.24,9,Sofia Cardoso,completed
+2026-01-13,ORD-0577,25.91,2,Inês Correia,completed
+2026-01-13,ORD-0578,77.66,7,Luísa Martins,completed
+2026-01-13,ORD-0579,48.51,7,Helena Fernandes,completed
+2026-01-13,ORD-0580,277.26,15,Rita Araújo,completed
+2026-01-13,ORD-0581,63.03,4,Paulo Monteiro,completed
+2026-01-13,ORD-0582,271.84,4,Encanamentos Rápidos Lda.,cancelled
+2026-01-14,ORD-0583,18.34,4,Joana Cunha,completed
+2026-01-14,ORD-0584,47.22,7,Obras & Reformas Lda.,completed
+2026-01-14,ORD-0585,213.98,8,António Ferreira,completed
+2026-01-14,ORD-0586,3.92,1,Raquel Lourenço,completed
+2026-01-14,ORD-0587,148.06,16,Ana Costa,completed
+2026-01-14,ORD-0588,435.35,15,Helena Fernandes,completed
+2026-01-14,ORD-0589,97.39,7,Bruno Barbosa,completed
+2026-01-15,ORD-0590,37.41,8,Pedro Gonçalves,pending
+2026-01-15,ORD-0591,42.72,4,Ana Costa,completed
+2026-01-15,ORD-0592,23.19,3,Rui Lopes,completed
+2026-01-15,ORD-0593,44.31,9,Lúcia Rocha,completed
+2026-01-15,ORD-0594,191.34,3,Sara Teixeira,completed
+2026-01-16,ORD-0595,102.61,7,Encanamentos Rápidos Lda.,completed
+2026-01-16,ORD-0596,218.83,7,Tiago Marques,completed
+2026-01-16,ORD-0597,39.78,5,Filipe Nunes,completed
+2026-01-16,ORD-0598,88.07,6,Paulo Monteiro,completed
+2026-01-16,ORD-0599,354.72,11,Nuno Pinto,completed
+2026-01-16,ORD-0600,99.13,8,Helena Fernandes,completed
+2026-01-16,ORD-0601,35.92,2,Maria Santos,completed
+2026-01-16,ORD-0602,52.41,7,Empresa MegaConstruções Lda.,completed
+2026-01-16,ORD-0603,58.21,9,Isabel Pereira,completed
+2026-01-16,ORD-0604,38.96,5,Electricista Pinto,completed
+2026-01-16,ORD-0605,73.52,6,Sérgio Fonseca,completed
+2026-01-16,ORD-0606,47.66,6,Maria Santos,completed
+2026-01-16,ORD-0607,74.33,7,Empresa MegaConstruções Lda.,completed
+2026-01-16,ORD-0608,9.89,2,Condomínio Bela Vista,completed
+2026-01-16,ORD-0609,310.38,9,Rita Araújo,completed
+2026-01-16,ORD-0610,201.96,9,Diogo Tavares,completed
+2026-01-16,ORD-0611,38.51,5,Carlos Almeida,completed
+2026-01-17,ORD-0612,139.81,9,António Ferreira,completed
+2026-01-17,ORD-0613,199.26,5,Imobiliária Atlântico,completed
+2026-01-17,ORD-0614,40.22,5,Sara Teixeira,completed
+2026-01-17,ORD-0615,296.31,6,Susana Borges,completed
+2026-01-17,ORD-0616,13.19,3,Carpintaria São José,completed
+2026-01-17,ORD-0617,22.29,6,Ana Costa,completed
+2026-01-17,ORD-0618,74.68,5,Marta Vieira,completed
+2026-01-17,ORD-0619,45.81,6,Carpintaria São José,completed
+2026-01-17,ORD-0620,636.33,12,Carpintaria São José,completed
+2026-01-17,ORD-0621,96.15,6,Pinturas Modernas Lda.,pending
+2026-01-17,ORD-0622,30.13,5,Isabel Pereira,completed
+2026-01-17,ORD-0623,19.52,5,Marta Vieira,completed
+2026-01-17,ORD-0624,72.84,12,Catarina Gomes,completed
+2026-01-17,ORD-0625,155.84,16,Carpintaria São José,completed
+2026-01-17,ORD-0626,61.44,5,Marta Vieira,completed
+2026-01-17,ORD-0627,19.49,3,Encanamentos Rápidos Lda.,completed
+2026-01-17,ORD-0628,12.82,1,Encanamentos Rápidos Lda.,completed
+2026-01-17,ORD-0629,28.10,4,Nuno Pinto,completed
+2026-01-17,ORD-0630,34.98,6,Restaurante O Marinheiro,completed
+2026-01-17,ORD-0631,42.90,4,Maria Santos,completed
+2026-01-17,ORD-0632,49.42,12,Encanamentos Rápidos Lda.,completed
+2026-01-17,ORD-0633,15.20,3,Luísa Martins,completed
+2026-01-17,ORD-0634,81.18,11,Francisco Sousa,completed
+2026-01-17,ORD-0635,54.88,10,Bruno Barbosa,completed
+2026-01-17,ORD-0636,3.53,1,Restaurante O Marinheiro,completed
+2026-01-19,ORD-0637,17.92,2,Carpintaria São José,completed
+2026-01-19,ORD-0638,369.93,7,Raquel Lourenço,completed
+2026-01-19,ORD-0639,20.27,1,Sérgio Fonseca,completed
+2026-01-19,ORD-0640,36.93,5,Ricardo Matos,completed
+2026-01-19,ORD-0641,52.92,5,Hugo Azevedo,completed
+2026-01-19,ORD-0642,164.32,6,Susana Borges,completed
+2026-01-19,ORD-0643,44.47,4,Susana Borges,completed
+2026-01-19,ORD-0644,181.18,12,Catarina Gomes,completed
+2026-01-19,ORD-0645,407.24,8,Paulo Monteiro,completed
+2026-01-19,ORD-0646,8.74,2,Empreiteira do Norte S.A.,completed
+2026-01-19,ORD-0647,43.85,1,Joana Cunha,completed
+2026-01-19,ORD-0648,32.80,8,Raquel Lourenço,completed
+2026-01-19,ORD-0649,36.24,4,Raquel Lourenço,completed
+2026-01-19,ORD-0650,23.86,4,Construções Silva & Filhos,completed
+2026-01-19,ORD-0651,527.24,7,Electricista Pinto,completed
+2026-01-19,ORD-0652,33.37,5,João Silva,completed
+2026-01-19,ORD-0653,30.52,5,António Ferreira,completed
+2026-01-19,ORD-0654,30.52,1,Isabel Pereira,completed
+2026-01-19,ORD-0655,134.95,8,Manuel Oliveira,completed
+2026-01-19,ORD-0656,76.20,13,Ana Costa,completed
+2026-01-20,ORD-0657,23.05,4,Rui Lopes,completed
+2026-01-20,ORD-0658,12.44,1,Imobiliária Atlântico,completed
+2026-01-20,ORD-0659,86.42,3,Empreiteira do Norte S.A.,completed
+2026-01-20,ORD-0660,21.14,2,Sara Teixeira,completed
+2026-01-20,ORD-0661,66.77,8,Restaurante O Marinheiro,completed
+2026-01-20,ORD-0662,84.41,11,Marta Vieira,completed
+2026-01-20,ORD-0663,413.75,16,Inês Correia,completed
+2026-01-20,ORD-0664,130.02,7,Lúcia Rocha,completed
+2026-01-20,ORD-0665,19.55,5,Ana Costa,completed
+2026-01-20,ORD-0666,174.72,8,António Ferreira,completed
+2026-01-20,ORD-0667,49.68,3,Francisco Sousa,completed
+2026-01-20,ORD-0668,91.91,4,Hugo Azevedo,completed
+2026-01-20,ORD-0669,35.02,4,Hotel Praia Azul,cancelled
+2026-01-21,ORD-0670,157.76,5,Lúcia Rocha,completed
+2026-01-21,ORD-0671,12.10,2,Pedro Gonçalves,completed
+2026-01-21,ORD-0672,7.20,3,Restaurante O Marinheiro,completed
+2026-01-21,ORD-0673,27.09,5,Helena Fernandes,pending
+2026-01-21,ORD-0674,58.61,6,Raquel Lourenço,completed
+2026-01-21,ORD-0675,2.93,1,Carpintaria São José,completed
+2026-01-21,ORD-0676,79.02,9,Empresa MegaConstruções Lda.,completed
+2026-01-21,ORD-0677,6.69,1,Electricista Pinto,completed
+2026-01-21,ORD-0678,87.82,15,Junta de Freguesia Local,completed
+2026-01-21,ORD-0679,101.62,4,Patrícia Reis,completed
+2026-01-21,ORD-0680,27.86,4,Nuno Pinto,completed
+2026-01-21,ORD-0681,54.92,6,Paulo Monteiro,completed
+2026-01-21,ORD-0682,43.57,8,Cláudia Duarte,completed
+2026-01-21,ORD-0683,93.24,14,António Ferreira,completed
+2026-01-21,ORD-0684,12.94,1,Joana Cunha,completed
+2026-01-21,ORD-0685,57.19,5,Raquel Lourenço,completed
+2026-01-21,ORD-0686,300.23,15,João Silva,completed
+2026-01-21,ORD-0687,19.75,1,Marta Vieira,completed
+2026-01-21,ORD-0688,176.95,4,Paulo Monteiro,pending
+2026-01-22,ORD-0689,209.99,5,Pedro Gonçalves,completed
+2026-01-22,ORD-0690,248.47,13,João Silva,completed
+2026-01-22,ORD-0691,7.74,1,Serralharia Central,completed
+2026-01-22,ORD-0692,202.08,13,Rita Araújo,completed
+2026-01-22,ORD-0693,59.68,6,Obras & Reformas Lda.,pending
+2026-01-22,ORD-0694,69.87,6,Diogo Tavares,completed
+2026-01-22,ORD-0695,16.24,3,Patrícia Reis,completed
+2026-01-22,ORD-0696,95.04,8,Helena Fernandes,completed
+2026-01-22,ORD-0697,285.60,12,Electricista Pinto,completed
+2026-01-22,ORD-0698,17.90,4,Construções Silva & Filhos,completed
+2026-01-22,ORD-0699,18.40,2,Raquel Lourenço,completed
+2026-01-23,ORD-0700,73.73,8,Francisco Sousa,completed
+2026-01-23,ORD-0701,198.21,7,Imobiliária Atlântico,completed
+2026-01-23,ORD-0702,18.82,4,Susana Borges,pending
+2026-01-23,ORD-0703,25.58,6,Nuno Pinto,completed
+2026-01-23,ORD-0704,17.99,3,André Moreira,completed
+2026-01-23,ORD-0705,13.67,2,Patrícia Reis,completed
+2026-01-23,ORD-0706,154.86,16,Isabel Pereira,completed
+2026-01-23,ORD-0707,198.08,13,Construções Silva & Filhos,completed
+2026-01-23,ORD-0708,14.86,2,Bruno Barbosa,completed
+2026-01-23,ORD-0709,93.72,16,João Silva,completed
+2026-01-23,ORD-0710,222.65,6,Paulo Monteiro,completed
+2026-01-23,ORD-0711,13.50,4,Lúcia Rocha,completed
+2026-01-23,ORD-0712,37.34,4,Raquel Lourenço,cancelled
+2026-01-23,ORD-0713,6.18,1,Empresa MegaConstruções Lda.,pending
+2026-01-23,ORD-0714,108.28,4,Tiago Marques,completed
+2026-01-24,ORD-0715,113.78,7,Empresa MegaConstruções Lda.,completed
+2026-01-24,ORD-0716,28.10,6,Construções Silva & Filhos,completed
+2026-01-24,ORD-0717,24.77,4,Manuel Oliveira,completed
+2026-01-24,ORD-0718,60.02,7,Câmara Municipal,completed
+2026-01-24,ORD-0719,61.45,3,Joana Cunha,completed
+2026-01-24,ORD-0720,4.79,1,Paulo Monteiro,completed
+2026-01-24,ORD-0721,94.00,12,Pinturas Modernas Lda.,completed
+2026-01-24,ORD-0722,11.23,2,Raquel Lourenço,completed
+2026-01-24,ORD-0723,31.51,5,Hotel Praia Azul,completed
+2026-01-24,ORD-0724,66.38,8,Pinturas Modernas Lda.,completed
+2026-01-24,ORD-0725,60.62,7,Inês Correia,completed
+2026-01-24,ORD-0726,366.46,4,Condomínio Bela Vista,completed
+2026-01-24,ORD-0727,37.79,4,Carlos Almeida,completed
+2026-01-24,ORD-0728,84.78,5,João Silva,completed
+2026-01-24,ORD-0729,57.39,5,Obras & Reformas Lda.,pending
+2026-01-24,ORD-0730,49.08,7,Pedro Gonçalves,pending
+2026-01-24,ORD-0731,417.41,7,Helena Fernandes,completed
+2026-01-26,ORD-0732,23.42,4,Diogo Tavares,completed
+2026-01-26,ORD-0733,1.89,1,Raquel Lourenço,completed
+2026-01-26,ORD-0734,129.49,8,Joana Cunha,completed
+2026-01-26,ORD-0735,42.46,7,Cláudia Duarte,completed
+2026-01-26,ORD-0736,57.79,3,Electricista Pinto,completed
+2026-01-26,ORD-0737,4.33,1,Marta Vieira,completed
+2026-01-26,ORD-0738,52.80,4,Sofia Cardoso,completed
+2026-01-26,ORD-0739,167.95,14,Encanamentos Rápidos Lda.,completed
+2026-01-26,ORD-0740,47.46,6,Miguel Carvalho,completed
+2026-01-26,ORD-0741,12.00,1,Ana Costa,completed
+2026-01-27,ORD-0742,32.01,6,Encanamentos Rápidos Lda.,completed
+2026-01-27,ORD-0743,252.97,11,Junta de Freguesia Local,completed
+2026-01-27,ORD-0744,39.30,5,Restaurante O Marinheiro,completed
+2026-01-27,ORD-0745,41.46,5,Francisco Sousa,completed
+2026-01-27,ORD-0746,192.39,8,Pedro Gonçalves,completed
+2026-01-27,ORD-0747,33.59,6,Maria Santos,completed
+2026-01-27,ORD-0748,30.62,3,Lúcia Rocha,completed
+2026-01-27,ORD-0749,353.88,13,Catarina Gomes,completed
+2026-01-27,ORD-0750,108.72,6,Nuno Pinto,completed
+2026-01-27,ORD-0751,95.84,6,Filipe Nunes,completed
+2026-01-27,ORD-0752,103.97,3,Diogo Tavares,completed
+2026-01-27,ORD-0753,72.37,10,Condomínio Bela Vista,completed
+2026-01-27,ORD-0754,213.55,10,Lúcia Rocha,completed
+2026-01-27,ORD-0755,60.86,6,Manuel Oliveira,completed
+2026-01-27,ORD-0756,40.15,5,Miguel Carvalho,completed
+2026-01-27,ORD-0757,46.04,6,Câmara Municipal,completed
+2026-01-28,ORD-0758,6.92,1,Rita Araújo,completed
+2026-01-28,ORD-0759,35.28,4,Hotel Praia Azul,pending
+2026-01-28,ORD-0760,232.29,7,Isabel Pereira,completed
+2026-01-28,ORD-0761,15.58,4,Cláudia Duarte,completed
+2026-01-28,ORD-0762,258.80,13,Ana Costa,completed
+2026-01-28,ORD-0763,9.26,1,Paulo Monteiro,completed
+2026-01-28,ORD-0764,116.46,4,Hotel Praia Azul,completed
+2026-01-28,ORD-0765,169.46,6,Lúcia Rocha,completed
+2026-01-28,ORD-0766,147.50,8,Miguel Carvalho,completed
+2026-01-28,ORD-0767,5.79,1,Cláudia Duarte,completed
+2026-01-28,ORD-0768,11.64,2,Carpintaria São José,completed
+2026-01-28,ORD-0769,52.58,5,Inês Correia,completed
+2026-01-28,ORD-0770,204.90,9,Miguel Carvalho,completed
+2026-01-28,ORD-0771,93.32,12,Patrícia Reis,completed
+2026-01-28,ORD-0772,15.20,3,Diogo Tavares,completed
+2026-01-28,ORD-0773,14.00,2,Helena Fernandes,completed
+2026-01-29,ORD-0774,11.14,2,Nuno Pinto,completed
+2026-01-29,ORD-0775,3.10,2,Electricista Pinto,completed
+2026-01-29,ORD-0776,137.06,13,Marta Vieira,completed
+2026-01-29,ORD-0777,258.01,12,Hugo Azevedo,completed
+2026-01-29,ORD-0778,12.33,2,Isabel Pereira,completed
+2026-01-29,ORD-0779,18.08,3,Rui Lopes,pending
+2026-01-29,ORD-0780,189.54,10,Tiago Marques,completed
+2026-01-29,ORD-0781,24.29,4,Maria Santos,completed
+2026-01-29,ORD-0782,17.57,2,Electricista Pinto,completed
+2026-01-29,ORD-0783,41.28,2,Pinturas Modernas Lda.,completed
+2026-01-29,ORD-0784,20.06,4,Miguel Carvalho,completed
+2026-01-29,ORD-0785,52.67,6,Hugo Azevedo,pending
+2026-01-29,ORD-0786,124.29,13,Miguel Carvalho,completed
+2026-01-29,ORD-0787,52.72,3,Raquel Lourenço,completed
+2026-01-29,ORD-0788,1.99,1,Patrícia Reis,completed
+2026-01-29,ORD-0789,157.24,12,Patrícia Reis,completed
+2026-01-29,ORD-0790,4.36,1,Ana Costa,completed
+2026-01-29,ORD-0791,93.69,2,Cláudia Duarte,completed
+2026-01-29,ORD-0792,73.56,13,Luísa Martins,completed
+2026-01-30,ORD-0793,9.30,2,Obras & Reformas Lda.,completed
+2026-01-30,ORD-0794,29.98,1,Daniel Coelho,completed
+2026-01-30,ORD-0795,379.57,12,Luísa Martins,completed
+2026-01-30,ORD-0796,36.96,4,António Ferreira,completed
+2026-01-30,ORD-0797,107.90,10,Helena Fernandes,completed
+2026-01-30,ORD-0798,150.49,8,Tiago Marques,completed
+2026-01-30,ORD-0799,194.05,12,Patrícia Reis,completed
+2026-01-30,ORD-0800,86.51,5,Susana Borges,completed
+2026-01-30,ORD-0801,236.98,8,Raquel Lourenço,completed
+2026-01-30,ORD-0802,120.20,5,Ricardo Matos,completed
+2026-01-31,ORD-0803,33.02,5,Diogo Tavares,completed
+2026-01-31,ORD-0804,350.59,6,Teresa Rodrigues,completed
+2026-01-31,ORD-0805,82.08,2,Hotel Praia Azul,completed
+2026-01-31,ORD-0806,26.93,3,Joana Cunha,completed
+2026-01-31,ORD-0807,102.27,4,Obras & Reformas Lda.,cancelled
+2026-01-31,ORD-0808,160.15,4,João Silva,completed
+2026-01-31,ORD-0809,40.36,4,Encanamentos Rápidos Lda.,pending
+2026-01-31,ORD-0810,84.89,8,João Silva,completed
+2026-01-31,ORD-0811,116.38,10,Imobiliária Atlântico,completed
+2026-01-31,ORD-0812,89.69,4,Bruno Barbosa,pending
+2026-01-31,ORD-0813,22.45,5,Hotel Praia Azul,completed
+2026-01-31,ORD-0814,191.64,8,Hugo Azevedo,completed
+2026-01-31,ORD-0815,177.04,15,Sara Teixeira,completed
+2026-01-31,ORD-0816,183.35,7,Cláudia Duarte,completed
+2026-01-31,ORD-0817,25.59,4,José Mendes,completed
+2026-01-31,ORD-0818,136.48,5,Filipe Nunes,pending
+2026-01-31,ORD-0819,95.77,10,Pedro Gonçalves,completed
+2026-01-31,ORD-0820,17.65,4,Beatriz Ribeiro,completed
+2026-01-31,ORD-0821,267.26,12,José Mendes,completed
+2026-02-02,ORD-0822,144.60,6,Hotel Praia Azul,completed
+2026-02-02,ORD-0823,386.57,15,Patrícia Reis,completed
+2026-02-02,ORD-0824,30.65,3,Isabel Pereira,completed
+2026-02-02,ORD-0825,59.64,6,Diogo Tavares,completed
+2026-02-02,ORD-0826,13.67,3,Catarina Gomes,completed
+2026-02-02,ORD-0827,78.61,12,Restaurante O Marinheiro,completed
+2026-02-02,ORD-0828,43.19,3,Marta Vieira,cancelled
+2026-02-02,ORD-0829,32.42,4,Encanamentos Rápidos Lda.,pending
+2026-02-02,ORD-0830,23.51,3,Electricista Pinto,completed
+2026-02-02,ORD-0831,53.60,12,Susana Borges,completed
+2026-02-02,ORD-0832,28.00,5,Filipe Nunes,completed
+2026-02-02,ORD-0833,125.24,7,Pedro Gonçalves,completed
+2026-02-02,ORD-0834,91.14,8,André Moreira,completed
+2026-02-02,ORD-0835,110.28,8,Junta de Freguesia Local,completed
+2026-02-03,ORD-0836,19.52,6,Câmara Municipal,completed
+2026-02-03,ORD-0837,141.55,8,Luísa Martins,completed
+2026-02-03,ORD-0838,391.93,12,Electricista Pinto,completed
+2026-02-03,ORD-0839,209.09,8,Pinturas Modernas Lda.,pending
+2026-02-03,ORD-0840,18.77,4,Joana Cunha,completed
+2026-02-03,ORD-0841,226.95,7,Rita Araújo,pending
+2026-02-03,ORD-0842,7.60,1,Daniel Coelho,completed
+2026-02-03,ORD-0843,143.52,6,Patrícia Reis,completed
+2026-02-03,ORD-0844,4.70,1,Inês Correia,completed
+2026-02-03,ORD-0845,12.41,1,André Moreira,completed
+2026-02-03,ORD-0846,29.90,3,Sofia Cardoso,completed
+2026-02-03,ORD-0847,127.70,8,Luísa Martins,completed
+2026-02-03,ORD-0848,34.83,6,António Ferreira,pending
+2026-02-03,ORD-0849,104.66,7,Sérgio Fonseca,completed
+2026-02-03,ORD-0850,26.01,4,Maria Santos,completed
+2026-02-03,ORD-0851,111.21,13,Maria Santos,completed
+2026-02-03,ORD-0852,42.99,3,Teresa Rodrigues,completed
+2026-02-03,ORD-0853,10.13,3,Miguel Carvalho,completed
+2026-02-04,ORD-0854,17.81,4,Carpintaria São José,completed
+2026-02-04,ORD-0855,80.31,7,Câmara Municipal,completed
+2026-02-04,ORD-0856,13.79,2,Serralharia Central,completed
+2026-02-04,ORD-0857,290.33,12,Maria Santos,completed
+2026-02-04,ORD-0858,402.02,12,Pedro Gonçalves,completed
+2026-02-04,ORD-0859,12.79,2,Hotel Praia Azul,completed
+2026-02-04,ORD-0860,78.99,10,Filipe Nunes,cancelled
+2026-02-04,ORD-0861,71.29,9,Hotel Praia Azul,completed
+2026-02-04,ORD-0862,33.75,5,Sofia Cardoso,completed
+2026-02-04,ORD-0863,452.17,13,João Silva,pending
+2026-02-04,ORD-0864,25.67,3,Câmara Municipal,completed
+2026-02-05,ORD-0865,19.28,3,Hotel Praia Azul,completed
+2026-02-05,ORD-0866,246.20,9,Obras & Reformas Lda.,completed
+2026-02-05,ORD-0867,11.32,2,Susana Borges,completed
+2026-02-05,ORD-0868,50.01,10,Câmara Municipal,completed
+2026-02-05,ORD-0869,22.82,4,Rui Lopes,completed
+2026-02-05,ORD-0870,10.88,3,Daniel Coelho,completed
+2026-02-05,ORD-0871,77.24,10,Nuno Pinto,completed
+2026-02-05,ORD-0872,132.43,14,Nuno Pinto,completed
+2026-02-05,ORD-0873,94.31,1,José Mendes,pending
+2026-02-05,ORD-0874,10.62,4,Manuel Oliveira,completed
+2026-02-05,ORD-0875,40.82,4,Lúcia Rocha,completed
+2026-02-05,ORD-0876,199.97,10,Susana Borges,completed
+2026-02-05,ORD-0877,8.53,1,Ana Costa,pending
+2026-02-05,ORD-0878,77.49,5,Susana Borges,completed
+2026-02-05,ORD-0879,7.74,1,Filipe Nunes,completed
+2026-02-05,ORD-0880,58.89,12,Susana Borges,completed
+2026-02-05,ORD-0881,56.98,5,João Silva,completed
+2026-02-05,ORD-0882,13.18,2,Miguel Carvalho,completed
+2026-02-05,ORD-0883,21.42,4,Ana Costa,completed
+2026-02-06,ORD-0884,19.54,4,Hugo Azevedo,completed
+2026-02-06,ORD-0885,54.34,3,Hotel Praia Azul,completed
+2026-02-06,ORD-0886,9.43,2,Empresa MegaConstruções Lda.,pending
+2026-02-06,ORD-0887,108.04,10,Paulo Monteiro,completed
+2026-02-06,ORD-0888,26.83,4,João Silva,completed
+2026-02-06,ORD-0889,268.74,11,Helena Fernandes,completed
+2026-02-06,ORD-0890,4.44,1,Vera Machado,completed
+2026-02-06,ORD-0891,18.61,3,Maria Santos,completed
+2026-02-06,ORD-0892,22.99,3,Sofia Cardoso,completed
+2026-02-06,ORD-0893,8.61,1,Miguel Carvalho,pending
+2026-02-06,ORD-0894,50.77,4,Isabel Pereira,completed
+2026-02-06,ORD-0895,15.59,2,Rita Araújo,completed
+2026-02-06,ORD-0896,331.06,14,Empresa MegaConstruções Lda.,completed
+2026-02-06,ORD-0897,20.06,3,Nuno Pinto,completed
+2026-02-06,ORD-0898,84.69,7,Susana Borges,completed
+2026-02-06,ORD-0899,32.80,6,Rita Araújo,completed
+2026-02-06,ORD-0900,95.60,7,Condomínio Bela Vista,completed
+2026-02-06,ORD-0901,14.93,2,Catarina Gomes,completed
+2026-02-07,ORD-0902,34.37,6,Francisco Sousa,completed
+2026-02-07,ORD-0903,11.90,2,Joana Cunha,completed
+2026-02-07,ORD-0904,192.61,8,Patrícia Reis,completed
+2026-02-07,ORD-0905,19.58,5,André Moreira,pending
+2026-02-07,ORD-0906,9.15,1,José Mendes,completed
+2026-02-07,ORD-0907,23.40,2,Electricista Pinto,completed
+2026-02-07,ORD-0908,29.76,5,Inês Correia,completed
+2026-02-07,ORD-0909,32.13,6,José Mendes,completed
+2026-02-07,ORD-0910,122.86,8,Rui Lopes,completed
+2026-02-07,ORD-0911,93.50,11,Encanamentos Rápidos Lda.,completed
+2026-02-07,ORD-0912,28.00,7,Maria Santos,completed
+2026-02-07,ORD-0913,26.19,2,Sofia Cardoso,completed
+2026-02-07,ORD-0914,79.15,9,Carlos Almeida,completed
+2026-02-07,ORD-0915,284.79,10,Filipe Nunes,completed
+2026-02-07,ORD-0916,21.03,4,Raquel Lourenço,completed
+2026-02-07,ORD-0917,18.97,3,Paulo Monteiro,completed
+2026-02-07,ORD-0918,30.90,2,Inês Correia,completed
+2026-02-07,ORD-0919,68.98,9,Luísa Martins,completed
+2026-02-07,ORD-0920,51.24,9,Joana Cunha,completed
+2026-02-07,ORD-0921,54.56,12,Encanamentos Rápidos Lda.,completed
+2026-02-07,ORD-0922,21.11,4,Empresa MegaConstruções Lda.,completed
+2026-02-09,ORD-0923,245.20,13,Beatriz Ribeiro,completed
+2026-02-09,ORD-0924,138.63,7,Restaurante O Marinheiro,completed
+2026-02-09,ORD-0925,9.09,1,Francisco Sousa,completed
+2026-02-09,ORD-0926,110.57,7,Câmara Municipal,completed
+2026-02-09,ORD-0927,8.61,1,Isabel Pereira,completed
+2026-02-09,ORD-0928,20.58,5,Helena Fernandes,completed
+2026-02-09,ORD-0929,121.95,4,Hotel Praia Azul,completed
+2026-02-09,ORD-0930,133.07,7,João Silva,completed
+2026-02-09,ORD-0931,28.81,5,Maria Santos,completed
+2026-02-09,ORD-0932,132.14,11,Nuno Pinto,completed
+2026-02-09,ORD-0933,62.22,4,Isabel Pereira,completed
+2026-02-09,ORD-0934,11.23,2,Construções Silva & Filhos,completed
+2026-02-09,ORD-0935,30.86,4,Rita Araújo,completed
+2026-02-09,ORD-0936,175.14,9,Pinturas Modernas Lda.,completed
+2026-02-09,ORD-0937,86.40,13,Obras & Reformas Lda.,completed
+2026-02-09,ORD-0938,6.28,2,Obras & Reformas Lda.,completed
+2026-02-09,ORD-0939,86.64,1,Patrícia Reis,completed
+2026-02-09,ORD-0940,14.51,1,Empreiteira do Norte S.A.,completed
+2026-02-09,ORD-0941,97.94,13,Beatriz Ribeiro,completed
+2026-02-10,ORD-0942,315.38,10,Luísa Martins,pending
+2026-02-10,ORD-0943,5.65,2,Teresa Rodrigues,completed
+2026-02-10,ORD-0944,41.22,6,Catarina Gomes,completed
+2026-02-10,ORD-0945,110.26,5,Rita Araújo,completed
+2026-02-10,ORD-0946,18.01,4,Obras & Reformas Lda.,completed
+2026-02-10,ORD-0947,10.16,1,Cláudia Duarte,completed
+2026-02-10,ORD-0948,99.92,11,Tiago Marques,completed
+2026-02-10,ORD-0949,58.75,8,João Silva,completed
+2026-02-10,ORD-0950,78.51,8,Obras & Reformas Lda.,completed
+2026-02-10,ORD-0951,11.66,2,Daniel Coelho,completed
+2026-02-10,ORD-0952,86.33,8,Obras & Reformas Lda.,completed
+2026-02-10,ORD-0953,63.97,5,Electricista Pinto,completed
+2026-02-10,ORD-0954,4.71,1,Teresa Rodrigues,completed
+2026-02-10,ORD-0955,337.00,17,Serralharia Central,completed
+2026-02-10,ORD-0956,238.33,7,Marta Vieira,completed
+2026-02-10,ORD-0957,13.30,4,Manuel Oliveira,completed
+2026-02-10,ORD-0958,26.13,6,Helena Fernandes,completed
+2026-02-10,ORD-0959,5.87,1,Câmara Municipal,completed
+2026-02-10,ORD-0960,11.52,2,Paulo Monteiro,completed
