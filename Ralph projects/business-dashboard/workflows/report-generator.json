@@ -160,7 +160,37 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1450, 100],
-      "notes": "Sends HTML to Gotenberg (Docker) for Chromium-based PDF conversion"
+      "notes": "Sends HTML to Gotenberg (Docker) for Chromium-based PDF conversion",
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.error !== undefined || !$binary?.data }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Check PDF Error",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1650, 100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ error: 'PDF generation failed. Gotenberg may be unavailable.' }) }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "name": "PDF Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 200]
     },
     {
       "parameters": {
@@ -192,7 +222,7 @@
       "name": "Return PDF",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [1650, 100]
+      "position": [1850, 0]
     }
   ],
   "connections": {
@@ -278,6 +308,24 @@
     },
     "Convert to PDF via Gotenberg": {
       "main": [
+        [
+          {
+            "node": "Check PDF Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check PDF Error": {
+      "main": [
+        [
+          {
+            "node": "PDF Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
         [
           {
             "node": "Return PDF",

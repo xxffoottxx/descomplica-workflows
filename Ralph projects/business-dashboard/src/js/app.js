@@ -136,7 +136,6 @@ async function loadDashboardData() {
       data = await response.json();
     } catch (apiError) {
       // Fallback to demo data
-      console.log('Using demo data');
       data = getDemoData();
     }
 
@@ -364,14 +363,29 @@ function updateEquipa(equipa) {
   equipa.membros.forEach(membro => {
     const memberEl = document.createElement('div');
     memberEl.className = 'team-member';
-    memberEl.innerHTML = `
-      <div class="team-avatar">${getInitials(membro.nome)}</div>
-      <div class="team-info">
-        <div class="team-name">${membro.nome}</div>
-        <div class="team-role">${membro.funcao}</div>
-      </div>
-      <div class="team-hours">${membro.horas}h</div>
-    `;
+
+    const avatar = document.createElement('div');
+    avatar.className = 'team-avatar';
+    avatar.textContent = getInitials(membro.nome);
+
+    const info = document.createElement('div');
+    info.className = 'team-info';
+    const name = document.createElement('div');
+    name.className = 'team-name';
+    name.textContent = membro.nome;
+    const role = document.createElement('div');
+    role.className = 'team-role';
+    role.textContent = membro.funcao;
+    info.appendChild(name);
+    info.appendChild(role);
+
+    const hours = document.createElement('div');
+    hours.className = 'team-hours';
+    hours.textContent = `${membro.horas}h`;
+
+    memberEl.appendChild(avatar);
+    memberEl.appendChild(info);
+    memberEl.appendChild(hours);
     teamList.appendChild(memberEl);
   });
 }
