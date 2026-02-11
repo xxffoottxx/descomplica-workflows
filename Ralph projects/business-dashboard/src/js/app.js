@@ -5,9 +5,8 @@
 
 // Configuration
 const CONFIG = {
-  // Replace with your n8n webhook URLs
-  dataWebhookUrl: 'https://your-n8n-instance.com/webhook/dashboard-data',
-  reportWebhookUrl: 'https://your-n8n-instance.com/webhook/generate-report',
+  dataWebhookUrl: 'https://n8n.descomplicador.pt/webhook/dashboard-refresh',
+  reportWebhookUrl: 'https://n8n.descomplicador.pt/webhook/generate-report',
   refreshInterval: 30 * 60 * 1000, // 30 minutes
   dataEndpoint: 'data/dashboard-data.json', // Fallback to local JSON for demo
 };

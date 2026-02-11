@@ -1,0 +1,465 @@
+Name,Role,Date,CheckIn,CheckOut,Status
+Ralph Medeiros,Proprietário / Gerente,2025-12-02,08:12,18:07,present
+Carla Figueiredo,Subgerente,2025-12-02,08:08,17:05,present
+Bruno Tavares,Vendedor Sénior,2025-12-02,08:00,17:34,present
+Ana Beatriz Sousa,Vendedora,2025-12-02,09:45,17:12,present
+Tiago Mendes,Vendedor,2025-12-02,09:10,18:21,present
+Sérgio Pinto,Armazém / Stock,2025-12-02,08:03,18:44,present
+Marta Coelho,Caixa / Atendimento,2025-12-02,08:01,17:06,present
+Fernando Lopes,Entregas / Motorista,2025-12-02,08:16,17:09,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-03,07:00,18:27,present
+Carla Figueiredo,Subgerente,2025-12-03,09:41,18:14,present
+Bruno Tavares,Vendedor Sénior,2025-12-03,,,day_off
+Ana Beatriz Sousa,Vendedora,2025-12-03,08:31,17:07,present
+Tiago Mendes,Vendedor,2025-12-03,09:22,17:39,present
+Sérgio Pinto,Armazém / Stock,2025-12-03,09:05,17:38,present
+Marta Coelho,Caixa / Atendimento,2025-12-03,09:33,18:38,present
+Fernando Lopes,Entregas / Motorista,2025-12-03,08:04,17:43,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-04,08:11,18:17,present
+Carla Figueiredo,Subgerente,2025-12-04,,,day_off
+Bruno Tavares,Vendedor Sénior,2025-12-04,,,day_off
+Ana Beatriz Sousa,Vendedora,2025-12-04,08:00,17:41,present
+Tiago Mendes,Vendedor,2025-12-04,08:24,18:30,present
+Sérgio Pinto,Armazém / Stock,2025-12-04,08:36,18:17,present
+Marta Coelho,Caixa / Atendimento,2025-12-04,09:08,17:24,present
+Fernando Lopes,Entregas / Motorista,2025-12-04,08:13,17:44,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-05,,,day_off
+Carla Figueiredo,Subgerente,2025-12-05,08:41,17:24,present
+Bruno Tavares,Vendedor Sénior,2025-12-05,09:34,18:31,present
+Ana Beatriz Sousa,Vendedora,2025-12-05,08:24,17:37,present
+Tiago Mendes,Vendedor,2025-12-05,08:44,17:15,present
+Sérgio Pinto,Armazém / Stock,2025-12-05,08:01,18:35,present
+Marta Coelho,Caixa / Atendimento,2025-12-05,08:07,17:22,present
+Fernando Lopes,Entregas / Motorista,2025-12-05,08:09,17:09,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-06,08:07,18:14,present
+Carla Figueiredo,Subgerente,2025-12-06,,,day_off
+Bruno Tavares,Vendedor Sénior,2025-12-06,08:44,14:23,present
+Ana Beatriz Sousa,Vendedora,2025-12-06,,,day_off
+Tiago Mendes,Vendedor,2025-12-06,08:01,13:23,present
+Sérgio Pinto,Armazém / Stock,2025-12-06,,,absent
+Marta Coelho,Caixa / Atendimento,2025-12-06,08:30,13:33,present
+Fernando Lopes,Entregas / Motorista,2025-12-06,,,sick
+Ralph Medeiros,Proprietário / Gerente,2025-12-09,07:09,18:09,present
+Carla Figueiredo,Subgerente,2025-12-09,08:38,17:32,present
+Bruno Tavares,Vendedor Sénior,2025-12-09,09:27,18:29,present
+Ana Beatriz Sousa,Vendedora,2025-12-09,09:36,18:19,present
+Tiago Mendes,Vendedor,2025-12-09,09:10,18:05,present
+Sérgio Pinto,Armazém / Stock,2025-12-09,08:13,18:39,present
+Marta Coelho,Caixa / Atendimento,2025-12-09,09:11,18:35,present
+Fernando Lopes,Entregas / Motorista,2025-12-09,08:26,17:29,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-10,08:26,19:10,present
+Carla Figueiredo,Subgerente,2025-12-10,09:41,18:12,present
+Bruno Tavares,Vendedor Sénior,2025-12-10,08:04,18:38,present
+Ana Beatriz Sousa,Vendedora,2025-12-10,09:01,17:18,present
+Tiago Mendes,Vendedor,2025-12-10,08:04,17:38,present
+Sérgio Pinto,Armazém / Stock,2025-12-10,09:12,18:12,present
+Marta Coelho,Caixa / Atendimento,2025-12-10,08:15,18:05,present
+Fernando Lopes,Entregas / Motorista,2025-12-10,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2025-12-11,08:01,18:20,present
+Carla Figueiredo,Subgerente,2025-12-11,09:00,18:18,present
+Bruno Tavares,Vendedor Sénior,2025-12-11,,,day_off
+Ana Beatriz Sousa,Vendedora,2025-12-11,09:22,17:44,present
+Tiago Mendes,Vendedor,2025-12-11,09:26,18:32,present
+Sérgio Pinto,Armazém / Stock,2025-12-11,08:01,18:24,present
+Marta Coelho,Caixa / Atendimento,2025-12-11,08:18,17:09,present
+Fernando Lopes,Entregas / Motorista,2025-12-11,08:28,17:05,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-12,,,absent
+Carla Figueiredo,Subgerente,2025-12-12,08:45,17:32,present
+Bruno Tavares,Vendedor Sénior,2025-12-12,09:28,17:21,present
+Ana Beatriz Sousa,Vendedora,2025-12-12,09:02,18:43,present
+Tiago Mendes,Vendedor,2025-12-12,08:39,18:04,present
+Sérgio Pinto,Armazém / Stock,2025-12-12,,,day_off
+Marta Coelho,Caixa / Atendimento,2025-12-12,,,absent
+Fernando Lopes,Entregas / Motorista,2025-12-12,08:17,16:31,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-13,08:05,18:17,present
+Carla Figueiredo,Subgerente,2025-12-13,08:11,14:16,present
+Bruno Tavares,Vendedor Sénior,2025-12-13,,,day_off
+Ana Beatriz Sousa,Vendedora,2025-12-13,08:36,14:02,present
+Tiago Mendes,Vendedor,2025-12-13,,,sick
+Sérgio Pinto,Armazém / Stock,2025-12-13,09:23,14:23,present
+Marta Coelho,Caixa / Atendimento,2025-12-13,09:16,13:39,present
+Fernando Lopes,Entregas / Motorista,2025-12-13,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2025-12-15,08:00,18:06,present
+Carla Figueiredo,Subgerente,2025-12-15,08:36,18:04,present
+Bruno Tavares,Vendedor Sénior,2025-12-15,09:42,17:22,present
+Ana Beatriz Sousa,Vendedora,2025-12-15,09:06,17:11,present
+Tiago Mendes,Vendedor,2025-12-15,09:27,17:25,present
+Sérgio Pinto,Armazém / Stock,2025-12-15,09:21,18:31,present
+Marta Coelho,Caixa / Atendimento,2025-12-15,09:07,18:29,present
+Fernando Lopes,Entregas / Motorista,2025-12-15,08:30,17:09,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-16,08:18,18:38,present
+Carla Figueiredo,Subgerente,2025-12-16,08:23,18:30,present
+Bruno Tavares,Vendedor Sénior,2025-12-16,08:01,18:27,present
+Ana Beatriz Sousa,Vendedora,2025-12-16,08:05,17:04,present
+Tiago Mendes,Vendedor,2025-12-16,08:19,18:28,present
+Sérgio Pinto,Armazém / Stock,2025-12-16,,,day_off
+Marta Coelho,Caixa / Atendimento,2025-12-16,09:11,17:05,present
+Fernando Lopes,Entregas / Motorista,2025-12-16,,,sick
+Ralph Medeiros,Proprietário / Gerente,2025-12-17,,,absent
+Carla Figueiredo,Subgerente,2025-12-17,09:30,18:34,present
+Bruno Tavares,Vendedor Sénior,2025-12-17,08:44,18:22,present
+Ana Beatriz Sousa,Vendedora,2025-12-17,,,day_off
+Tiago Mendes,Vendedor,2025-12-17,08:04,18:42,present
+Sérgio Pinto,Armazém / Stock,2025-12-17,08:20,18:20,present
+Marta Coelho,Caixa / Atendimento,2025-12-17,09:09,18:20,present
+Fernando Lopes,Entregas / Motorista,2025-12-17,09:13,17:33,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-18,08:30,18:40,present
+Carla Figueiredo,Subgerente,2025-12-18,08:02,17:12,present
+Bruno Tavares,Vendedor Sénior,2025-12-18,08:38,18:13,present
+Ana Beatriz Sousa,Vendedora,2025-12-18,08:43,18:00,present
+Tiago Mendes,Vendedor,2025-12-18,09:01,18:19,present
+Sérgio Pinto,Armazém / Stock,2025-12-18,08:44,18:41,present
+Marta Coelho,Caixa / Atendimento,2025-12-18,,,sick
+Fernando Lopes,Entregas / Motorista,2025-12-18,09:13,17:21,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-19,07:14,19:23,present
+Carla Figueiredo,Subgerente,2025-12-19,08:34,18:24,present
+Bruno Tavares,Vendedor Sénior,2025-12-19,09:40,18:44,present
+Ana Beatriz Sousa,Vendedora,2025-12-19,08:05,17:05,present
+Tiago Mendes,Vendedor,2025-12-19,09:06,18:39,present
+Sérgio Pinto,Armazém / Stock,2025-12-19,,,absent
+Marta Coelho,Caixa / Atendimento,2025-12-19,08:42,18:26,present
+Fernando Lopes,Entregas / Motorista,2025-12-19,08:17,17:07,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-20,07:11,19:26,present
+Carla Figueiredo,Subgerente,2025-12-20,,,day_off
+Bruno Tavares,Vendedor Sénior,2025-12-20,08:32,14:17,present
+Ana Beatriz Sousa,Vendedora,2025-12-20,,,day_off
+Tiago Mendes,Vendedor,2025-12-20,08:00,14:02,present
+Sérgio Pinto,Armazém / Stock,2025-12-20,,,sick
+Marta Coelho,Caixa / Atendimento,2025-12-20,09:21,13:36,present
+Fernando Lopes,Entregas / Motorista,2025-12-20,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2025-12-22,08:26,18:36,present
+Carla Figueiredo,Subgerente,2025-12-22,09:11,18:20,present
+Bruno Tavares,Vendedor Sénior,2025-12-22,09:14,17:45,present
+Ana Beatriz Sousa,Vendedora,2025-12-22,08:40,18:25,present
+Tiago Mendes,Vendedor,2025-12-22,09:35,17:20,present
+Sérgio Pinto,Armazém / Stock,2025-12-22,08:01,18:00,present
+Marta Coelho,Caixa / Atendimento,2025-12-22,08:01,18:45,present
+Fernando Lopes,Entregas / Motorista,2025-12-22,08:18,17:01,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-23,07:14,19:11,present
+Carla Figueiredo,Subgerente,2025-12-23,08:19,17:34,present
+Bruno Tavares,Vendedor Sénior,2025-12-23,09:16,18:03,present
+Ana Beatriz Sousa,Vendedora,2025-12-23,08:40,17:40,present
+Tiago Mendes,Vendedor,2025-12-23,,,day_off
+Sérgio Pinto,Armazém / Stock,2025-12-23,08:06,17:18,present
+Marta Coelho,Caixa / Atendimento,2025-12-23,08:05,17:31,present
+Fernando Lopes,Entregas / Motorista,2025-12-23,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2025-12-24,07:15,18:26,present
+Carla Figueiredo,Subgerente,2025-12-24,08:13,18:26,present
+Bruno Tavares,Vendedor Sénior,2025-12-24,09:40,18:10,present
+Ana Beatriz Sousa,Vendedora,2025-12-24,08:11,18:36,present
+Tiago Mendes,Vendedor,2025-12-24,08:07,18:22,present
+Sérgio Pinto,Armazém / Stock,2025-12-24,08:10,18:16,present
+Marta Coelho,Caixa / Atendimento,2025-12-24,,,absent
+Fernando Lopes,Entregas / Motorista,2025-12-24,08:16,17:09,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-26,08:03,18:01,present
+Carla Figueiredo,Subgerente,2025-12-26,08:05,18:44,present
+Bruno Tavares,Vendedor Sénior,2025-12-26,,,vacation
+Ana Beatriz Sousa,Vendedora,2025-12-26,08:05,18:45,present
+Tiago Mendes,Vendedor,2025-12-26,09:29,18:31,present
+Sérgio Pinto,Armazém / Stock,2025-12-26,09:12,18:11,present
+Marta Coelho,Caixa / Atendimento,2025-12-26,09:25,17:37,present
+Fernando Lopes,Entregas / Motorista,2025-12-26,,,vacation
+Ralph Medeiros,Proprietário / Gerente,2025-12-27,08:13,19:27,present
+Carla Figueiredo,Subgerente,2025-12-27,,,vacation
+Bruno Tavares,Vendedor Sénior,2025-12-27,09:12,14:23,present
+Ana Beatriz Sousa,Vendedora,2025-12-27,,,vacation
+Tiago Mendes,Vendedor,2025-12-27,,,vacation
+Sérgio Pinto,Armazém / Stock,2025-12-27,09:25,13:07,present
+Marta Coelho,Caixa / Atendimento,2025-12-27,08:22,13:04,present
+Fernando Lopes,Entregas / Motorista,2025-12-27,08:24,17:07,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-29,07:22,19:13,present
+Carla Figueiredo,Subgerente,2025-12-29,09:14,18:04,present
+Bruno Tavares,Vendedor Sénior,2025-12-29,08:33,17:06,present
+Ana Beatriz Sousa,Vendedora,2025-12-29,08:36,18:26,present
+Tiago Mendes,Vendedor,2025-12-29,09:20,18:12,present
+Sérgio Pinto,Armazém / Stock,2025-12-29,09:31,17:17,present
+Marta Coelho,Caixa / Atendimento,2025-12-29,08:28,17:38,present
+Fernando Lopes,Entregas / Motorista,2025-12-29,08:07,17:01,present
+Ralph Medeiros,Proprietário / Gerente,2025-12-30,08:00,19:18,present
+Carla Figueiredo,Subgerente,2025-12-30,09:02,18:33,present
+Bruno Tavares,Vendedor Sénior,2025-12-30,08:04,18:06,present
+Ana Beatriz Sousa,Vendedora,2025-12-30,09:19,18:20,present
+Tiago Mendes,Vendedor,2025-12-30,09:05,18:20,present
+Sérgio Pinto,Armazém / Stock,2025-12-30,08:25,18:44,present
+Marta Coelho,Caixa / Atendimento,2025-12-30,,,vacation
+Fernando Lopes,Entregas / Motorista,2025-12-30,,,absent
+Ralph Medeiros,Proprietário / Gerente,2025-12-31,08:03,18:14,present
+Carla Figueiredo,Subgerente,2025-12-31,08:08,17:20,present
+Bruno Tavares,Vendedor Sénior,2025-12-31,,,vacation
+Ana Beatriz Sousa,Vendedora,2025-12-31,08:05,17:23,present
+Tiago Mendes,Vendedor,2025-12-31,08:44,17:16,present
+Sérgio Pinto,Armazém / Stock,2025-12-31,,,absent
+Marta Coelho,Caixa / Atendimento,2025-12-31,09:04,18:21,present
+Fernando Lopes,Entregas / Motorista,2025-12-31,08:08,17:10,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-02,,,vacation
+Carla Figueiredo,Subgerente,2026-01-02,08:20,17:37,present
+Bruno Tavares,Vendedor Sénior,2026-01-02,,,vacation
+Ana Beatriz Sousa,Vendedora,2026-01-02,08:33,18:15,present
+Tiago Mendes,Vendedor,2026-01-02,09:17,18:30,present
+Sérgio Pinto,Armazém / Stock,2026-01-02,09:18,18:05,present
+Marta Coelho,Caixa / Atendimento,2026-01-02,08:42,18:13,present
+Fernando Lopes,Entregas / Motorista,2026-01-02,08:15,16:13,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-03,,,vacation
+Carla Figueiredo,Subgerente,2026-01-03,,,absent
+Bruno Tavares,Vendedor Sénior,2026-01-03,09:19,14:41,present
+Ana Beatriz Sousa,Vendedora,2026-01-03,08:14,14:24,present
+Tiago Mendes,Vendedor,2026-01-03,,,vacation
+Sérgio Pinto,Armazém / Stock,2026-01-03,08:17,14:10,present
+Marta Coelho,Caixa / Atendimento,2026-01-03,08:09,14:06,present
+Fernando Lopes,Entregas / Motorista,2026-01-03,,,vacation
+Ralph Medeiros,Proprietário / Gerente,2026-01-05,07:15,20:28,present
+Carla Figueiredo,Subgerente,2026-01-05,08:35,17:22,present
+Bruno Tavares,Vendedor Sénior,2026-01-05,08:25,18:27,present
+Ana Beatriz Sousa,Vendedora,2026-01-05,08:28,18:23,present
+Tiago Mendes,Vendedor,2026-01-05,09:27,17:18,present
+Sérgio Pinto,Armazém / Stock,2026-01-05,08:38,18:33,present
+Marta Coelho,Caixa / Atendimento,2026-01-05,09:06,18:03,present
+Fernando Lopes,Entregas / Motorista,2026-01-05,08:07,16:03,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-06,08:08,18:04,present
+Carla Figueiredo,Subgerente,2026-01-06,09:14,18:44,present
+Bruno Tavares,Vendedor Sénior,2026-01-06,09:25,17:14,present
+Ana Beatriz Sousa,Vendedora,2026-01-06,09:31,17:10,present
+Tiago Mendes,Vendedor,2026-01-06,09:40,18:45,present
+Sérgio Pinto,Armazém / Stock,2026-01-06,08:06,17:32,present
+Marta Coelho,Caixa / Atendimento,2026-01-06,,,day_off
+Fernando Lopes,Entregas / Motorista,2026-01-06,09:07,16:20,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-07,07:05,19:29,present
+Carla Figueiredo,Subgerente,2026-01-07,08:42,18:27,present
+Bruno Tavares,Vendedor Sénior,2026-01-07,08:16,17:10,present
+Ana Beatriz Sousa,Vendedora,2026-01-07,08:38,18:30,present
+Tiago Mendes,Vendedor,2026-01-07,09:15,18:07,present
+Sérgio Pinto,Armazém / Stock,2026-01-07,08:36,18:18,present
+Marta Coelho,Caixa / Atendimento,2026-01-07,08:09,17:06,present
+Fernando Lopes,Entregas / Motorista,2026-01-07,09:10,17:31,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-08,08:08,19:16,present
+Carla Figueiredo,Subgerente,2026-01-08,08:22,18:45,present
+Bruno Tavares,Vendedor Sénior,2026-01-08,09:07,18:43,present
+Ana Beatriz Sousa,Vendedora,2026-01-08,08:09,18:14,present
+Tiago Mendes,Vendedor,2026-01-08,08:22,18:01,present
+Sérgio Pinto,Armazém / Stock,2026-01-08,09:23,17:05,present
+Marta Coelho,Caixa / Atendimento,2026-01-08,09:40,17:17,present
+Fernando Lopes,Entregas / Motorista,2026-01-08,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2026-01-09,08:30,20:11,present
+Carla Figueiredo,Subgerente,2026-01-09,09:21,18:37,present
+Bruno Tavares,Vendedor Sénior,2026-01-09,09:19,17:02,present
+Ana Beatriz Sousa,Vendedora,2026-01-09,09:39,17:27,present
+Tiago Mendes,Vendedor,2026-01-09,09:18,17:00,present
+Sérgio Pinto,Armazém / Stock,2026-01-09,08:29,18:09,present
+Marta Coelho,Caixa / Atendimento,2026-01-09,09:39,18:42,present
+Fernando Lopes,Entregas / Motorista,2026-01-09,08:09,16:18,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-10,,,absent
+Carla Figueiredo,Subgerente,2026-01-10,,,sick
+Bruno Tavares,Vendedor Sénior,2026-01-10,08:03,14:08,present
+Ana Beatriz Sousa,Vendedora,2026-01-10,,,day_off
+Tiago Mendes,Vendedor,2026-01-10,08:05,14:09,present
+Sérgio Pinto,Armazém / Stock,2026-01-10,,,day_off
+Marta Coelho,Caixa / Atendimento,2026-01-10,,,sick
+Fernando Lopes,Entregas / Motorista,2026-01-10,09:12,17:25,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-12,,,absent
+Carla Figueiredo,Subgerente,2026-01-12,09:38,18:11,present
+Bruno Tavares,Vendedor Sénior,2026-01-12,09:37,17:43,present
+Ana Beatriz Sousa,Vendedora,2026-01-12,09:08,18:35,present
+Tiago Mendes,Vendedor,2026-01-12,09:05,18:36,present
+Sérgio Pinto,Armazém / Stock,2026-01-12,,,sick
+Marta Coelho,Caixa / Atendimento,2026-01-12,09:06,17:33,present
+Fernando Lopes,Entregas / Motorista,2026-01-12,08:16,17:45,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-13,08:13,19:26,present
+Carla Figueiredo,Subgerente,2026-01-13,,,sick
+Bruno Tavares,Vendedor Sénior,2026-01-13,,,absent
+Ana Beatriz Sousa,Vendedora,2026-01-13,08:08,18:19,present
+Tiago Mendes,Vendedor,2026-01-13,09:08,18:34,present
+Sérgio Pinto,Armazém / Stock,2026-01-13,,,day_off
+Marta Coelho,Caixa / Atendimento,2026-01-13,09:08,18:42,present
+Fernando Lopes,Entregas / Motorista,2026-01-13,09:14,16:05,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-14,07:10,20:06,present
+Carla Figueiredo,Subgerente,2026-01-14,09:44,18:03,present
+Bruno Tavares,Vendedor Sénior,2026-01-14,08:44,17:33,present
+Ana Beatriz Sousa,Vendedora,2026-01-14,09:08,17:43,present
+Tiago Mendes,Vendedor,2026-01-14,08:19,18:19,present
+Sérgio Pinto,Armazém / Stock,2026-01-14,08:31,18:44,present
+Marta Coelho,Caixa / Atendimento,2026-01-14,08:00,17:38,present
+Fernando Lopes,Entregas / Motorista,2026-01-14,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2026-01-15,07:15,18:32,present
+Carla Figueiredo,Subgerente,2026-01-15,08:07,18:25,present
+Bruno Tavares,Vendedor Sénior,2026-01-15,08:15,18:16,present
+Ana Beatriz Sousa,Vendedora,2026-01-15,09:42,18:07,present
+Tiago Mendes,Vendedor,2026-01-15,08:11,17:42,present
+Sérgio Pinto,Armazém / Stock,2026-01-15,08:30,18:18,present
+Marta Coelho,Caixa / Atendimento,2026-01-15,08:37,18:23,present
+Fernando Lopes,Entregas / Motorista,2026-01-15,08:12,17:06,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-16,08:04,18:18,present
+Carla Figueiredo,Subgerente,2026-01-16,09:00,18:19,present
+Bruno Tavares,Vendedor Sénior,2026-01-16,09:02,18:08,present
+Ana Beatriz Sousa,Vendedora,2026-01-16,09:17,17:10,present
+Tiago Mendes,Vendedor,2026-01-16,08:22,18:33,present
+Sérgio Pinto,Armazém / Stock,2026-01-16,08:11,18:09,present
+Marta Coelho,Caixa / Atendimento,2026-01-16,09:29,18:08,present
+Fernando Lopes,Entregas / Motorista,2026-01-16,09:09,17:04,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-17,08:30,19:38,present
+Carla Figueiredo,Subgerente,2026-01-17,09:08,14:37,present
+Bruno Tavares,Vendedor Sénior,2026-01-17,,,day_off
+Ana Beatriz Sousa,Vendedora,2026-01-17,,,day_off
+Tiago Mendes,Vendedor,2026-01-17,,,absent
+Sérgio Pinto,Armazém / Stock,2026-01-17,,,day_off
+Marta Coelho,Caixa / Atendimento,2026-01-17,,,day_off
+Fernando Lopes,Entregas / Motorista,2026-01-17,08:23,17:26,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-19,,,absent
+Carla Figueiredo,Subgerente,2026-01-19,08:04,18:23,present
+Bruno Tavares,Vendedor Sénior,2026-01-19,08:11,18:06,present
+Ana Beatriz Sousa,Vendedora,2026-01-19,09:08,18:36,present
+Tiago Mendes,Vendedor,2026-01-19,08:16,18:28,present
+Sérgio Pinto,Armazém / Stock,2026-01-19,08:12,18:10,present
+Marta Coelho,Caixa / Atendimento,2026-01-19,08:05,18:01,present
+Fernando Lopes,Entregas / Motorista,2026-01-19,09:03,16:02,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-20,07:11,19:36,present
+Carla Figueiredo,Subgerente,2026-01-20,08:21,17:43,present
+Bruno Tavares,Vendedor Sénior,2026-01-20,09:12,17:36,present
+Ana Beatriz Sousa,Vendedora,2026-01-20,09:22,18:35,present
+Tiago Mendes,Vendedor,2026-01-20,,,day_off
+Sérgio Pinto,Armazém / Stock,2026-01-20,09:04,18:05,present
+Marta Coelho,Caixa / Atendimento,2026-01-20,09:06,17:31,present
+Fernando Lopes,Entregas / Motorista,2026-01-20,09:17,17:01,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-21,08:29,19:24,present
+Carla Figueiredo,Subgerente,2026-01-21,08:10,18:04,present
+Bruno Tavares,Vendedor Sénior,2026-01-21,08:33,18:32,present
+Ana Beatriz Sousa,Vendedora,2026-01-21,08:34,18:07,present
+Tiago Mendes,Vendedor,2026-01-21,09:41,17:02,present
+Sérgio Pinto,Armazém / Stock,2026-01-21,09:12,18:03,present
+Marta Coelho,Caixa / Atendimento,2026-01-21,09:42,17:15,present
+Fernando Lopes,Entregas / Motorista,2026-01-21,09:28,17:44,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-22,07:11,18:26,present
+Carla Figueiredo,Subgerente,2026-01-22,08:35,18:08,present
+Bruno Tavares,Vendedor Sénior,2026-01-22,08:06,17:31,present
+Ana Beatriz Sousa,Vendedora,2026-01-22,09:27,18:19,present
+Tiago Mendes,Vendedor,2026-01-22,08:01,17:01,present
+Sérgio Pinto,Armazém / Stock,2026-01-22,08:34,18:24,present
+Marta Coelho,Caixa / Atendimento,2026-01-22,08:35,18:03,present
+Fernando Lopes,Entregas / Motorista,2026-01-22,08:22,16:27,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-23,08:04,18:28,present
+Carla Figueiredo,Subgerente,2026-01-23,09:22,17:21,present
+Bruno Tavares,Vendedor Sénior,2026-01-23,08:15,17:05,present
+Ana Beatriz Sousa,Vendedora,2026-01-23,08:26,18:34,present
+Tiago Mendes,Vendedor,2026-01-23,08:15,17:04,present
+Sérgio Pinto,Armazém / Stock,2026-01-23,09:11,18:02,present
+Marta Coelho,Caixa / Atendimento,2026-01-23,08:18,17:38,present
+Fernando Lopes,Entregas / Motorista,2026-01-23,09:03,17:04,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-24,07:15,19:14,present
+Carla Figueiredo,Subgerente,2026-01-24,09:35,14:41,present
+Bruno Tavares,Vendedor Sénior,2026-01-24,09:44,13:03,present
+Ana Beatriz Sousa,Vendedora,2026-01-24,09:17,13:13,present
+Tiago Mendes,Vendedor,2026-01-24,,,day_off
+Sérgio Pinto,Armazém / Stock,2026-01-24,08:23,13:02,present
+Marta Coelho,Caixa / Atendimento,2026-01-24,,,day_off
+Fernando Lopes,Entregas / Motorista,2026-01-24,,,sick
+Ralph Medeiros,Proprietário / Gerente,2026-01-26,08:18,19:19,present
+Carla Figueiredo,Subgerente,2026-01-26,08:03,18:39,present
+Bruno Tavares,Vendedor Sénior,2026-01-26,08:24,18:28,present
+Ana Beatriz Sousa,Vendedora,2026-01-26,08:24,17:42,present
+Tiago Mendes,Vendedor,2026-01-26,08:42,18:02,present
+Sérgio Pinto,Armazém / Stock,2026-01-26,09:01,18:21,present
+Marta Coelho,Caixa / Atendimento,2026-01-26,,,day_off
+Fernando Lopes,Entregas / Motorista,2026-01-26,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2026-01-27,08:23,20:27,present
+Carla Figueiredo,Subgerente,2026-01-27,,,day_off
+Bruno Tavares,Vendedor Sénior,2026-01-27,,,day_off
+Ana Beatriz Sousa,Vendedora,2026-01-27,09:43,18:34,present
+Tiago Mendes,Vendedor,2026-01-27,09:10,18:29,present
+Sérgio Pinto,Armazém / Stock,2026-01-27,08:08,17:17,present
+Marta Coelho,Caixa / Atendimento,2026-01-27,09:05,17:34,present
+Fernando Lopes,Entregas / Motorista,2026-01-27,09:12,16:39,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-28,08:21,19:41,present
+Carla Figueiredo,Subgerente,2026-01-28,08:07,18:36,present
+Bruno Tavares,Vendedor Sénior,2026-01-28,09:11,18:29,present
+Ana Beatriz Sousa,Vendedora,2026-01-28,08:29,17:22,present
+Tiago Mendes,Vendedor,2026-01-28,08:26,17:37,present
+Sérgio Pinto,Armazém / Stock,2026-01-28,,,absent
+Marta Coelho,Caixa / Atendimento,2026-01-28,09:04,18:11,present
+Fernando Lopes,Entregas / Motorista,2026-01-28,08:08,17:08,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-29,07:04,20:41,present
+Carla Figueiredo,Subgerente,2026-01-29,08:41,17:11,present
+Bruno Tavares,Vendedor Sénior,2026-01-29,09:37,18:02,present
+Ana Beatriz Sousa,Vendedora,2026-01-29,08:03,18:16,present
+Tiago Mendes,Vendedor,2026-01-29,,,absent
+Sérgio Pinto,Armazém / Stock,2026-01-29,09:34,18:02,present
+Marta Coelho,Caixa / Atendimento,2026-01-29,09:06,17:32,present
+Fernando Lopes,Entregas / Motorista,2026-01-29,09:02,16:13,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-30,08:26,19:04,present
+Carla Figueiredo,Subgerente,2026-01-30,09:09,17:20,present
+Bruno Tavares,Vendedor Sénior,2026-01-30,09:21,18:41,present
+Ana Beatriz Sousa,Vendedora,2026-01-30,09:39,17:10,present
+Tiago Mendes,Vendedor,2026-01-30,09:09,18:01,present
+Sérgio Pinto,Armazém / Stock,2026-01-30,08:20,18:45,present
+Marta Coelho,Caixa / Atendimento,2026-01-30,09:13,18:37,present
+Fernando Lopes,Entregas / Motorista,2026-01-30,09:04,17:41,present
+Ralph Medeiros,Proprietário / Gerente,2026-01-31,,,day_off
+Carla Figueiredo,Subgerente,2026-01-31,09:34,13:33,present
+Bruno Tavares,Vendedor Sénior,2026-01-31,09:20,14:12,present
+Ana Beatriz Sousa,Vendedora,2026-01-31,,,absent
+Tiago Mendes,Vendedor,2026-01-31,09:14,14:20,present
+Sérgio Pinto,Armazém / Stock,2026-01-31,,,absent
+Marta Coelho,Caixa / Atendimento,2026-01-31,09:05,14:35,present
+Fernando Lopes,Entregas / Motorista,2026-01-31,09:15,17:14,present
+Ralph Medeiros,Proprietário / Gerente,2026-02-02,08:07,20:08,present
+Carla Figueiredo,Subgerente,2026-02-02,,,absent
+Bruno Tavares,Vendedor Sénior,2026-02-02,,,day_off
+Ana Beatriz Sousa,Vendedora,2026-02-02,09:18,18:20,present
+Tiago Mendes,Vendedor,2026-02-02,09:26,18:09,present
+Sérgio Pinto,Armazém / Stock,2026-02-02,08:11,18:00,present
+Marta Coelho,Caixa / Atendimento,2026-02-02,09:16,18:45,present
+Fernando Lopes,Entregas / Motorista,2026-02-02,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2026-02-03,07:26,19:01,present
+Carla Figueiredo,Subgerente,2026-02-03,08:08,18:33,present
+Bruno Tavares,Vendedor Sénior,2026-02-03,,,day_off
+Ana Beatriz Sousa,Vendedora,2026-02-03,09:44,18:15,present
+Tiago Mendes,Vendedor,2026-02-03,08:21,18:37,present
+Sérgio Pinto,Armazém / Stock,2026-02-03,08:02,17:22,present
+Marta Coelho,Caixa / Atendimento,2026-02-03,,,day_off
+Fernando Lopes,Entregas / Motorista,2026-02-03,09:26,17:18,present
+Ralph Medeiros,Proprietário / Gerente,2026-02-04,07:23,18:37,present
+Carla Figueiredo,Subgerente,2026-02-04,,,day_off
+Bruno Tavares,Vendedor Sénior,2026-02-04,08:37,18:23,present
+Ana Beatriz Sousa,Vendedora,2026-02-04,09:24,18:28,present
+Tiago Mendes,Vendedor,2026-02-04,09:06,17:19,present
+Sérgio Pinto,Armazém / Stock,2026-02-04,08:36,18:33,present
+Marta Coelho,Caixa / Atendimento,2026-02-04,09:18,18:24,present
+Fernando Lopes,Entregas / Motorista,2026-02-04,08:30,16:02,present
+Ralph Medeiros,Proprietário / Gerente,2026-02-05,07:13,20:17,present
+Carla Figueiredo,Subgerente,2026-02-05,09:06,18:18,present
+Bruno Tavares,Vendedor Sénior,2026-02-05,09:17,18:28,present
+Ana Beatriz Sousa,Vendedora,2026-02-05,08:18,18:38,present
+Tiago Mendes,Vendedor,2026-02-05,08:42,18:09,present
+Sérgio Pinto,Armazém / Stock,2026-02-05,08:01,18:02,present
+Marta Coelho,Caixa / Atendimento,2026-02-05,,,day_off
+Fernando Lopes,Entregas / Motorista,2026-02-05,,,absent
+Ralph Medeiros,Proprietário / Gerente,2026-02-06,07:11,18:18,present
+Carla Figueiredo,Subgerente,2026-02-06,,,day_off
+Bruno Tavares,Vendedor Sénior,2026-02-06,08:29,18:07,present
+Ana Beatriz Sousa,Vendedora,2026-02-06,08:28,18:31,present
+Tiago Mendes,Vendedor,2026-02-06,08:17,18:42,present
+Sérgio Pinto,Armazém / Stock,2026-02-06,09:05,18:14,present
+Marta Coelho,Caixa / Atendimento,2026-02-06,09:10,18:21,present
+Fernando Lopes,Entregas / Motorista,2026-02-06,09:23,17:43,present
+Ralph Medeiros,Proprietário / Gerente,2026-02-07,08:28,18:27,present
+Carla Figueiredo,Subgerente,2026-02-07,09:12,13:40,present
+Bruno Tavares,Vendedor Sénior,2026-02-07,,,day_off
+Ana Beatriz Sousa,Vendedora,2026-02-07,,,absent
+Tiago Mendes,Vendedor,2026-02-07,08:31,14:08,present
+Sérgio Pinto,Armazém / Stock,2026-02-07,08:00,14:04,present
+Marta Coelho,Caixa / Atendimento,2026-02-07,08:02,14:44,present
+Fernando Lopes,Entregas / Motorista,2026-02-07,09:07,17:22,present
+Ralph Medeiros,Proprietário / Gerente,2026-02-09,07:28,19:14,present
+Carla Figueiredo,Subgerente,2026-02-09,,,day_off
+Bruno Tavares,Vendedor Sénior,2026-02-09,09:38,18:34,present
+Ana Beatriz Sousa,Vendedora,2026-02-09,08:14,17:18,present
+Tiago Mendes,Vendedor,2026-02-09,09:20,17:42,present
+Sérgio Pinto,Armazém / Stock,2026-02-09,08:29,18:42,present
+Marta Coelho,Caixa / Atendimento,2026-02-09,09:45,17:30,present
+Fernando Lopes,Entregas / Motorista,2026-02-09,,,day_off
+Ralph Medeiros,Proprietário / Gerente,2026-02-10,07:00,19:17,present
+Carla Figueiredo,Subgerente,2026-02-10,09:03,18:20,present
+Bruno Tavares,Vendedor Sénior,2026-02-10,09:26,18:28,present
+Ana Beatriz Sousa,Vendedora,2026-02-10,09:03,18:31,present
+Tiago Mendes,Vendedor,2026-02-10,09:40,17:19,present
+Sérgio Pinto,Armazém / Stock,2026-02-10,08:36,17:34,present
+Marta Coelho,Caixa / Atendimento,2026-02-10,08:39,18:21,present
+Fernando Lopes,Entregas / Motorista,2026-02-10,09:00,17:01,present

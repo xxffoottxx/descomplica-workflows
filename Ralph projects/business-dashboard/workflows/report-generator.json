@@ -10,8 +10,7 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "generate-report",
-        "responseMode": "responseNode",
-        "authentication": "headerAuth"
+        "responseMode": "responseNode"
       },
       "name": "Webhook - Generate Report",
       "type": "n8n-nodes-base.webhook",
@@ -76,6 +75,12 @@
       "type": "n8n-nodes-base.googleSheets",
       "typeVersion": 4,
       "position": [850, 200],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      },
       "notes": "PLACEHOLDER: Replace with ERP system connector",
       "continueOnFail": true,
       "retryOnFail": true,
