@@ -7,6 +7,8 @@
 const CONFIG = {
   dataWebhookUrl: 'https://n8n.descomplicador.pt/webhook/dashboard-refresh',
   reportWebhookUrl: 'https://n8n.descomplicador.pt/webhook/generate-report',
+  webhookAuthHeader: 'Api-Key',
+  webhookAuthToken: 'pcsk_3exga9_NVmGqhfn3fSukBvAHhBQ1SfoCCNoQFGMB4Q1MhxzLuMQn7GJy9ghAFjREqDLKZH',
   refreshInterval: 30 * 60 * 1000, // 30 minutes
   dataEndpoint: 'data/dashboard-data.json', // Fallback to local JSON for demo
 };
@@ -124,7 +126,12 @@ async function loadDashboardData() {
     // Try to fetch from webhook/API first
     let data;
     try {
-      const response = await fetch(CONFIG.dataWebhookUrl);
+      const response = await fetch(CONFIG.dataWebhookUrl, {
+        method: 'POST',
+        headers: {
+          [CONFIG.webhookAuthHeader]: CONFIG.webhookAuthToken,
+        },
+      });
       if (!response.ok) throw new Error('API not available');
       data = await response.json();
     } catch (apiError) {
@@ -408,6 +415,7 @@ async function generateReport() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        [CONFIG.webhookAuthHeader]: CONFIG.webhookAuthToken,
       },
       body: JSON.stringify({
         startDate,
