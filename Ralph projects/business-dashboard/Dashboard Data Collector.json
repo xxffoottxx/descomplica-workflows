@@ -1,0 +1,456 @@
+{
+  "name": "Dashboard Data Collector",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "name": "Schedule - Every 30 Minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [-256, 224],
+      "id": "dbbaae97-2158-471c-8920-5f102bfbc8ed"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dashboard-refresh",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook - Manual Refresh",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [-256, 384],
+      "webhookId": "dashboard-refresh",
+      "id": "ffaab8eb-c6ac-45ab-89da-e9fb5c28220e",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KhqgAMIOVb6glj8J",
+          "name": "Header Auth account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Vendas",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "name": "Google Sheets - Vendas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [0, 0],
+      "id": "226ecf8b-4f63-4a6a-9cc4-09db35a12532",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "PLACEHOLDER: Replace with ERP connector (Artsoft, Primavera, Sage, etc.)"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Tarefas",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "name": "Google Sheets - Tarefas",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [0, 160],
+      "id": "de3b0048-80ac-42d5-b773-80d7a5e5a499",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "PLACEHOLDER: Replace with Task Management System connector"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Stock",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "name": "Google Sheets - Stock",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [0, 304],
+      "id": "6cd07f8b-892f-4d7c-ba80-4caf671d22bc",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "PLACEHOLDER: Replace with Inventory System connector"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Equipa",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "name": "Google Sheets - Equipa",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [0, 464],
+      "id": "8bdb8342-a172-4977-94e3-c334e0ca937a",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "PLACEHOLDER: Replace with HR/Time Tracking System"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "={{ $env.DASHBOARD_SPREADSHEET_ID }}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Email Metrics",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "name": "Google Sheets - Email",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4,
+      "position": [0, 608],
+      "id": "3ee62366-f37c-461d-9784-4747119fae92",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "PLACEHOLDER: Replace with Email System connector (Gmail API, Outlook, etc.)"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "tag-vendas",
+              "name": "_dataSource",
+              "value": "vendas",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "includeOtherFields": true
+        }
+      },
+      "name": "Tag Vendas",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [208, 0],
+      "id": "a1b2c3d4-tag-vendas"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "tag-tarefas",
+              "name": "_dataSource",
+              "value": "tarefas",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "includeOtherFields": true
+        }
+      },
+      "name": "Tag Tarefas",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [208, 160],
+      "id": "a1b2c3d4-tag-tarefas"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "tag-stock",
+              "name": "_dataSource",
+              "value": "stock",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "includeOtherFields": true
+        }
+      },
+      "name": "Tag Stock",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [208, 304],
+      "id": "a1b2c3d4-tag-stock"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "tag-equipa",
+              "name": "_dataSource",
+              "value": "equipa",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "includeOtherFields": true
+        }
+      },
+      "name": "Tag Equipa",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [208, 464],
+      "id": "a1b2c3d4-tag-equipa"
+    },
+    {
+      "parameters": {
+        "mode": "manual",
+        "duplicateItem": false,
+        "assignments": {
+          "assignments": [
+            {
+              "id": "tag-email",
+              "name": "_dataSource",
+              "value": "email",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "includeOtherFields": true
+        }
+      },
+      "name": "Tag Email",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [208, 608],
+      "id": "a1b2c3d4-tag-email"
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n// Dashboard Data Collector - Process & Aggregate\n// Classifies datasets by _dataSource tag added by Set nodes\n// Timezone: Atlantic/Azores with DST awareness\n\n// --- Timezone: compute 'now' in Atlantic/Azores ---\nconst serverNow = new Date();\nconst utcMs = serverNow.getTime() + (serverNow.getTimezoneOffset() * 60000);\nconst month = new Date(utcMs).getUTCMonth();\n// Azores DST: last Sunday of March to last Sunday of October\n// Simplified: April(3) through October(9) = UTC+0, else UTC-1\nconst isDST = month >= 3 && month <= 9;\nconst offsetHours = isDST ? 0 : -1;\nconst now = new Date(utcMs + (offsetHours * 3600000));\nconst today = now.toISOString().split('T')[0];\n\n// --- Helpers ---\nconst safeInt = (v) => { const n = parseInt(v); return isNaN(n) ? 0 : n; };\nconst safeFloat = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };\nconst capPct = (v) => Math.max(-999, Math.min(999, Math.round(v * 10) / 10));\n\nfunction parseTime(dateStr, timeStr) {\n  if (!timeStr || typeof timeStr !== 'string') return null;\n  const match = timeStr.trim().match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?$/);\n  if (!match) return null;\n  const d = new Date(dateStr + 'T' + match[1].padStart(2, '0') + ':' + match[2]);\n  return isNaN(d.getTime()) ? null : d;\n}\n\n// --- Classify items by _dataSource tag ---\nconst allItems = $input.all();\nconst warnings = [];\nlet vendasData = [];\nlet tarefasData = [];\nlet stockData = [];\nlet equipaData = [];\nlet emailData = [];\n\nfor (const item of allItems) {\n  const row = item.json;\n  if (!row || Object.keys(row).length === 0) continue;\n  const src = row._dataSource;\n  if (src === 'vendas') vendasData.push(row);\n  else if (src === 'tarefas') tarefasData.push(row);\n  else if (src === 'stock') stockData.push(row);\n  else if (src === 'equipa') equipaData.push(row);\n  else if (src === 'email') emailData.push(row);\n}\n\n// --- Track missing data sources ---\nconst sources = { Vendas: vendasData, Tarefas: tarefasData, Stock: stockData, Equipa: equipaData, Email: emailData };\nfor (const [name, data] of Object.entries(sources)) {\n  if (data.length === 0) warnings.push(name + ': no data returned');\n}\nif (Object.values(sources).every(d => d.length === 0)) {\n  throw new Error('All data sources failed - check spreadsheet ID, sheet names, and credentials');\n}\n\n// --- Process Sales ---\nfunction processVendas(data) {\n  const todayData = data.filter(r => r.Date === today);\n  const yd = new Date(now); yd.setDate(yd.getDate() - 1);\n  const yesterday = yd.toISOString().split('T')[0];\n  const yesterdayData = data.filter(r => r.Date === yesterday);\n\n  const receitaHoje = todayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaOntem = yesterdayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaMudanca = receitaOntem > 0 ? capPct((receitaHoje - receitaOntem) / receitaOntem * 100) : 0;\n\n  const pedidosHoje = todayData.length;\n  const pedidosOntem = yesterdayData.length;\n  const pedidosMudanca = pedidosOntem > 0 ? capPct((pedidosHoje - pedidosOntem) / pedidosOntem * 100) : 0;\n\n  const weekData = [];\n  for (let i = 6; i >= 0; i--) {\n    const d = new Date(now); d.setDate(d.getDate() - i);\n    const ds = d.toISOString().split('T')[0];\n    weekData.push(data.filter(r => r.Date === ds).reduce((s, r) => s + safeFloat(r.Amount), 0));\n  }\n  const totalSemana = weekData.reduce((s, v) => s + v, 0);\n  const ticketMedio = pedidosHoje > 0 ? Math.round(receitaHoje / pedidosHoje * 100) / 100 : 0;\n\n  const monthData = [];\n  for (let w = 0; w < 4; w++) {\n    let wt = 0;\n    for (let d = 0; d < 7; d++) {\n      const dt = new Date(now); dt.setDate(dt.getDate() - ((w * 7) + d));\n      const ds = dt.toISOString().split('T')[0];\n      wt += data.filter(r => r.Date === ds).reduce((s, r) => s + safeFloat(r.Amount), 0);\n    }\n    monthData.unshift(wt);\n  }\n  const totalMes = monthData.reduce((s, v) => s + v, 0);\n\n  // Hourly: use real data if Hour column exists, otherwise flag as estimated\n  const hasHour = todayData.length > 0 && todayData[0].Hour !== undefined;\n  let todayChart;\n  if (hasHour) {\n    const hrs = ['09','10','11','12','13','14','15','16','17','18'];\n    todayChart = {\n      labels: hrs.map(h => h + 'h'),\n      values: hrs.map(h => todayData.filter(r => String(r.Hour).padStart(2,'0') === h).reduce((s, r) => s + safeFloat(r.Amount), 0)),\n      isEstimated: false\n    };\n  } else {\n    const mult = [0.05,0.14,0.24,0.36,0.47,0.60,0.74,0.86,0.96,1];\n    todayChart = {\n      labels: ['9h','10h','11h','12h','13h','14h','15h','16h','17h','18h'],\n      values: mult.map(f => Math.round(receitaHoje * f * 100) / 100),\n      isEstimated: true\n    };\n  }\n\n  return {\n    receitaHoje, receitaMudanca, pedidosHoje, pedidosMudanca,\n    ticketMedio, totalSemana, totalMes,\n    today: todayChart,\n    week: { labels: ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'], values: weekData },\n    month: { labels: ['Sem 1','Sem 2','Sem 3','Sem 4'], values: monthData }\n  };\n}\n\n// --- Process Tasks ---\nfunction processTarefas(data) {\n  const abertas = data.filter(r => (r.Status || '').toLowerCase() === 'open').length;\n  const concluidasHoje = data.filter(r => (r.Status || '').toLowerCase() === 'completed' && r.Date === today).length;\n  const atrasadas = data.filter(r => (r.Status || '').toLowerCase() === 'open' && new Date(r.DueDate) < now).length;\n  return { abertas, concluidasHoje, atrasadas };\n}\n\n// --- Process Stock ---\nfunction processStock(data) {\n  const baixoStock = data.filter(r => {\n    const qty = safeInt(r.Quantity);\n    const min = safeInt(r.MinQuantity);\n    return min > 0 && qty < min;\n  }).map(r => ({\n    produto: r.Product || 'Unknown',\n    quantidade: safeInt(r.Quantity),\n    minimo: safeInt(r.MinQuantity)\n  }));\n  const totalProdutos = data.length;\n  const valorTotal = Math.round(data.reduce((s, r) => s + (safeInt(r.Quantity) * safeFloat(r.UnitPrice)), 0) * 100) / 100;\n  return { baixoStock, totalProdutos, valorTotal };\n}\n\n// --- Process Team ---\nfunction processEquipa(data) {\n  const todayData = data.filter(r => r.Date === today && (r.Status || '').toLowerCase() === 'present');\n  const presentes = todayData.length;\n\n  const horasTrabalhadas = todayData.reduce((sum, r) => {\n    const ci = parseTime(today, r.CheckIn);\n    if (!ci) return sum;\n    const co = parseTime(today, r.CheckOut) || now;\n    let h = (co - ci) / 3600000;\n    if (h < 0) h += 24;\n    return sum + h;\n  }, 0);\n\n  const membros = todayData.map(r => {\n    const ci = parseTime(today, r.CheckIn);\n    let horas = 0;\n    let emTurno = false;\n    if (ci) {\n      const co = parseTime(today, r.CheckOut);\n      emTurno = !co;\n      let h = ((co || now) - ci) / 3600000;\n      if (h < 0) h += 24;\n      horas = Math.round(h * 10) / 10;\n    }\n    return { nome: r.Name || 'Unknown', funcao: r.Role || '', horas, emTurno };\n  });\n\n  return { presentes, horasTrabalhadas: Math.round(horasTrabalhadas * 10) / 10, membros };\n}\n\n// --- Process Email ---\nfunction processEmail(data) {\n  const todayRow = data.find(r => r.Date === today);\n  if (!todayRow && data.length > 0) warnings.push('Email: no data for today');\n  return {\n    naoLidas: safeInt(todayRow?.Unread),\n    importantes: safeInt(todayRow?.Important),\n    enviadasHoje: safeInt(todayRow?.Sent),\n    taxaResposta: safeInt(todayRow?.ResponseRate)\n  };\n}\n\n// --- Build output ---\nconst vendas = processVendas(vendasData);\nconst tarefas = processTarefas(tarefasData);\nconst stock = processStock(stockData);\nconst equipa = processEquipa(equipaData);\nconst email = processEmail(emailData);\n\nreturn { json: {\n  metadata: {\n    generatedAt: now.toISOString(),\n    timezone: 'Atlantic/Azores',\n    warnings: warnings.length > 0 ? warnings : null\n  },\n  resumo: {\n    receitaHoje: vendas.receitaHoje,\n    receitaMudanca: vendas.receitaMudanca,\n    pedidosHoje: vendas.pedidosHoje,\n    pedidosMudanca: vendas.pedidosMudanca,\n    tarefasAbertas: tarefas.abertas,\n    tarefasConcluidas: tarefas.concluidasHoje,\n    emailsNaoLidos: email.naoLidas,\n    emailsImportantes: email.importantes\n  },\n  vendas, tarefas, stock, email, equipa\n}};\n} catch (err) {\n  return { json: { error: true, message: err.message, metadata: { generatedAt: new Date().toISOString() } } };\n}"
+      },
+      "name": "Process & Aggregate Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [448, 304],
+      "id": "562a421f-ed8d-4dfa-8806-07c4e77e5f1e",
+      "notes": "Classifies by _dataSource tag. Azores timezone. NaN-safe. Warnings on missing data."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "webhook-check",
+              "leftValue": "={{ $('Webhook - Manual Refresh').isExecuted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "name": "Is Webhook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [656, 304],
+      "id": "a1b2c3d4-is-webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [864, 224],
+      "id": "90bf8880-02d6-42dc-9a34-a7e14082e5c3"
+    },
+    {
+      "parameters": {},
+      "name": "Schedule Run Complete",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [864, 400],
+      "id": "a1b2c3d4-schedule-done",
+      "notes": "Schedule runs end here. Add persistence (file, DB, cache) when needed."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule - Every 30 Minutes": {
+      "main": [
+        [
+          { "node": "Google Sheets - Vendas", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Tarefas", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Stock", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Equipa", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Email", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Webhook - Manual Refresh": {
+      "main": [
+        [
+          { "node": "Google Sheets - Vendas", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Tarefas", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Stock", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Equipa", "type": "main", "index": 0 },
+          { "node": "Google Sheets - Email", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "Google Sheets - Vendas": {
+      "main": [[ { "node": "Tag Vendas", "type": "main", "index": 0 } ]]
+    },
+    "Google Sheets - Tarefas": {
+      "main": [[ { "node": "Tag Tarefas", "type": "main", "index": 0 } ]]
+    },
+    "Google Sheets - Stock": {
+      "main": [[ { "node": "Tag Stock", "type": "main", "index": 0 } ]]
+    },
+    "Google Sheets - Equipa": {
+      "main": [[ { "node": "Tag Equipa", "type": "main", "index": 0 } ]]
+    },
+    "Google Sheets - Email": {
+      "main": [[ { "node": "Tag Email", "type": "main", "index": 0 } ]]
+    },
+    "Tag Vendas": {
+      "main": [[ { "node": "Process & Aggregate Data", "type": "main", "index": 0 } ]]
+    },
+    "Tag Tarefas": {
+      "main": [[ { "node": "Process & Aggregate Data", "type": "main", "index": 0 } ]]
+    },
+    "Tag Stock": {
+      "main": [[ { "node": "Process & Aggregate Data", "type": "main", "index": 0 } ]]
+    },
+    "Tag Equipa": {
+      "main": [[ { "node": "Process & Aggregate Data", "type": "main", "index": 0 } ]]
+    },
+    "Tag Email": {
+      "main": [[ { "node": "Process & Aggregate Data", "type": "main", "index": 0 } ]]
+    },
+    "Process & Aggregate Data": {
+      "main": [[ { "node": "Is Webhook?", "type": "main", "index": 0 } ]]
+    },
+    "Is Webhook?": {
+      "main": [
+        [ { "node": "Respond to Webhook", "type": "main", "index": 0 } ],
+        [ { "node": "Schedule Run Complete", "type": "main", "index": 0 } ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "executionTimeout": 300,
+    "saveExecutionProgress": true,
+    "availableInMCP": false
+  },
+  "versionId": "8375de31-a69f-4ca9-854b-fd4b20d2a2ae",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "tY4CaW9m_rDjHoyhYO74x",
+  "tags": []
+}
