@@ -3,16 +3,16 @@
  * Handles caching, offline support, and background sync
  */
 
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.7.0';
 const CACHE_NAME = `dashboard-${CACHE_VERSION}`;
 
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/css/styles.css',
-  '/js/app.js',
-  '/js/auth.js',
-  '/manifest.json',
+  './',
+  './index.html',
+  './css/styles.css',
+  './js/app.js',
+  './js/auth.js',
+  './manifest.json',
   'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js'
 ];
 

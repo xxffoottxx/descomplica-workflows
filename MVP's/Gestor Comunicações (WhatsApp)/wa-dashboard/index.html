@@ -2,6 +2,7 @@
 <html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://descomplicador.pt; connect-src 'self' https://n8n.descomplicador.pt">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
@@ -67,6 +68,14 @@
                 </label>
             </div>
         </div>
+        <div id="archive-bar" class="archive-bar" style="display: none;">
+            <button id="archive-toggle" class="archive-toggle-btn">
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                    <path fill="currentColor" d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
+                </svg>
+                <span id="archive-toggle-text">Ver arquivadas</span>
+            </button>
+        </div>
         <div id="conversations-container" class="conversations-container">
         </div>
     </div>
@@ -106,12 +115,20 @@
                     <p id="chat-phone"></p>
                 </div>
             </div>
-            <button id="takeover-btn" class="takeover-btn" aria-label="Assumir conversa">
-                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                    <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
-                </svg>
-                <span id="takeover-label">Assumir</span>
-            </button>
+            <div class="chat-header-actions">
+                <button id="archive-btn" class="archive-btn" aria-label="Arquivar conversa">
+                    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                        <path fill="currentColor" d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
+                    </svg>
+                    <span id="archive-label">Arquivar</span>
+                </button>
+                <button id="takeover-btn" class="takeover-btn" aria-label="Assumir conversa">
+                    <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                        <path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                    </svg>
+                    <span id="takeover-label">Assumir</span>
+                </button>
+            </div>
         </header>
         <div id="window-warning" class="window-warning" style="display:none;" role="alert">
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">

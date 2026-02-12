@@ -7,15 +7,16 @@ class AuthManager {
   constructor() {
     // Default PIN hash (PIN: 1234) - should be changed in production
     // Generated via: await crypto.subtle.digest('SHA-256', new TextEncoder().encode('1234'))
-    this.defaultPinHash = 'a4e624d686e03ed2767c0abd85c14426b0b1157d2ce81d27bb4fe4f6f01d688a';
+    this.defaultPinHash = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4';
     this.storageKey = 'dashboard_pin_hash';
     this.sessionKey = 'dashboard_authenticated';
     this.init();
   }
 
   init() {
-    // Ensure there's a PIN hash in storage (use default if not set)
-    if (!localStorage.getItem(this.storageKey)) {
+    const stored = localStorage.getItem(this.storageKey);
+    // Replace the old incorrect hash, or set default if no hash exists
+    if (!stored || stored === 'a4e624d686e03ed2767c0abd85c14426b0b1157d2ce81d27bb4fe4f6f01d688a') {
       localStorage.setItem(this.storageKey, this.defaultPinHash);
     }
   }
@@ -237,6 +238,10 @@ class PinInput {
           setTimeout(() => {
             mainApp.style.opacity = '1';
           }, 10);
+        }
+        // Initialize the dashboard after PIN success
+        if (typeof initApp === 'function') {
+          initApp();
         }
       }, 300);
     }

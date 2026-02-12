@@ -19,6 +19,7 @@ const state = {
   lastUpdate: null,
   charts: {},
   currentPeriod: 'today',
+  selectedDate: new Date().toISOString().split('T')[0],
 };
 
 /**
@@ -54,6 +55,9 @@ function setupUI() {
   // Update current date
   updateCurrentDate();
 
+  // Dark mode toggle
+  setupThemeToggle();
+
   // Refresh button
   const refreshBtn = document.getElementById('refresh-btn');
   refreshBtn.addEventListener('click', () => {
@@ -79,6 +83,28 @@ function setupUI() {
   document.getElementById('cancel-report-btn').addEventListener('click', hideReportModal);
   document.getElementById('confirm-report-btn').addEventListener('click', generateReport);
 
+  // Low stock toggle
+  document.getElementById('toggle-low-stock').addEventListener('click', () => {
+    const list = document.getElementById('low-stock-list');
+    const btn = document.getElementById('toggle-low-stock');
+    const isExpanded = list.classList.contains('expanded');
+
+    if (isExpanded) {
+      list.style.maxHeight = list.scrollHeight + 'px';
+      requestAnimationFrame(() => {
+        list.style.maxHeight = '0';
+      });
+      list.classList.remove('expanded');
+      list.classList.add('collapsed');
+      btn.classList.remove('open');
+    } else {
+      list.classList.remove('collapsed');
+      list.classList.add('expanded');
+      list.style.maxHeight = list.scrollHeight + 'px';
+      btn.classList.add('open');
+    }
+  });
+
   // Sales period tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -87,6 +113,18 @@ function setupUI() {
     });
   });
 
+  // Date picker
+  const datePicker = document.getElementById('date-picker');
+  if (datePicker) {
+    datePicker.value = state.selectedDate;
+    datePicker.max = new Date().toISOString().split('T')[0];
+    datePicker.addEventListener('change', (e) => {
+      state.selectedDate = e.target.value;
+      updateSectionTitle();
+      loadDashboardData();
+    });
+  }
+
   // Setup default report dates (last 7 days)
   const today = new Date();
   const lastWeek = new Date(today);
@@ -94,6 +132,38 @@ function setupUI() {
 
   document.getElementById('report-end-date').valueAsDate = today;
   document.getElementById('report-start-date').valueAsDate = lastWeek;
+}
+
+/**
+ * Setup Dark Mode Toggle
+ */
+function setupThemeToggle() {
+  const themeToggle = document.getElementById('theme-toggle');
+  const lightIcon = document.getElementById('theme-icon-light');
+  const darkIcon = document.getElementById('theme-icon-dark');
+
+  const updateThemeIcons = (theme) => {
+    if (theme === 'dark') {
+      lightIcon.style.display = 'none';
+      darkIcon.style.display = 'block';
+    } else {
+      lightIcon.style.display = 'block';
+      darkIcon.style.display = 'none';
+    }
+  };
+
+  // Initialize icon state
+  const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+  updateThemeIcons(currentTheme);
+
+  themeToggle.addEventListener('click', () => {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('dashboard_theme', newTheme);
+    updateThemeIcons(newTheme);
+  });
 }
 
 /**
@@ -117,6 +187,23 @@ function updateCurrentDate() {
 }
 
 /**
+ * Update Section Title Based on Selected Date
+ */
+function updateSectionTitle() {
+  const today = new Date().toISOString().split('T')[0];
+  const sectionTitle = document.querySelector('.dashboard-section .section-title');
+  if (!sectionTitle) return;
+
+  if (state.selectedDate === today) {
+    sectionTitle.textContent = 'Resumo do Dia';
+  } else {
+    const parts = state.selectedDate.split('-');
+    const formatted = parts[2] + '/' + parts[1] + '/' + parts[0];
+    sectionTitle.textContent = 'Resumo de ' + formatted;
+  }
+}
+
+/**
  * Load Dashboard Data
  */
 async function loadDashboardData() {
@@ -129,8 +216,10 @@ async function loadDashboardData() {
       const response = await fetch(CONFIG.dataWebhookUrl, {
         method: 'POST',
         headers: {
+          'Content-Type': 'application/json',
           [CONFIG.webhookAuthHeader]: CONFIG.webhookAuthToken,
         },
+        body: JSON.stringify({ date: state.selectedDate }),
       });
       if (!response.ok) throw new Error('API not available');
       data = await response.json();
@@ -215,14 +304,14 @@ function updateSalesChart(data) {
       datasets: [{
         label: 'Vendas',
         data: data.values,
-        borderColor: '#2563eb',
-        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+        borderColor: '#b5e04e',
+        backgroundColor: 'rgba(181, 224, 78, 0.1)',
         borderWidth: 2,
         fill: true,
         tension: 0.4,
         pointRadius: 4,
         pointHoverRadius: 6,
-        pointBackgroundColor: '#2563eb',
+        pointBackgroundColor: '#b5e04e',
         pointBorderColor: '#fff',
         pointBorderWidth: 2,
       }]
@@ -257,14 +346,17 @@ function updateSalesChart(data) {
           beginAtZero: true,
           ticks: {
             callback: (value) => {
-              return formatCurrency(value);
+              if (value >= 1000) return (value / 1000).toFixed(1) + 'k EUR';
+              return value + ' EUR';
             },
             font: {
               size: 11
             }
           },
           grid: {
-            color: 'rgba(0, 0, 0, 0.05)'
+            color: document.documentElement.getAttribute('data-theme') === 'dark'
+              ? 'rgba(255, 255, 255, 0.08)'
+              : 'rgba(0, 0, 0, 0.05)'
           }
         },
         x: {
@@ -327,15 +419,30 @@ function updateStock(stock) {
 
   // Update low stock alerts
   const alertList = document.getElementById('low-stock-list');
+  const toggleBtn = document.getElementById('toggle-low-stock');
+  const toggleText = document.getElementById('low-stock-toggle-text');
   alertList.innerHTML = '';
 
   if (stock.baixoStock.length > 0) {
+    toggleBtn.style.display = 'flex';
+    toggleText.textContent = `Ver ${stock.baixoStock.length} produtos em baixo stock`;
+
     stock.baixoStock.forEach(item => {
       const alertEl = document.createElement('div');
       alertEl.className = 'alert-item';
       alertEl.textContent = `${item.produto}: ${item.quantidade} unidades (mín: ${item.minimo})`;
       alertList.appendChild(alertEl);
     });
+
+    // Set max-height for animation if already expanded
+    if (alertList.classList.contains('expanded')) {
+      alertList.style.maxHeight = alertList.scrollHeight + 'px';
+    }
+  } else {
+    toggleBtn.style.display = 'none';
+    alertList.classList.remove('expanded');
+    alertList.classList.add('collapsed');
+    toggleBtn.classList.remove('open');
   }
 }
 
@@ -412,12 +519,12 @@ async function generateReport() {
   const endDate = document.getElementById('report-end-date').value;
 
   if (!startDate || !endDate) {
-    alert('Por favor, selecione ambas as datas');
+    showToast('Por favor, selecione ambas as datas', 'warning');
     return;
   }
 
   if (new Date(startDate) > new Date(endDate)) {
-    alert('A data de início deve ser anterior à data de fim');
+    showToast('A data de início deve ser anterior à data de fim', 'warning');
     return;
   }
 
@@ -453,7 +560,7 @@ async function generateReport() {
 
   } catch (error) {
     console.error('Report generation error:', error);
-    alert('Erro ao gerar relatório. Por favor, tente novamente.');
+    showToast('Erro ao gerar relatório. Por favor, tente novamente.', 'error');
   } finally {
     hideLoading();
   }
@@ -500,11 +607,33 @@ function hideLoading() {
 }
 
 /**
+ * Show Toast Notification
+ */
+function showToast(message, type = 'error', duration = 4000) {
+  let toast = document.getElementById('toast-notification');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast-notification';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.className = `toast ${type}`;
+  requestAnimationFrame(() => {
+    toast.classList.add('visible');
+  });
+  clearTimeout(toast._timeout);
+  toast._timeout = setTimeout(() => {
+    toast.classList.remove('visible');
+  }, duration);
+}
+
+/**
  * Show Error Message
  */
 function showError(message) {
-  // Could implement a toast notification here
   console.error(message);
+  showToast(message, 'error');
 }
 
 /**

@@ -223,25 +223,11 @@
     },
     {
       "parameters": {
-        "mode": "manual",
-        "duplicateItem": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "tag-vendas",
-              "name": "_dataSource",
-              "value": "vendas",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {
-          "includeOtherFields": true
-        }
+        "jsCode": "return $input.all().map(item => { item.json._dataSource = 'vendas'; return item; });"
       },
       "name": "Tag Vendas",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         208,
         0
@@ -250,25 +236,11 @@
     },
     {
       "parameters": {
-        "mode": "manual",
-        "duplicateItem": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "tag-tarefas",
-              "name": "_dataSource",
-              "value": "tarefas",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {
-          "includeOtherFields": true
-        }
+        "jsCode": "return $input.all().map(item => { item.json._dataSource = 'tarefas'; return item; });"
       },
       "name": "Tag Tarefas",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         208,
         160
@@ -277,25 +249,11 @@
     },
     {
       "parameters": {
-        "mode": "manual",
-        "duplicateItem": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "tag-stock",
-              "name": "_dataSource",
-              "value": "stock",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {
-          "includeOtherFields": true
-        }
+        "jsCode": "return $input.all().map(item => { item.json._dataSource = 'stock'; return item; });"
       },
       "name": "Tag Stock",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         208,
         304
@@ -304,25 +262,11 @@
     },
     {
       "parameters": {
-        "mode": "manual",
-        "duplicateItem": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "tag-equipa",
-              "name": "_dataSource",
-              "value": "equipa",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {
-          "includeOtherFields": true
-        }
+        "jsCode": "return $input.all().map(item => { item.json._dataSource = 'equipa'; return item; });"
       },
       "name": "Tag Equipa",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         208,
         464
@@ -331,25 +275,11 @@
     },
     {
       "parameters": {
-        "mode": "manual",
-        "duplicateItem": false,
-        "assignments": {
-          "assignments": [
-            {
-              "id": "tag-email",
-              "name": "_dataSource",
-              "value": "email",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {
-          "includeOtherFields": true
-        }
+        "jsCode": "return $input.all().map(item => { item.json._dataSource = 'email'; return item; });"
       },
       "name": "Tag Email",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         208,
         608
@@ -358,13 +288,65 @@
     },
     {
       "parameters": {
-        "jsCode": "try {\n// Dashboard Data Collector - Process & Aggregate\n// Classifies datasets by _dataSource tag added by Set nodes\n// Timezone: Atlantic/Azores with DST awareness\n\n// --- Timezone: compute 'now' in Atlantic/Azores ---\nconst serverNow = new Date();\nconst utcMs = serverNow.getTime() + (serverNow.getTimezoneOffset() * 60000);\nconst month = new Date(utcMs).getUTCMonth();\n// Azores DST: last Sunday of March to last Sunday of October\n// Simplified: April(3) through October(9) = UTC+0, else UTC-1\nconst isDST = month >= 3 && month <= 9;\nconst offsetHours = isDST ? 0 : -1;\nconst now = new Date(utcMs + (offsetHours * 3600000));\nconst today = now.toISOString().split('T')[0];\n\n// --- Helpers ---\nconst safeInt = (v) => { const n = parseInt(v); return isNaN(n) ? 0 : n; };\nconst safeFloat = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };\nconst capPct = (v) => Math.max(-999, Math.min(999, Math.round(v * 10) / 10));\n\nfunction parseTime(dateStr, timeStr) {\n  if (!timeStr || typeof timeStr !== 'string') return null;\n  const match = timeStr.trim().match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?$/);\n  if (!match) return null;\n  const d = new Date(dateStr + 'T' + match[1].padStart(2, '0') + ':' + match[2]);\n  return isNaN(d.getTime()) ? null : d;\n}\n\n// --- Classify items by _dataSource tag ---\nconst allItems = $input.all();\nconst warnings = [];\nlet vendasData = [];\nlet tarefasData = [];\nlet stockData = [];\nlet equipaData = [];\nlet emailData = [];\n\nfor (const item of allItems) {\n  const row = item.json;\n  if (!row || Object.keys(row).length === 0) continue;\n  const src = row._dataSource;\n  if (src === 'vendas') vendasData.push(row);\n  else if (src === 'tarefas') tarefasData.push(row);\n  else if (src === 'stock') stockData.push(row);\n  else if (src === 'equipa') equipaData.push(row);\n  else if (src === 'email') emailData.push(row);\n}\n\n// --- Track missing data sources ---\nconst sources = { Vendas: vendasData, Tarefas: tarefasData, Stock: stockData, Equipa: equipaData, Email: emailData };\nfor (const [name, data] of Object.entries(sources)) {\n  if (data.length === 0) warnings.push(name + ': no data returned');\n}\nif (Object.values(sources).every(d => d.length === 0)) {\n  throw new Error('All data sources failed - check spreadsheet ID, sheet names, and credentials');\n}\n\n// --- Process Sales ---\nfunction processVendas(data) {\n  const todayData = data.filter(r => r.Date === today);\n  const yd = new Date(now); yd.setDate(yd.getDate() - 1);\n  const yesterday = yd.toISOString().split('T')[0];\n  const yesterdayData = data.filter(r => r.Date === yesterday);\n\n  const receitaHoje = todayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaOntem = yesterdayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaMudanca = receitaOntem > 0 ? capPct((receitaHoje - receitaOntem) / receitaOntem * 100) : 0;\n\n  const pedidosHoje = todayData.length;\n  const pedidosOntem = yesterdayData.length;\n  const pedidosMudanca = pedidosOntem > 0 ? capPct((pedidosHoje - pedidosOntem) / pedidosOntem * 100) : 0;\n\n  const weekData = [];\n  for (let i = 6; i >= 0; i--) {\n    const d = new Date(now); d.setDate(d.getDate() - i);\n    const ds = d.toISOString().split('T')[0];\n    weekData.push(data.filter(r => r.Date === ds).reduce((s, r) => s + safeFloat(r.Amount), 0));\n  }\n  const totalSemana = weekData.reduce((s, v) => s + v, 0);\n  const ticketMedio = pedidosHoje > 0 ? Math.round(receitaHoje / pedidosHoje * 100) / 100 : 0;\n\n  const monthData = [];\n  for (let w = 0; w < 4; w++) {\n    let wt = 0;\n    for (let d = 0; d < 7; d++) {\n      const dt = new Date(now); dt.setDate(dt.getDate() - ((w * 7) + d));\n      const ds = dt.toISOString().split('T')[0];\n      wt += data.filter(r => r.Date === ds).reduce((s, r) => s + safeFloat(r.Amount), 0);\n    }\n    monthData.unshift(wt);\n  }\n  const totalMes = monthData.reduce((s, v) => s + v, 0);\n\n  // Hourly: use real data if Hour column exists, otherwise flag as estimated\n  const hasHour = todayData.length > 0 && todayData[0].Hour !== undefined;\n  let todayChart;\n  if (hasHour) {\n    const hrs = ['09','10','11','12','13','14','15','16','17','18'];\n    todayChart = {\n      labels: hrs.map(h => h + 'h'),\n      values: hrs.map(h => todayData.filter(r => String(r.Hour).padStart(2,'0') === h).reduce((s, r) => s + safeFloat(r.Amount), 0)),\n      isEstimated: false\n    };\n  } else {\n    const mult = [0.05,0.14,0.24,0.36,0.47,0.60,0.74,0.86,0.96,1];\n    todayChart = {\n      labels: ['9h','10h','11h','12h','13h','14h','15h','16h','17h','18h'],\n      values: mult.map(f => Math.round(receitaHoje * f * 100) / 100),\n      isEstimated: true\n    };\n  }\n\n  return {\n    receitaHoje, receitaMudanca, pedidosHoje, pedidosMudanca,\n    ticketMedio, totalSemana, totalMes,\n    today: todayChart,\n    week: { labels: ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'], values: weekData },\n    month: { labels: ['Sem 1','Sem 2','Sem 3','Sem 4'], values: monthData }\n  };\n}\n\n// --- Process Tasks ---\nfunction processTarefas(data) {\n  const abertas = data.filter(r => (r.Status || '').toLowerCase() === 'open').length;\n  const concluidasHoje = data.filter(r => (r.Status || '').toLowerCase() === 'completed' && r.Date === today).length;\n  const atrasadas = data.filter(r => (r.Status || '').toLowerCase() === 'open' && new Date(r.DueDate) < now).length;\n  return { abertas, concluidasHoje, atrasadas };\n}\n\n// --- Process Stock ---\nfunction processStock(data) {\n  const baixoStock = data.filter(r => {\n    const qty = safeInt(r.Quantity);\n    const min = safeInt(r.MinQuantity);\n    return min > 0 && qty < min;\n  }).map(r => ({\n    produto: r.Product || 'Unknown',\n    quantidade: safeInt(r.Quantity),\n    minimo: safeInt(r.MinQuantity)\n  }));\n  const totalProdutos = data.length;\n  const valorTotal = Math.round(data.reduce((s, r) => s + (safeInt(r.Quantity) * safeFloat(r.UnitPrice)), 0) * 100) / 100;\n  return { baixoStock, totalProdutos, valorTotal };\n}\n\n// --- Process Team ---\nfunction processEquipa(data) {\n  const todayData = data.filter(r => r.Date === today && (r.Status || '').toLowerCase() === 'present');\n  const presentes = todayData.length;\n\n  const horasTrabalhadas = todayData.reduce((sum, r) => {\n    const ci = parseTime(today, r.CheckIn);\n    if (!ci) return sum;\n    const co = parseTime(today, r.CheckOut) || now;\n    let h = (co - ci) / 3600000;\n    if (h < 0) h += 24;\n    return sum + h;\n  }, 0);\n\n  const membros = todayData.map(r => {\n    const ci = parseTime(today, r.CheckIn);\n    let horas = 0;\n    let emTurno = false;\n    if (ci) {\n      const co = parseTime(today, r.CheckOut);\n      emTurno = !co;\n      let h = ((co || now) - ci) / 3600000;\n      if (h < 0) h += 24;\n      horas = Math.round(h * 10) / 10;\n    }\n    return { nome: r.Name || 'Unknown', funcao: r.Role || '', horas, emTurno };\n  });\n\n  return { presentes, horasTrabalhadas: Math.round(horasTrabalhadas * 10) / 10, membros };\n}\n\n// --- Process Email ---\nfunction processEmail(data) {\n  const todayRow = data.find(r => r.Date === today);\n  if (!todayRow && data.length > 0) warnings.push('Email: no data for today');\n  return {\n    naoLidas: safeInt(todayRow?.Unread),\n    importantes: safeInt(todayRow?.Important),\n    enviadasHoje: safeInt(todayRow?.Sent),\n    taxaResposta: safeInt(todayRow?.ResponseRate)\n  };\n}\n\n// --- Build output ---\nconst vendas = processVendas(vendasData);\nconst tarefas = processTarefas(tarefasData);\nconst stock = processStock(stockData);\nconst equipa = processEquipa(equipaData);\nconst email = processEmail(emailData);\n\nreturn { json: {\n  metadata: {\n    generatedAt: now.toISOString(),\n    timezone: 'Atlantic/Azores',\n    warnings: warnings.length > 0 ? warnings : null\n  },\n  resumo: {\n    receitaHoje: vendas.receitaHoje,\n    receitaMudanca: vendas.receitaMudanca,\n    pedidosHoje: vendas.pedidosHoje,\n    pedidosMudanca: vendas.pedidosMudanca,\n    tarefasAbertas: tarefas.abertas,\n    tarefasConcluidas: tarefas.concluidasHoje,\n    emailsNaoLidos: email.naoLidas,\n    emailsImportantes: email.importantes\n  },\n  vendas, tarefas, stock, email, equipa\n}};\n} catch (err) {\n  return { json: { error: true, message: err.message, metadata: { generatedAt: new Date().toISOString() } } };\n}"
+        "mode": "append"
+      },
+      "name": "Merge 1",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        416,
+        80
+      ],
+      "id": "merge-001-vt"
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "name": "Merge 2",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        576,
+        192
+      ],
+      "id": "merge-002-vs"
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "name": "Merge 3",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        736,
+        330
+      ],
+      "id": "merge-003-ve"
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "name": "Merge 4",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        896,
+        470
+      ],
+      "id": "merge-004-em"
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n// Dashboard Data Collector - Process & Aggregate\n// Classifies datasets by _dataSource tag added by Set nodes\n// Timezone: Atlantic/Azores with DST awareness\n\n// --- Timezone: compute 'now' in Atlantic/Azores ---\nconst serverNow = new Date();\nconst utcMs = serverNow.getTime() + (serverNow.getTimezoneOffset() * 60000);\nconst month = new Date(utcMs).getUTCMonth();\n// Azores DST: last Sunday of March to last Sunday of October\n// Simplified: April(3) through October(9) = UTC+0, else UTC-1\nconst isDST = month >= 3 && month <= 9;\nconst offsetHours = isDST ? 0 : -1;\nconst now = new Date(utcMs + (offsetHours * 3600000));\nlet today = now.toISOString().split('T')[0];\n\n// --- Optional date parameter from webhook ---\ntry {\n  const webhookBody = $('Webhook - Manual Refresh').first().json.body;\n  if (webhookBody && webhookBody.date && /^\\d{4}-\\d{2}-\\d{2}$/.test(webhookBody.date)) {\n    today = webhookBody.date;\n  }\n} catch (e) { /* scheduled run - no webhook body */ }\n\n// --- Date Normalization ---\nfunction normalizeDate(val) {\n  if (val == null || val === '') return null;\n  const s = String(val).trim();\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s;\n  const dmy = s.match(/^(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})$/);\n  if (dmy) return dmy[3] + '-' + dmy[2].padStart(2,'0') + '-' + dmy[1].padStart(2,'0');\n  if (s.includes('T')) { const p = s.split('T')[0]; if (/^\\d{4}-\\d{2}-\\d{2}$/.test(p)) return p; }\n  const num = Number(s);\n  if (!isNaN(num) && num > 10000 && num < 100000) {\n    const epoch = new Date(Date.UTC(1899, 11, 30));\n    epoch.setUTCDate(epoch.getUTCDate() + num);\n    return epoch.toISOString().split('T')[0];\n  }\n  return null;\n}\n\n// --- Helpers ---\nconst safeInt = (v) => { const n = parseInt(v); return isNaN(n) ? 0 : n; };\nconst safeFloat = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };\nconst capPct = (v) => Math.max(-999, Math.min(999, Math.round(v * 10) / 10));\n\nfunction parseTime(dateStr, timeStr) {\n  if (!timeStr || typeof timeStr !== 'string') return null;\n  const match = timeStr.trim().match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?$/);\n  if (!match) return null;\n  const d = new Date(dateStr + 'T' + match[1].padStart(2, '0') + ':' + match[2]);\n  return isNaN(d.getTime()) ? null : d;\n}\n\n// --- Classify items by _dataSource tag ---\nconst allItems = $input.all();\nconst warnings = [];\nlet vendasData = [];\nlet tarefasData = [];\nlet stockData = [];\nlet equipaData = [];\nlet emailData = [];\n\nfor (const item of allItems) {\n  const row = item.json;\n  if (!row || Object.keys(row).length <= 1) continue;\n  const src = row._dataSource;\n  if (src === 'vendas') vendasData.push(row);\n  else if (src === 'tarefas') tarefasData.push(row);\n  else if (src === 'stock') stockData.push(row);\n  else if (src === 'equipa') equipaData.push(row);\n  else if (src === 'email') emailData.push(row);\n}\n\n// --- Track missing data sources ---\nconst sources = { Vendas: vendasData, Tarefas: tarefasData, Stock: stockData, Equipa: equipaData, Email: emailData };\nfor (const [name, data] of Object.entries(sources)) {\n  if (data.length === 0) warnings.push(name + ': no data returned');\n}\nif (Object.values(sources).every(d => d.length === 0)) {\n  throw new Error('All data sources failed - check spreadsheet ID, sheet names, and credentials');\n}\n\n// --- Process Sales ---\nfunction processVendas(data) {\n  const todayData = data.filter(r => normalizeDate(r.Date) === today);\n  const yd = new Date(now); yd.setDate(yd.getDate() - 1);\n  const yesterday = yd.toISOString().split('T')[0];\n  const yesterdayData = data.filter(r => normalizeDate(r.Date) === yesterday);\n\n  const receitaHoje = todayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaOntem = yesterdayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaMudanca = receitaOntem > 0 ? capPct((receitaHoje - receitaOntem) / receitaOntem * 100) : 0;\n\n  const pedidosHoje = todayData.length;\n  const pedidosOntem = yesterdayData.length;\n  const pedidosMudanca = pedidosOntem > 0 ? capPct((pedidosHoje - pedidosOntem) / pedidosOntem * 100) : 0;\n\n  const weekData = [];\n  for (let i = 6; i >= 0; i--) {\n    const d = new Date(now); d.setDate(d.getDate() - i);\n    const ds = d.toISOString().split('T')[0];\n    weekData.push(data.filter(r => normalizeDate(r.Date) === ds).reduce((s, r) => s + safeFloat(r.Amount), 0));\n  }\n  const totalSemana = weekData.reduce((s, v) => s + v, 0);\n  const ticketMedio = pedidosHoje > 0 ? Math.round(receitaHoje / pedidosHoje * 100) / 100 : 0;\n\n  const monthData = [];\n  for (let w = 0; w < 4; w++) {\n    let wt = 0;\n    for (let d = 0; d < 7; d++) {\n      const dt = new Date(now); dt.setDate(dt.getDate() - ((w * 7) + d));\n      const ds = dt.toISOString().split('T')[0];\n      wt += data.filter(r => normalizeDate(r.Date) === ds).reduce((s, r) => s + safeFloat(r.Amount), 0);\n    }\n    monthData.unshift(wt);\n  }\n  const totalMes = monthData.reduce((s, v) => s + v, 0);\n\n  // Hourly: use real data if Hour column exists, otherwise flag as estimated\n  const hasHour = todayData.length > 0 && todayData[0].Hour !== undefined;\n  let todayChart;\n  if (hasHour) {\n    const hrs = ['09','10','11','12','13','14','15','16','17','18'];\n    todayChart = {\n      labels: hrs.map(h => h + 'h'),\n      values: hrs.map(h => todayData.filter(r => String(r.Hour).padStart(2,'0') === h).reduce((s, r) => s + safeFloat(r.Amount), 0)),\n      isEstimated: false\n    };\n  } else {\n    const mult = [0.05,0.14,0.24,0.36,0.47,0.60,0.74,0.86,0.96,1];\n    todayChart = {\n      labels: ['9h','10h','11h','12h','13h','14h','15h','16h','17h','18h'],\n      values: mult.map(f => Math.round(receitaHoje * f * 100) / 100),\n      isEstimated: true\n    };\n  }\n\n  return {\n    receitaHoje, receitaMudanca, pedidosHoje, pedidosMudanca,\n    ticketMedio, totalSemana, totalMes,\n    today: todayChart,\n    week: { labels: ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'], values: weekData },\n    month: { labels: ['Sem 1','Sem 2','Sem 3','Sem 4'], values: monthData }\n  };\n}\n\n// --- Process Tasks ---\nfunction processTarefas(data) {\n  const s = (r) => (r.Status || '').toLowerCase();\n  const abertas = data.filter(r => s(r) === 'open' || s(r) === 'pending').length;\n  const concluidasHoje = data.filter(r => s(r) === 'completed' && normalizeDate(r.DueDate) === today).length;\n  const atrasadas = data.filter(r => s(r) === 'overdue').length;\n  return { abertas, concluidasHoje, atrasadas };\n}\n\n// --- Process Stock ---\nfunction processStock(data) {\n  const baixoStock = data.filter(r => {\n    const qty = safeInt(r.Quantity);\n    const min = safeInt(r.MinQuantity);\n    return min > 0 && qty < min;\n  }).map(r => ({\n    produto: r.Product || 'Unknown',\n    quantidade: safeInt(r.Quantity),\n    minimo: safeInt(r.MinQuantity)\n  }));\n  const totalProdutos = data.length;\n  const valorTotal = Math.round(data.reduce((s, r) => s + (safeInt(r.Quantity) * safeFloat(r.UnitPrice)), 0) * 100) / 100;\n  return { baixoStock, totalProdutos, valorTotal };\n}\n\n// --- Process Team ---\nfunction processEquipa(data) {\n  const todayData = data.filter(r => normalizeDate(r.Date) === today && (r.Status || '').toLowerCase() === 'present');\n  const presentes = todayData.length;\n\n  const horasTrabalhadas = todayData.reduce((sum, r) => {\n    const ci = parseTime(today, r.CheckIn);\n    if (!ci) return sum;\n    const co = parseTime(today, r.CheckOut) || now;\n    let h = (co - ci) / 3600000;\n    if (h < 0) h += 24;\n    return sum + h;\n  }, 0);\n\n  const membros = todayData.map(r => {\n    const ci = parseTime(today, r.CheckIn);\n    let horas = 0;\n    let emTurno = false;\n    if (ci) {\n      const co = parseTime(today, r.CheckOut);\n      emTurno = !co;\n      let h = ((co || now) - ci) / 3600000;\n      if (h < 0) h += 24;\n      horas = Math.round(h * 10) / 10;\n    }\n    return { nome: r.Name || 'Unknown', funcao: r.Role || '', horas, emTurno };\n  });\n\n  return { presentes, horasTrabalhadas: Math.round(horasTrabalhadas * 10) / 10, membros };\n}\n\n// --- Process Email ---\nfunction processEmail(data) {\n  const todayRow = data.find(r => normalizeDate(r.Date) === today);\n  if (!todayRow && data.length > 0) warnings.push('Email: no data for today');\n  return {\n    naoLidas: safeInt(todayRow?.Unread),\n    importantes: safeInt(todayRow?.Important),\n    enviadasHoje: safeInt(todayRow?.Sent),\n    taxaResposta: safeInt(todayRow?.ResponseRate)\n  };\n}\n\n// --- Build output ---\nconst vendas = processVendas(vendasData);\nconst tarefas = processTarefas(tarefasData);\nconst stock = processStock(stockData);\nconst equipa = processEquipa(equipaData);\nconst email = processEmail(emailData);\n\nreturn { json: {\n  metadata: {\n    generatedAt: now.toISOString(),\n    timezone: 'Atlantic/Azores',\n    warnings: warnings.length > 0 ? warnings : null,\n    selectedDate: today,\n    debug: { vendasRows: vendasData.length, sampleDate: vendasData.length > 0 ? vendasData[0].Date : null }\n  },\n  resumo: {\n    receitaHoje: vendas.receitaHoje,\n    receitaMudanca: vendas.receitaMudanca,\n    pedidosHoje: vendas.pedidosHoje,\n    pedidosMudanca: vendas.pedidosMudanca,\n    tarefasAbertas: tarefas.abertas,\n    tarefasConcluidas: tarefas.concluidasHoje,\n    emailsNaoLidos: email.naoLidas,\n    emailsImportantes: email.importantes\n  },\n  vendas, tarefas, stock, email, equipa\n}};\n} catch (err) {\n  return { json: { error: true, message: err.message, metadata: { generatedAt: new Date().toISOString() } } };\n}"
       },
       "name": "Process & Aggregate Data",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        1100,
         304
       ],
       "id": "562a421f-ed8d-4dfa-8806-07c4e77e5f1e",
@@ -396,7 +378,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
       "position": [
-        656,
+        1308,
         304
       ],
       "id": "a1b2c3d4-is-webhook"
@@ -411,7 +393,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        864,
+        1516,
         224
       ],
       "id": "90bf8880-02d6-42dc-9a34-a7e14082e5c3"
@@ -422,7 +404,7 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        864,
+        1516,
         400
       ],
       "id": "a1b2c3d4-schedule-done",
@@ -551,7 +533,7 @@
       "main": [
         [
           {
-            "node": "Process & Aggregate Data",
+            "node": "Merge 1",
             "type": "main",
             "index": 0
           }
@@ -562,9 +544,9 @@
       "main": [
         [
           {
-            "node": "Process & Aggregate Data",
+            "node": "Merge 1",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -573,9 +555,9 @@
       "main": [
         [
           {
-            "node": "Process & Aggregate Data",
+            "node": "Merge 2",
             "type": "main",
-            "index": 0
+            "index": 1
           }
         ]
       ]
@@ -584,14 +566,58 @@
       "main": [
         [
           {
-            "node": "Process & Aggregate Data",
+            "node": "Merge 3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tag Email": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge 1": {
+      "main": [
+        [
+          {
+            "node": "Merge 2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Tag Email": {
+    "Merge 2": {
+      "main": [
+        [
+          {
+            "node": "Merge 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 3": {
+      "main": [
+        [
+          {
+            "node": "Merge 4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge 4": {
       "main": [
         [
           {
@@ -1064,7 +1090,7 @@
       },
       {
         "parameters": {
-          "jsCode": "try {\n// Dashboard Data Collector - Process & Aggregate\n// Classifies datasets by _dataSource tag added by Set nodes\n// Timezone: Atlantic/Azores with DST awareness\n\n// --- Timezone: compute 'now' in Atlantic/Azores ---\nconst serverNow = new Date();\nconst utcMs = serverNow.getTime() + (serverNow.getTimezoneOffset() * 60000);\nconst month = new Date(utcMs).getUTCMonth();\n// Azores DST: last Sunday of March to last Sunday of October\n// Simplified: April(3) through October(9) = UTC+0, else UTC-1\nconst isDST = month >= 3 && month <= 9;\nconst offsetHours = isDST ? 0 : -1;\nconst now = new Date(utcMs + (offsetHours * 3600000));\nconst today = now.toISOString().split('T')[0];\n\n// --- Helpers ---\nconst safeInt = (v) => { const n = parseInt(v); return isNaN(n) ? 0 : n; };\nconst safeFloat = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };\nconst capPct = (v) => Math.max(-999, Math.min(999, Math.round(v * 10) / 10));\n\nfunction parseTime(dateStr, timeStr) {\n  if (!timeStr || typeof timeStr !== 'string') return null;\n  const match = timeStr.trim().match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?$/);\n  if (!match) return null;\n  const d = new Date(dateStr + 'T' + match[1].padStart(2, '0') + ':' + match[2]);\n  return isNaN(d.getTime()) ? null : d;\n}\n\n// --- Classify items by _dataSource tag ---\nconst allItems = $input.all();\nconst warnings = [];\nlet vendasData = [];\nlet tarefasData = [];\nlet stockData = [];\nlet equipaData = [];\nlet emailData = [];\n\nfor (const item of allItems) {\n  const row = item.json;\n  if (!row || Object.keys(row).length === 0) continue;\n  const src = row._dataSource;\n  if (src === 'vendas') vendasData.push(row);\n  else if (src === 'tarefas') tarefasData.push(row);\n  else if (src === 'stock') stockData.push(row);\n  else if (src === 'equipa') equipaData.push(row);\n  else if (src === 'email') emailData.push(row);\n}\n\n// --- Track missing data sources ---\nconst sources = { Vendas: vendasData, Tarefas: tarefasData, Stock: stockData, Equipa: equipaData, Email: emailData };\nfor (const [name, data] of Object.entries(sources)) {\n  if (data.length === 0) warnings.push(name + ': no data returned');\n}\nif (Object.values(sources).every(d => d.length === 0)) {\n  throw new Error('All data sources failed - check spreadsheet ID, sheet names, and credentials');\n}\n\n// --- Process Sales ---\nfunction processVendas(data) {\n  const todayData = data.filter(r => r.Date === today);\n  const yd = new Date(now); yd.setDate(yd.getDate() - 1);\n  const yesterday = yd.toISOString().split('T')[0];\n  const yesterdayData = data.filter(r => r.Date === yesterday);\n\n  const receitaHoje = todayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaOntem = yesterdayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaMudanca = receitaOntem > 0 ? capPct((receitaHoje - receitaOntem) / receitaOntem * 100) : 0;\n\n  const pedidosHoje = todayData.length;\n  const pedidosOntem = yesterdayData.length;\n  const pedidosMudanca = pedidosOntem > 0 ? capPct((pedidosHoje - pedidosOntem) / pedidosOntem * 100) : 0;\n\n  const weekData = [];\n  for (let i = 6; i >= 0; i--) {\n    const d = new Date(now); d.setDate(d.getDate() - i);\n    const ds = d.toISOString().split('T')[0];\n    weekData.push(data.filter(r => r.Date === ds).reduce((s, r) => s + safeFloat(r.Amount), 0));\n  }\n  const totalSemana = weekData.reduce((s, v) => s + v, 0);\n  const ticketMedio = pedidosHoje > 0 ? Math.round(receitaHoje / pedidosHoje * 100) / 100 : 0;\n\n  const monthData = [];\n  for (let w = 0; w < 4; w++) {\n    let wt = 0;\n    for (let d = 0; d < 7; d++) {\n      const dt = new Date(now); dt.setDate(dt.getDate() - ((w * 7) + d));\n      const ds = dt.toISOString().split('T')[0];\n      wt += data.filter(r => r.Date === ds).reduce((s, r) => s + safeFloat(r.Amount), 0);\n    }\n    monthData.unshift(wt);\n  }\n  const totalMes = monthData.reduce((s, v) => s + v, 0);\n\n  // Hourly: use real data if Hour column exists, otherwise flag as estimated\n  const hasHour = todayData.length > 0 && todayData[0].Hour !== undefined;\n  let todayChart;\n  if (hasHour) {\n    const hrs = ['09','10','11','12','13','14','15','16','17','18'];\n    todayChart = {\n      labels: hrs.map(h => h + 'h'),\n      values: hrs.map(h => todayData.filter(r => String(r.Hour).padStart(2,'0') === h).reduce((s, r) => s + safeFloat(r.Amount), 0)),\n      isEstimated: false\n    };\n  } else {\n    const mult = [0.05,0.14,0.24,0.36,0.47,0.60,0.74,0.86,0.96,1];\n    todayChart = {\n      labels: ['9h','10h','11h','12h','13h','14h','15h','16h','17h','18h'],\n      values: mult.map(f => Math.round(receitaHoje * f * 100) / 100),\n      isEstimated: true\n    };\n  }\n\n  return {\n    receitaHoje, receitaMudanca, pedidosHoje, pedidosMudanca,\n    ticketMedio, totalSemana, totalMes,\n    today: todayChart,\n    week: { labels: ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'], values: weekData },\n    month: { labels: ['Sem 1','Sem 2','Sem 3','Sem 4'], values: monthData }\n  };\n}\n\n// --- Process Tasks ---\nfunction processTarefas(data) {\n  const abertas = data.filter(r => (r.Status || '').toLowerCase() === 'open').length;\n  const concluidasHoje = data.filter(r => (r.Status || '').toLowerCase() === 'completed' && r.Date === today).length;\n  const atrasadas = data.filter(r => (r.Status || '').toLowerCase() === 'open' && new Date(r.DueDate) < now).length;\n  return { abertas, concluidasHoje, atrasadas };\n}\n\n// --- Process Stock ---\nfunction processStock(data) {\n  const baixoStock = data.filter(r => {\n    const qty = safeInt(r.Quantity);\n    const min = safeInt(r.MinQuantity);\n    return min > 0 && qty < min;\n  }).map(r => ({\n    produto: r.Product || 'Unknown',\n    quantidade: safeInt(r.Quantity),\n    minimo: safeInt(r.MinQuantity)\n  }));\n  const totalProdutos = data.length;\n  const valorTotal = Math.round(data.reduce((s, r) => s + (safeInt(r.Quantity) * safeFloat(r.UnitPrice)), 0) * 100) / 100;\n  return { baixoStock, totalProdutos, valorTotal };\n}\n\n// --- Process Team ---\nfunction processEquipa(data) {\n  const todayData = data.filter(r => r.Date === today && (r.Status || '').toLowerCase() === 'present');\n  const presentes = todayData.length;\n\n  const horasTrabalhadas = todayData.reduce((sum, r) => {\n    const ci = parseTime(today, r.CheckIn);\n    if (!ci) return sum;\n    const co = parseTime(today, r.CheckOut) || now;\n    let h = (co - ci) / 3600000;\n    if (h < 0) h += 24;\n    return sum + h;\n  }, 0);\n\n  const membros = todayData.map(r => {\n    const ci = parseTime(today, r.CheckIn);\n    let horas = 0;\n    let emTurno = false;\n    if (ci) {\n      const co = parseTime(today, r.CheckOut);\n      emTurno = !co;\n      let h = ((co || now) - ci) / 3600000;\n      if (h < 0) h += 24;\n      horas = Math.round(h * 10) / 10;\n    }\n    return { nome: r.Name || 'Unknown', funcao: r.Role || '', horas, emTurno };\n  });\n\n  return { presentes, horasTrabalhadas: Math.round(horasTrabalhadas * 10) / 10, membros };\n}\n\n// --- Process Email ---\nfunction processEmail(data) {\n  const todayRow = data.find(r => r.Date === today);\n  if (!todayRow && data.length > 0) warnings.push('Email: no data for today');\n  return {\n    naoLidas: safeInt(todayRow?.Unread),\n    importantes: safeInt(todayRow?.Important),\n    enviadasHoje: safeInt(todayRow?.Sent),\n    taxaResposta: safeInt(todayRow?.ResponseRate)\n  };\n}\n\n// --- Build output ---\nconst vendas = processVendas(vendasData);\nconst tarefas = processTarefas(tarefasData);\nconst stock = processStock(stockData);\nconst equipa = processEquipa(equipaData);\nconst email = processEmail(emailData);\n\nreturn { json: {\n  metadata: {\n    generatedAt: now.toISOString(),\n    timezone: 'Atlantic/Azores',\n    warnings: warnings.length > 0 ? warnings : null\n  },\n  resumo: {\n    receitaHoje: vendas.receitaHoje,\n    receitaMudanca: vendas.receitaMudanca,\n    pedidosHoje: vendas.pedidosHoje,\n    pedidosMudanca: vendas.pedidosMudanca,\n    tarefasAbertas: tarefas.abertas,\n    tarefasConcluidas: tarefas.concluidasHoje,\n    emailsNaoLidos: email.naoLidas,\n    emailsImportantes: email.importantes\n  },\n  vendas, tarefas, stock, email, equipa\n}};\n} catch (err) {\n  return { json: { error: true, message: err.message, metadata: { generatedAt: new Date().toISOString() } } };\n}"
+          "jsCode": "try {\n// Dashboard Data Collector - Process & Aggregate\n// Classifies datasets by _dataSource tag added by Set nodes\n// Timezone: Atlantic/Azores with DST awareness\n\n// --- Timezone: compute 'now' in Atlantic/Azores ---\nconst serverNow = new Date();\nconst utcMs = serverNow.getTime() + (serverNow.getTimezoneOffset() * 60000);\nconst month = new Date(utcMs).getUTCMonth();\n// Azores DST: last Sunday of March to last Sunday of October\n// Simplified: April(3) through October(9) = UTC+0, else UTC-1\nconst isDST = month >= 3 && month <= 9;\nconst offsetHours = isDST ? 0 : -1;\nconst now = new Date(utcMs + (offsetHours * 3600000));\nlet today = now.toISOString().split('T')[0];\n\n// --- Optional date parameter from webhook ---\ntry {\n  const webhookBody = $('Webhook - Manual Refresh').first().json.body;\n  if (webhookBody && webhookBody.date && /^\\d{4}-\\d{2}-\\d{2}$/.test(webhookBody.date)) {\n    today = webhookBody.date;\n  }\n} catch (e) { /* scheduled run - no webhook body */ }\n\n// --- Date Normalization ---\nfunction normalizeDate(val) {\n  if (val == null || val === '') return null;\n  const s = String(val).trim();\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s;\n  const dmy = s.match(/^(\\d{1,2})[\\/\\-](\\d{1,2})[\\/\\-](\\d{4})$/);\n  if (dmy) return dmy[3] + '-' + dmy[2].padStart(2,'0') + '-' + dmy[1].padStart(2,'0');\n  if (s.includes('T')) { const p = s.split('T')[0]; if (/^\\d{4}-\\d{2}-\\d{2}$/.test(p)) return p; }\n  const num = Number(s);\n  if (!isNaN(num) && num > 10000 && num < 100000) {\n    const epoch = new Date(Date.UTC(1899, 11, 30));\n    epoch.setUTCDate(epoch.getUTCDate() + num);\n    return epoch.toISOString().split('T')[0];\n  }\n  return null;\n}\n\n// --- Helpers ---\nconst safeInt = (v) => { const n = parseInt(v); return isNaN(n) ? 0 : n; };\nconst safeFloat = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };\nconst capPct = (v) => Math.max(-999, Math.min(999, Math.round(v * 10) / 10));\n\nfunction parseTime(dateStr, timeStr) {\n  if (!timeStr || typeof timeStr !== 'string') return null;\n  const match = timeStr.trim().match(/^(\\d{1,2}):(\\d{2})(?::\\d{2})?$/);\n  if (!match) return null;\n  const d = new Date(dateStr + 'T' + match[1].padStart(2, '0') + ':' + match[2]);\n  return isNaN(d.getTime()) ? null : d;\n}\n\n// --- Classify items by _dataSource tag ---\nconst allItems = $input.all();\nconst warnings = [];\nlet vendasData = [];\nlet tarefasData = [];\nlet stockData = [];\nlet equipaData = [];\nlet emailData = [];\n\nfor (const item of allItems) {\n  const row = item.json;\n  if (!row || Object.keys(row).length <= 1) continue;\n  const src = row._dataSource;\n  if (src === 'vendas') vendasData.push(row);\n  else if (src === 'tarefas') tarefasData.push(row);\n  else if (src === 'stock') stockData.push(row);\n  else if (src === 'equipa') equipaData.push(row);\n  else if (src === 'email') emailData.push(row);\n}\n\n// --- Track missing data sources ---\nconst sources = { Vendas: vendasData, Tarefas: tarefasData, Stock: stockData, Equipa: equipaData, Email: emailData };\nfor (const [name, data] of Object.entries(sources)) {\n  if (data.length === 0) warnings.push(name + ': no data returned');\n}\nif (Object.values(sources).every(d => d.length === 0)) {\n  throw new Error('All data sources failed - check spreadsheet ID, sheet names, and credentials');\n}\n\n// --- Process Sales ---\nfunction processVendas(data) {\n  const todayData = data.filter(r => normalizeDate(r.Date) === today);\n  const yd = new Date(now); yd.setDate(yd.getDate() - 1);\n  const yesterday = yd.toISOString().split('T')[0];\n  const yesterdayData = data.filter(r => normalizeDate(r.Date) === yesterday);\n\n  const receitaHoje = todayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaOntem = yesterdayData.reduce((s, r) => s + safeFloat(r.Amount), 0);\n  const receitaMudanca = receitaOntem > 0 ? capPct((receitaHoje - receitaOntem) / receitaOntem * 100) : 0;\n\n  const pedidosHoje = todayData.length;\n  const pedidosOntem = yesterdayData.length;\n  const pedidosMudanca = pedidosOntem > 0 ? capPct((pedidosHoje - pedidosOntem) / pedidosOntem * 100) : 0;\n\n  const weekData = [];\n  for (let i = 6; i >= 0; i--) {\n    const d = new Date(now); d.setDate(d.getDate() - i);\n    const ds = d.toISOString().split('T')[0];\n    weekData.push(data.filter(r => normalizeDate(r.Date) === ds).reduce((s, r) => s + safeFloat(r.Amount), 0));\n  }\n  const totalSemana = weekData.reduce((s, v) => s + v, 0);\n  const ticketMedio = pedidosHoje > 0 ? Math.round(receitaHoje / pedidosHoje * 100) / 100 : 0;\n\n  const monthData = [];\n  for (let w = 0; w < 4; w++) {\n    let wt = 0;\n    for (let d = 0; d < 7; d++) {\n      const dt = new Date(now); dt.setDate(dt.getDate() - ((w * 7) + d));\n      const ds = dt.toISOString().split('T')[0];\n      wt += data.filter(r => normalizeDate(r.Date) === ds).reduce((s, r) => s + safeFloat(r.Amount), 0);\n    }\n    monthData.unshift(wt);\n  }\n  const totalMes = monthData.reduce((s, v) => s + v, 0);\n\n  // Hourly: use real data if Hour column exists, otherwise flag as estimated\n  const hasHour = todayData.length > 0 && todayData[0].Hour !== undefined;\n  let todayChart;\n  if (hasHour) {\n    const hrs = ['09','10','11','12','13','14','15','16','17','18'];\n    todayChart = {\n      labels: hrs.map(h => h + 'h'),\n      values: hrs.map(h => todayData.filter(r => String(r.Hour).padStart(2,'0') === h).reduce((s, r) => s + safeFloat(r.Amount), 0)),\n      isEstimated: false\n    };\n  } else {\n    const mult = [0.05,0.14,0.24,0.36,0.47,0.60,0.74,0.86,0.96,1];\n    todayChart = {\n      labels: ['9h','10h','11h','12h','13h','14h','15h','16h','17h','18h'],\n      values: mult.map(f => Math.round(receitaHoje * f * 100) / 100),\n      isEstimated: true\n    };\n  }\n\n  return {\n    receitaHoje, receitaMudanca, pedidosHoje, pedidosMudanca,\n    ticketMedio, totalSemana, totalMes,\n    today: todayChart,\n    week: { labels: ['Seg','Ter','Qua','Qui','Sex','Sab','Dom'], values: weekData },\n    month: { labels: ['Sem 1','Sem 2','Sem 3','Sem 4'], values: monthData }\n  };\n}\n\n// --- Process Tasks ---\nfunction processTarefas(data) {\n  const s = (r) => (r.Status || '').toLowerCase();\n  const abertas = data.filter(r => s(r) === 'open' || s(r) === 'pending').length;\n  const concluidasHoje = data.filter(r => s(r) === 'completed' && normalizeDate(r.DueDate) === today).length;\n  const atrasadas = data.filter(r => s(r) === 'overdue').length;\n  return { abertas, concluidasHoje, atrasadas };\n}\n\n// --- Process Stock ---\nfunction processStock(data) {\n  const baixoStock = data.filter(r => {\n    const qty = safeInt(r.Quantity);\n    const min = safeInt(r.MinQuantity);\n    return min > 0 && qty < min;\n  }).map(r => ({\n    produto: r.Product || 'Unknown',\n    quantidade: safeInt(r.Quantity),\n    minimo: safeInt(r.MinQuantity)\n  }));\n  const totalProdutos = data.length;\n  const valorTotal = Math.round(data.reduce((s, r) => s + (safeInt(r.Quantity) * safeFloat(r.UnitPrice)), 0) * 100) / 100;\n  return { baixoStock, totalProdutos, valorTotal };\n}\n\n// --- Process Team ---\nfunction processEquipa(data) {\n  const todayData = data.filter(r => normalizeDate(r.Date) === today && (r.Status || '').toLowerCase() === 'present');\n  const presentes = todayData.length;\n\n  const horasTrabalhadas = todayData.reduce((sum, r) => {\n    const ci = parseTime(today, r.CheckIn);\n    if (!ci) return sum;\n    const co = parseTime(today, r.CheckOut) || now;\n    let h = (co - ci) / 3600000;\n    if (h < 0) h += 24;\n    return sum + h;\n  }, 0);\n\n  const membros = todayData.map(r => {\n    const ci = parseTime(today, r.CheckIn);\n    let horas = 0;\n    let emTurno = false;\n    if (ci) {\n      const co = parseTime(today, r.CheckOut);\n      emTurno = !co;\n      let h = ((co || now) - ci) / 3600000;\n      if (h < 0) h += 24;\n      horas = Math.round(h * 10) / 10;\n    }\n    return { nome: r.Name || 'Unknown', funcao: r.Role || '', horas, emTurno };\n  });\n\n  return { presentes, horasTrabalhadas: Math.round(horasTrabalhadas * 10) / 10, membros };\n}\n\n// --- Process Email ---\nfunction processEmail(data) {\n  const todayRow = data.find(r => normalizeDate(r.Date) === today);\n  if (!todayRow && data.length > 0) warnings.push('Email: no data for today');\n  return {\n    naoLidas: safeInt(todayRow?.Unread),\n    importantes: safeInt(todayRow?.Important),\n    enviadasHoje: safeInt(todayRow?.Sent),\n    taxaResposta: safeInt(todayRow?.ResponseRate)\n  };\n}\n\n// --- Build output ---\nconst vendas = processVendas(vendasData);\nconst tarefas = processTarefas(tarefasData);\nconst stock = processStock(stockData);\nconst equipa = processEquipa(equipaData);\nconst email = processEmail(emailData);\n\nreturn { json: {\n  metadata: {\n    generatedAt: now.toISOString(),\n    timezone: 'Atlantic/Azores',\n    warnings: warnings.length > 0 ? warnings : null,\n    selectedDate: today,\n    debug: { vendasRows: vendasData.length, sampleDate: vendasData.length > 0 ? vendasData[0].Date : null }\n  },\n  resumo: {\n    receitaHoje: vendas.receitaHoje,\n    receitaMudanca: vendas.receitaMudanca,\n    pedidosHoje: vendas.pedidosHoje,\n    pedidosMudanca: vendas.pedidosMudanca,\n    tarefasAbertas: tarefas.abertas,\n    tarefasConcluidas: tarefas.concluidasHoje,\n    emailsNaoLidos: email.naoLidas,\n    emailsImportantes: email.importantes\n  },\n  vendas, tarefas, stock, email, equipa\n}};\n} catch (err) {\n  return { json: { error: true, message: err.message, metadata: { generatedAt: new Date().toISOString() } } };\n}"
         },
         "name": "Process & Aggregate Data",
         "type": "n8n-nodes-base.code",

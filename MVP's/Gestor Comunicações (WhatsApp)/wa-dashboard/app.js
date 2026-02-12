@@ -21,6 +21,8 @@ let state = {
     currentView: 'list',
     isPaused: false,
     pausedUntil: null,
+    isArchived: false,
+    showArchived: false,
     botConfig: { enabled: true, schedule: [] }
 };
 
@@ -55,7 +57,12 @@ const elements = {
     saveSettings: document.getElementById('save-settings'),
     botStatusIndicator: document.getElementById('bot-status-indicator'),
     botStatusText: document.getElementById('bot-status-text'),
-    scheduleLabel: document.getElementById('schedule-label')
+    scheduleLabel: document.getElementById('schedule-label'),
+    archiveBtn: document.getElementById('archive-btn'),
+    archiveLabel: document.getElementById('archive-label'),
+    archiveBar: document.getElementById('archive-bar'),
+    archiveToggle: document.getElementById('archive-toggle'),
+    archiveToggleText: document.getElementById('archive-toggle-text')
 };
 
 // Initialize
@@ -84,6 +91,8 @@ function init() {
     elements.backBtn.addEventListener('click', () => showList());
     elements.refreshBtn.addEventListener('click', () => loadConversations());
     elements.takeoverBtn.addEventListener('click', handleTakeover);
+    elements.archiveBtn.addEventListener('click', handleArchive);
+    elements.archiveToggle.addEventListener('click', toggleArchiveView);
     elements.botEnabledToggle.addEventListener('change', handleBotToggle);
     elements.settingsBtn.addEventListener('click', openSettings);
     elements.settingsClose.addEventListener('click', closeSettings);
@@ -281,6 +290,7 @@ function showList() {
     state.currentView = 'list';
     state.currentPhone = null;
     state.currentName = null;
+    state.isArchived = false;
     state.messages = [];
     elements.listView.style.display = 'flex';
     elements.chatView.style.display = 'none';
@@ -289,18 +299,20 @@ function showList() {
     loadConversations();
 }
 
-function showChat(phone, name, isPaused, pausedUntil) {
+function showChat(phone, name, isPaused, pausedUntil, isArchived) {
     state.currentView = 'chat';
     state.currentPhone = phone;
     state.currentName = name;
     state.isPaused = !!isPaused;
     state.pausedUntil = pausedUntil || null;
+    state.isArchived = !!isArchived;
     elements.listView.style.display = 'none';
     elements.chatView.style.display = 'flex';
     elements.chatName.textContent = name;
     elements.chatPhone.textContent = formatPhoneDisplay(phone);
     elements.chatAvatar.textContent = getInitials(name);
     updateTakeoverButton();
+    updateArchiveButton();
     loadMessages(phone);
 }
 
@@ -356,20 +368,36 @@ async function handleTakeover() {
 
 // Rendering Functions
 function renderConversations() {
-    if (state.conversations.length === 0) {
+    const all = state.conversations;
+    const archived = all.filter(c => c.is_archived);
+    const active = all.filter(c => !c.is_archived);
+    const visible = state.showArchived ? archived : active;
+
+    // Update archive bar
+    if (archived.length > 0) {
+        elements.archiveBar.style.display = 'flex';
+        elements.archiveToggleText.textContent = state.showArchived
+            ? `Ver ativas (${active.length})`
+            : `Ver arquivadas (${archived.length})`;
+        elements.archiveToggle.classList.toggle('active', state.showArchived);
+    } else {
+        elements.archiveBar.style.display = 'none';
+    }
+
+    if (visible.length === 0) {
         elements.conversationsContainer.innerHTML = `
             <div class="empty-state">
                 <svg viewBox="0 0 24 24" role="img" aria-label="Sem conversas">
                     <path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/>
                 </svg>
-                <h3>Sem conversas</h3>
-                <p>Nenhuma conversa disponivel no momento</p>
+                <h3>${state.showArchived ? 'Sem arquivadas' : 'Sem conversas'}</h3>
+                <p>${state.showArchived ? 'Nenhuma conversa arquivada' : 'Nenhuma conversa disponivel no momento'}</p>
             </div>
         `;
         return;
     }
 
-    const sorted = [...state.conversations].sort((a, b) => {
+    const sorted = [...visible].sort((a, b) => {
         return new Date(b.last_message_at) - new Date(a.last_message_at);
     });
 
@@ -381,11 +409,11 @@ function renderConversations() {
         const preview = formatMessagePreview(conv);
 
         return `
-            <div class="conversation-item" data-phone="${escapeAttr(phone)}" role="button" tabindex="0">
+            <div class="conversation-item${conv.is_archived ? ' archived' : ''}" data-phone="${escapeAttr(phone)}" role="button" tabindex="0">
                 <div class="avatar">${initials}</div>
                 <div class="conversation-content">
                     <div class="conversation-header">
-                        <span class="conversation-name">${escapeHtml(name)}${conv.is_paused && new Date(conv.paused_until) > new Date() ? '<span class="pause-badge">PAUSA</span>' : ''}</span>
+                        <span class="conversation-name">${escapeHtml(name)}${conv.is_paused && new Date(conv.paused_until) > new Date() ? '<span class="pause-badge">PAUSA</span>' : ''}${conv.is_archived ? '<span class="archive-badge">ARQUIVO</span>' : ''}</span>
                         <span class="conversation-time">${time}</span>
                     </div>
                     <div class="conversation-preview">
@@ -401,7 +429,7 @@ function renderConversations() {
         const handler = () => {
             const phone = item.dataset.phone;
             const conv = state.conversations.find(c => (c.phone_number || c.phone) === phone);
-            showChat(phone, conv?.contact_name || phone, conv?.is_paused, conv?.paused_until);
+            showChat(phone, conv?.contact_name || phone, conv?.is_paused, conv?.paused_until, conv?.is_archived);
         };
         item.addEventListener('click', handler);
         item.addEventListener('keypress', (e) => {
@@ -772,6 +800,45 @@ function updateBotControlBar() {
     } else {
         elements.scheduleLabel.textContent = 'Sempre';
     }
+}
+
+// Archive Management
+async function handleArchive() {
+    if (!state.currentPhone) return;
+
+    if (state.isArchived) {
+        try {
+            await apiCall('unarchive', { phone: state.currentPhone });
+            state.isArchived = false;
+            updateArchiveButton();
+            showToast('Conversa desarquivada', 'info');
+        } catch (error) {
+            showToast(error.message || 'Erro ao desarquivar', 'error');
+        }
+    } else {
+        try {
+            await apiCall('archive', { phone: state.currentPhone });
+            showToast('Conversa arquivada', 'info');
+            showList();
+        } catch (error) {
+            showToast(error.message || 'Erro ao arquivar', 'error');
+        }
+    }
+}
+
+function updateArchiveButton() {
+    if (state.isArchived) {
+        elements.archiveBtn.classList.add('active');
+        elements.archiveLabel.textContent = 'Desarquivar';
+    } else {
+        elements.archiveBtn.classList.remove('active');
+        elements.archiveLabel.textContent = 'Arquivar';
+    }
+}
+
+function toggleArchiveView() {
+    state.showArchived = !state.showArchived;
+    renderConversations();
 }
 
 // SVG Icons

@@ -2,12 +2,12 @@
   "name": "Dashboard de Negócios",
   "short_name": "Dashboard",
   "description": "Acompanhe as suas métricas de negócio em tempo real",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "theme_color": "#b5e04e",
   "orientation": "portrait-primary",
-  "scope": "/",
+  "scope": ".",
   "lang": "pt-PT",
   "dir": "ltr",
   "categories": ["business", "productivity"],
@@ -74,25 +74,13 @@
       "name": "Atualizar Dados",
       "short_name": "Atualizar",
       "description": "Atualizar dados do dashboard",
-      "url": "/?action=refresh",
-      "icons": [
-        {
-          "src": "assets/icon-refresh.png",
-          "sizes": "96x96"
-        }
-      ]
+      "url": "./?action=refresh"
     },
     {
       "name": "Gerar Relatório",
       "short_name": "Relatório",
       "description": "Gerar relatório em PDF",
-      "url": "/?action=report",
-      "icons": [
-        {
-          "src": "assets/icon-report.png",
-          "sizes": "96x96"
-        }
-      ]
+      "url": "./?action=report"
     }
   ],
   "prefer_related_applications": false

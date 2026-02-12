@@ -2,8 +2,8 @@
 <html lang="pt-PT">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#b5e04e">
   <meta name="description" content="Dashboard de Negócios - Acompanhe as suas métricas em tempo real">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -13,10 +13,25 @@
 
   <!-- PWA Manifest -->
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/icon-180.png">
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" href="assets/icon-192.png">
-  <link rel="apple-touch-icon" href="assets/icon-192.png">
+  <!-- Favicon (inline SVG) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'><rect width='48' height='48' rx='12' fill='%23b5e04e'/><path d='M24 12L34 20V36H28V28H20V36H14V20L24 12Z' fill='%23171717'/></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Dark Mode Theme Prevention Script -->
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('dashboard_theme');
+      if (savedTheme) {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      }
+    })();
+  </script>
 
   <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css">
@@ -29,8 +44,8 @@
       <div class="pin-header">
         <div class="pin-logo">
           <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect width="48" height="48" rx="12" fill="#2563eb"/>
-            <path d="M24 12L34 20V36H28V28H20V36H14V20L24 12Z" fill="white"/>
+            <rect width="48" height="48" rx="12" fill="#b5e04e"/>
+            <path d="M24 12L34 20V36H28V28H20V36H14V20L24 12Z" fill="#171717"/>
           </svg>
         </div>
         <h1 class="pin-title">Dashboard de Negócios</h1>
@@ -73,7 +88,26 @@
           <h1>Dashboard</h1>
           <p class="header-date" id="current-date"></p>
         </div>
+        <div class="header-date-picker">
+          <input type="date" id="date-picker" class="date-picker-input">
+        </div>
         <div class="header-actions">
+          <button id="theme-toggle" class="btn-icon" title="Alternar tema">
+            <svg id="theme-icon-light" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+            <svg id="theme-icon-dark" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+          </button>
           <button id="refresh-btn" class="btn-icon" title="Atualizar dados">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
@@ -109,36 +143,44 @@
         <div class="metrics-grid">
 
           <div class="metric-card metric-revenue">
-            <div class="metric-icon">€</div>
-            <div class="metric-content">
+            <div class="metric-top">
               <div class="metric-label">Receita Hoje</div>
+              <div class="metric-icon">€</div>
+            </div>
+            <div class="metric-content">
               <div class="metric-value" id="revenue-today">€0,00</div>
               <div class="metric-change positive" id="revenue-change">+0%</div>
             </div>
           </div>
 
           <div class="metric-card metric-orders">
-            <div class="metric-icon">📦</div>
-            <div class="metric-content">
+            <div class="metric-top">
               <div class="metric-label">Pedidos</div>
+              <div class="metric-icon">📦</div>
+            </div>
+            <div class="metric-content">
               <div class="metric-value" id="orders-today">0</div>
               <div class="metric-change" id="orders-change">0%</div>
             </div>
           </div>
 
           <div class="metric-card metric-tasks">
-            <div class="metric-icon">✓</div>
-            <div class="metric-content">
+            <div class="metric-top">
               <div class="metric-label">Tarefas Abertas</div>
+              <div class="metric-icon">✓</div>
+            </div>
+            <div class="metric-content">
               <div class="metric-value" id="tasks-open">0</div>
               <div class="metric-change" id="tasks-completed">0 concluídas</div>
             </div>
           </div>
 
           <div class="metric-card metric-emails">
-            <div class="metric-icon">✉</div>
-            <div class="metric-content">
+            <div class="metric-top">
               <div class="metric-label">Emails</div>
+              <div class="metric-icon">✉</div>
+            </div>
+            <div class="metric-content">
               <div class="metric-value" id="emails-unread">0</div>
               <div class="metric-change" id="emails-important">0 importantes</div>
             </div>
@@ -219,7 +261,13 @@
             <div class="stock-sublabel">estimado</div>
           </div>
         </div>
-        <div id="low-stock-list" class="alert-list"></div>
+        <button id="toggle-low-stock" class="alert-toggle" style="display: none;">
+          <span id="low-stock-toggle-text">Ver produtos em baixo stock</span>
+          <svg class="alert-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="6 9 12 15 18 9"/>
+          </svg>
+        </button>
+        <div id="low-stock-list" class="alert-list collapsed"></div>
       </section>
 
       <!-- Email -->

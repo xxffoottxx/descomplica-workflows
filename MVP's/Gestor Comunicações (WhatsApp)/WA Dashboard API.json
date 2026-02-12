@@ -29,7 +29,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst body = input.body || {};\nconst headers = input.headers || {};\n\nconst apiKey = headers['x-dashboard-key'] || '';\nif (apiKey !== $env.WA_DASHBOARD_KEY) {\n  return [{ json: { error: 'Unauthorized', status: 401 } }];\n}\n\nconst action = body.action || 'conversations';\nconst phone = (body.phone || '').replace(/[^0-9+]/g, '');\nconst message = (body.message || '').substring(0, 4096);\nconst since = body.since || null;\nconst duration = Math.min(Math.max(Number(body.duration) || 1, 0.25), 24);\n\nif (['messages', 'reply', 'takeover', 'resume'].includes(action) && (phone.length < 7 || phone.length > 20)) {\n  return [{ json: { error: 'Invalid phone number', status: 400 } }];\n}\nif (action === 'reply' && (!message || message.trim().length === 0)) {\n  return [{ json: { error: 'Message is required', status: 400 } }];\n}\n\nreturn [{ json: { action, phone, message, since, duration, authorized: true } }];"
+        "jsCode": "const input = $input.first().json;\nconst body = input.body || {};\nconst headers = input.headers || {};\n\nconst apiKey = headers['x-dashboard-key'] || '';\nif (apiKey !== $env.WA_DASHBOARD_KEY) {\n  return [{ json: { error: 'Unauthorized', status: 401 } }];\n}\n\nconst action = body.action || 'conversations';\nconst phone = (body.phone || '').replace(/[^0-9+]/g, '');\nconst message = (body.message || '').substring(0, 4096);\nconst since = body.since || null;\nconst duration = Math.min(Math.max(Number(body.duration) || 1, 0.25), 24);\n\nif (['messages', 'reply', 'takeover', 'resume', 'archive', 'unarchive'].includes(action) && !/^\\+?\\d{10,15}$/.test(phone)) {\n  return [{ json: { error: 'Invalid phone number', status: 400 } }];\n}\nif (action === 'reply' && (!message || message.trim().length === 0)) {\n  return [{ json: { error: 'Message is required', status: 400 } }];\n}\n\nreturn [{ json: { action, phone, message, since, duration, authorized: true } }];"
       },
       "id": "wa-dash-0001-0001-0001-000000000002",
       "name": "Auth & Parse",
@@ -219,6 +219,50 @@
               },
               "renameOutput": true,
               "outputKey": "update-config"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "archive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "archive"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.action }}",
+                    "rightValue": "unarchive",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "unarchive"
             }
           ]
         },
@@ -255,7 +299,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH latest AS (SELECT DISTINCT ON (phone_number) phone_number, contact_name, message_text AS last_message, direction AS last_direction, created_at AS last_message_at FROM wa_messages ORDER BY phone_number, created_at DESC, id DESC) SELECT l.phone_number, l.contact_name, l.last_message_at, l.last_message, l.last_direction, c.message_count, CASE WHEN p.paused_until > NOW() THEN true ELSE false END AS is_paused, p.paused_until FROM latest l JOIN (SELECT phone_number, COUNT(*) AS message_count FROM wa_messages GROUP BY phone_number) c ON c.phone_number = l.phone_number LEFT JOIN wa_paused_conversations p ON p.phone_number = l.phone_number ORDER BY l.last_message_at DESC LIMIT 50",
+        "query": "WITH latest AS (SELECT DISTINCT ON (phone_number) phone_number, contact_name, message_text AS last_message, direction AS last_direction, created_at AS last_message_at FROM wa_messages ORDER BY phone_number, created_at DESC, id DESC) SELECT l.phone_number, l.contact_name, l.last_message_at, l.last_message, l.last_direction, c.message_count, CASE WHEN p.paused_until > NOW() THEN true ELSE false END AS is_paused, p.paused_until, CASE WHEN a.phone_number IS NOT NULL THEN true ELSE false END AS is_archived FROM latest l JOIN (SELECT phone_number, COUNT(*) AS message_count FROM wa_messages GROUP BY phone_number) c ON c.phone_number = l.phone_number LEFT JOIN wa_paused_conversations p ON p.phone_number = l.phone_number LEFT JOIN archived_conversations a ON a.phone_number = l.phone_number ORDER BY l.last_message_at DESC LIMIT 50",
         "options": {}
       },
       "id": "wa-dash-0001-0001-0001-000000000005",
@@ -301,7 +345,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v21.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "url": "=https://graph.facebook.com/v22.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -559,7 +603,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $('Dashboard Webhook').first().json.body || {};\n\nconst updates = [];\n\nif (typeof body.enabled === 'boolean') {\n  updates.push(`enabled = ${body.enabled}`);\n}\n\nif (body.schedule !== undefined) {\n  const escaped = JSON.stringify(body.schedule).replace(/'/g, \"''\");\n  updates.push(`schedule = '${escaped}'::jsonb`);\n}\n\nif (updates.length === 0) {\n  return [{ json: { query: 'SELECT enabled, schedule FROM wa_bot_config WHERE id = 1' } }];\n}\n\nupdates.push('updated_at = NOW()');\nconst query = `UPDATE wa_bot_config SET ${updates.join(', ')} WHERE id = 1 RETURNING enabled, schedule`;\n\nreturn [{ json: { query } }];"
+        "jsCode": "const body = $('Dashboard Webhook').first().json.body || {};\n\nconst updates = [];\n\nif (typeof body.enabled === 'boolean') {\n  updates.push(`enabled = ${body.enabled}`);\n}\n\nif (body.schedule !== undefined) {\n  const timeRegex = /^([01]\\d|2[0-3]):[0-5]\\d$/;\n\n  if (!Array.isArray(body.schedule)) {\n    throw new Error('schedule must be an array');\n  }\n\n  const sanitized = body.schedule.map((rule, i) => {\n    if (!rule || typeof rule !== 'object') throw new Error(`schedule[${i}] must be an object`);\n    if (!timeRegex.test(rule.start)) throw new Error(`schedule[${i}].start invalid`);\n    if (!timeRegex.test(rule.end)) throw new Error(`schedule[${i}].end invalid`);\n    if (!Array.isArray(rule.days) || rule.days.length === 0) throw new Error(`schedule[${i}].days must be non-empty array`);\n    const days = rule.days.map(d => {\n      const n = Number(d);\n      if (!Number.isInteger(n) || n < 0 || n > 6) throw new Error(`schedule[${i}].days invalid`);\n      return n;\n    });\n    return { days, start: rule.start, end: rule.end };\n  });\n\n  const escaped = JSON.stringify(sanitized).replace(/'/g, \"''\");\n  updates.push(`schedule = '${escaped}'::jsonb`);\n}\n\nif (updates.length === 0) {\n  return [{ json: { query: 'SELECT enabled, schedule FROM wa_bot_config WHERE id = 1' } }];\n}\n\nupdates.push('updated_at = NOW()');\nconst query = `UPDATE wa_bot_config SET ${updates.join(', ')} WHERE id = 1 RETURNING enabled, schedule`;\n\nreturn [{ json: { query } }];"
       },
       "id": "wa-dash-0001-0001-0001-000000000019",
       "name": "Build Update Query",
@@ -607,6 +651,88 @@
       "position": [
         528,
         1072
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO archived_conversations (phone_number) VALUES ($1) ON CONFLICT (phone_number) DO UPDATE SET archived_at = NOW()",
+        "options": {
+          "queryReplacement": "={{ $json.phone }}"
+        }
+      },
+      "id": "wa-dash-0001-0001-0001-000000000022",
+      "name": "Archive Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        48,
+        1232
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, archived: true }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "wa-dash-0001-0001-0001-000000000023",
+      "name": "Respond Archive",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        1232
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM archived_conversations WHERE phone_number = $1",
+        "options": {
+          "queryReplacement": "={{ $json.phone }}"
+        }
+      },
+      "id": "wa-dash-0001-0001-0001-000000000024",
+      "name": "Unarchive Conversation",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        48,
+        1392
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ success: true, archived: false }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "wa-dash-0001-0001-0001-000000000025",
+      "name": "Respond Unarchive",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        1392
       ]
     }
   ],
@@ -688,6 +814,20 @@
         [
           {
             "node": "Build Update Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Archive Conversation",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Unarchive Conversation",
             "type": "main",
             "index": 0
           }
@@ -794,6 +934,28 @@
         [
           {
             "node": "Respond Update Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Archive Conversation": {
+      "main": [
+        [
+          {
+            "node": "Respond Archive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Unarchive Conversation": {
+      "main": [
+        [
+          {
+            "node": "Respond Unarchive",
             "type": "main",
             "index": 0
           }
