@@ -1,0 +1,249 @@
+{
+  "name": "Resumo Contacto",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "6b6fea97-a4ea-4a07-b858-30ba57b4f927",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "2ff2417a-33da-49df-8f0b-b13e910a5a1d",
+      "name": "Webhook - Call Completed",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "6b6fea97-a4ea-4a07-b858-30ba57b4f927",
+      "notes": "Receives final call data from Vapi server-url event (not a tool call). Responds with simple acknowledgment."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers[\"x-vapi-secret\"] || \"\";\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || \"\";\n  if (expected && vapiSecret !== expected) {\n    return { _error: true };\n  }\n} catch (e) {}\n\ntry {\n  const raw = input.body || input;\n  const msg = raw.message || raw;\n  const call = msg.call || raw.call || {};\n\n  const call_id = msg.call?.id || call.id || raw.call?.id || \"unknown\";\n  const started_at = msg.startedAt || call.startedAt || \"\";\n  const ended_at = msg.endedAt || call.endedAt || \"\";\n  const customer_phone = msg.customer?.number || call.customer?.number || \"Desconhecido\";\n\n  const analysis = msg.analysis || raw.analysis || {};\n  const structured = analysis.structuredData || {};\n\n  const intent = structured.intent || \"\";\n  const summary = analysis.summary || \"Sem resumo dispon\\u00edvel\";\n  const callback_urgency = structured.callbackUrgency || structured.callback_urgency || \"Logo que poss\\u00edvel\";\n\n  const raw_reason = msg.endedReason || call.endedReason || \"unknown\";\n  const reasonMap = {\n    \"customer-ended-call\": \"Cliente desligou\",\n    \"assistant-ended-call\": \"Assistente terminou\",\n    \"assistant-said-end-call-phrase\": \"Assistente terminou\",\n    \"voicemail\": \"Correio de voz\",\n    \"silence-timed-out\": \"Sem resposta\",\n    \"max-duration-reached\": \"Dura\\u00e7\\u00e3o m\\u00e1xima atingida\",\n    \"customer-did-not-answer\": \"Cliente n\\u00e3o atendeu\",\n    \"customer-busy\": \"Cliente ocupado\",\n    \"phone-call-provider-closed-websocket\": \"Chamada cortada\",\n    \"pipeline-error-openai-llm-failed\": \"Erro t\\u00e9cnico\",\n    \"pipeline-error-deepgram-transcriber-failed\": \"Erro t\\u00e9cnico\",\n    \"unknown\": \"Desconhecido\"\n  };\n  const ended_reason = reasonMap[raw_reason] || raw_reason.replace(/-/g, \" \").replace(/^./, c => c.toUpperCase());\n\n  let duration_seconds = 0;\n  if (msg.durationSeconds) {\n    duration_seconds = Number(msg.durationSeconds);\n  } else if (ended_at && started_at) {\n    duration_seconds = Math.round((new Date(ended_at) - new Date(started_at)) / 1000);\n  }\n\n  return {\n    _error: false,\n    call_id,\n    started_at,\n    customer_phone,\n    intent,\n    summary,\n    callback_urgency,\n    ended_reason,\n    duration_seconds\n  };\n} catch (err) {\n  console.log(\"Post Call Summary processing error:\", err.message);\n  return {\n    _error: false,\n    call_id: \"error\",\n    started_at: \"\",\n    summary: \"Erro ao processar dados da chamada: \" + err.message,\n    duration_seconds: 0,\n    customer_phone: \"Desconhecido\",\n    intent: \"\",\n    callback_urgency: \"Logo que poss\\u00edvel\",\n    ended_reason: \"Erro\"\n  };\n}"
+      },
+      "id": "a95c595a-e43d-4edb-a73a-40d5350270a9",
+      "name": "Process Call Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "notes": "Auth check + extracts caller phone, intent, callback urgency and summary from Vapi payload."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { received: true, status: \"success\" } }}",
+        "options": {}
+      },
+      "id": "09161f3d-d102-4696-b6d2-dfce8f4fbf9d",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        448,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "andrefloresbrasil@gmail.com",
+        "subject": "=Chamada Recebida — {{ $json.intent || \"Assistente Virtual Mega Loja\" }}",
+        "message": "=<!DOCTYPE html>\r\n<html lang=\"pt-PT\">\r\n<head>\r\n    <meta charset=\"UTF-8\">\r\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\r\n    <title>Chamada Recebida - Mega Loja Borja Reis</title>\r\n</head>\r\n<body style=\"margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5;\">\r\n    <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"background-color: #f5f5f5;\">\r\n        <tr>\r\n            <td style=\"padding: 20px 10px;\">\r\n                <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);\">\r\n\r\n                    <!-- Brand Header -->\r\n                    <tr>\r\n                        <td style=\"background-color: #3e3935; padding: 24px 20px; text-align: center;\">\r\n                            <h1 style=\"margin: 0; color: #f2db27; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;\">\r\n                                MEGA LOJA BORJA REIS\r\n                            </h1>\r\n                            <p style=\"margin: 6px 0 0 0; color: #ffffff; font-size: 13px;\">\r\n                                Chamada recebida pelo Assistente Virtual\r\n                            </p>\r\n                        </td>\r\n                    </tr>\r\n\r\n                    <!-- Phone Number + Call Button -->\r\n                    <tr>\r\n                        <td style=\"padding: 30px 20px 20px 20px; text-align: center;\">\r\n                            <p style=\"margin: 0 0 6px 0; color: #6b7280; font-size: 13px;\">Telemóvel do cliente</p>\r\n                            <a href=\"tel:{{ $json.customer_phone }}\" style=\"color: #3e3935; font-size: 28px; font-weight: 700; text-decoration: none; display: block;\">\r\n                                {{ $json.customer_phone }}\r\n                            </a>\r\n                            <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"margin: 16px auto 0 auto;\">\r\n                                <tr>\r\n                                    <td style=\"background-color: #10b981; border-radius: 8px;\">\r\n                                        <a href=\"tel:{{ $json.customer_phone }}\" style=\"display: inline-block; padding: 14px 32px; color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none;\">\r\n                                            Ligar agora\r\n                                        </a>\r\n                                    </td>\r\n                                </tr>\r\n                            </table>\r\n                            <p style=\"margin: 12px 0 0 0; color: #91867e; font-size: 12px;\">\r\n                                {{ new Date($json.started_at).toLocaleString('pt-PT', { timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }} · {{ Math.floor($json.duration_seconds / 60) }}m {{ $json.duration_seconds % 60 }}s · {{ $json.ended_reason }}\r\n                            </p>\r\n                        </td>\r\n                    </tr>\r\n\r\n                    <!-- Callback Urgency -->\r\n                    <tr>\r\n                        <td style=\"padding: 0 20px 20px 20px;\">\r\n                            <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"background-color: #fffbeb; border: 2px solid #f2db27; border-radius: 6px;\">\r\n                                <tr>\r\n                                    <td style=\"padding: 16px;\">\r\n                                        <p style=\"margin: 0 0 4px 0; color: #6b7280; font-size: 13px; font-weight: 600;\">Quando retornar</p>\r\n                                        <p style=\"margin: 0; color: #3e3935; font-size: 16px; font-weight: 700;\">\r\n                                            {{ $json.callback_urgency }}\r\n                                        </p>\r\n                                    </td>\r\n                                </tr>\r\n                            </table>\r\n                        </td>\r\n                    </tr>\r\n\r\n                    <!-- Intent / Topic -->\r\n                    <tr>\r\n                        <td style=\"padding: 0 20px 20px 20px;\">\r\n                            <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"background-color: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb;\">\r\n                                <tr>\r\n                                    <td style=\"padding: 16px;\">\r\n                                        <p style=\"margin: 0 0 4px 0; color: #6b7280; font-size: 13px; font-weight: 600;\">Assunto da chamada</p>\r\n                                        <p style=\"margin: 0; color: #3e3935; font-size: 15px; line-height: 1.5;\">\r\n                                            {{ $json.intent || 'Não identificado' }}\r\n                                        </p>\r\n                                    </td>\r\n                                </tr>\r\n                            </table>\r\n                        </td>\r\n                    </tr>\r\n\r\n                    <!-- Summary -->\r\n                    <tr>\r\n                        <td style=\"padding: 0 20px 30px 20px;\">\r\n                            <table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" width=\"100%\" style=\"border-left: 4px solid #e5e7eb; border-radius: 2px;\">\r\n                                <tr>\r\n                                    <td style=\"padding: 12px 16px;\">\r\n                                        <p style=\"margin: 0 0 4px 0; color: #6b7280; font-size: 13px; font-weight: 600;\">Resumo da conversa</p>\r\n                                        <p style=\"margin: 0; color: #6b7280; font-size: 14px; line-height: 1.6;\">\r\n                                            {{ $json.summary }}\r\n                                        </p>\r\n                                    </td>\r\n                                </tr>\r\n                            </table>\r\n                        </td>\r\n                    </tr>\r\n\r\n                    <!-- Footer -->\r\n                    <tr>\r\n                        <td style=\"background-color: #3e3935; padding: 20px; text-align: center;\">\r\n                            <p style=\"margin: 0; color: #91867e; font-size: 12px;\">\r\n                                Assistente Virtual — Mega Loja Borja Reis\r\n                            </p>\r\n                        </td>\r\n                    </tr>\r\n\r\n                </table>\r\n            </td>\r\n        </tr>\r\n    </table>\r\n</body>\r\n</html>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2,
+      "position": [
+        448,
+        64
+      ],
+      "id": "450afa5d-29f1-4e48-b26e-b376d3c0b923",
+      "name": "Send Call Summary Email",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "webhookId": "74d64158-10bb-4d6d-95a8-f7e6685e808b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "wAMRJTfnApwY7RS6",
+          "name": "Gmail account"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "1X7hpVg-EeWQOnUnLXHJHbV2Jbcc1anWuvaaE4v0KIvg"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0",
+          "cachedResultName": "Registos Mega Loja",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1X7hpVg-EeWQOnUnLXHJHbV2Jbcc1anWuvaaE4v0KIvg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Data": "={{ new Date($json.started_at).toLocaleString('pt-PT', { timeZone: 'Atlantic/Azores', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}",
+            "Contacto": "={{ $json.customer_phone }}",
+            "Assunto": "={{ $json.intent }}",
+            "Retornar": "={{ $json.callback_urgency }}",
+            "Resumo": "={{ $json.summary }}",
+            "Duração": "={{ Math.floor($json.duration_seconds / 60) + 'm ' + ($json.duration_seconds % 60) + 's' }}",
+            "Fim da chamada": "={{ $json.ended_reason }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Data",
+              "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Contacto",
+              "displayName": "Contacto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Assunto",
+              "displayName": "Assunto",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Retornar",
+              "displayName": "Retornar",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Resumo",
+              "displayName": "Resumo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Duração",
+              "displayName": "Duração",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Fim da chamada",
+              "displayName": "Fim da chamada",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "b7e2c3d4-5f6a-7b8c-9d0e-1f2a3b4c5d6e",
+      "name": "Log to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        208
+      ],
+      "notes": "Logs call summary to Google Sheets with Atlantic/Azores timezone formatting.",
+      "continueOnFail": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7VqULLmjWMaM7VIU",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Call Completed": {
+      "main": [
+        [
+          {
+            "node": "Process Call Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Call Data": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send Call Summary Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log to Google Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "errorWorkflow": "7msWfdcUmBjjvZPCLh4F9",
+    "availableInMCP": false,
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "34535ea2-9907-4762-bd44-d520fd68e502",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "uAqFlM4HVWYxxtb0",
+  "tags": []
+}
