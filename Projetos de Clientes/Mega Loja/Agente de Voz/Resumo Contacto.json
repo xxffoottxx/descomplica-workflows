@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-15T03:32:29.705Z",
+  "updatedAt": "2026-02-15T03:35:11.996Z",
   "createdAt": "2026-02-14T03:10:51.068Z",
   "id": "uAqFlM4HVWYxxtb0",
   "name": "Resumo Contacto",
@@ -105,13 +105,24 @@
             "Retornar": "={{ $json.callback_preference }}",
             "Resumo": "={{ $json.summary }}",
             "Duração": "={{ Math.floor($json.duration_seconds / 60) + 'm ' + ($json.duration_seconds % 60) + 's' }}",
-            "Fim da chamada": "={{ $json.ended_reason }}"
+            "Fim da chamada": "={{ $json.ended_reason }}",
+            "Nome": "={{ \\.customer_name || '' }}"
           },
           "matchingColumns": [],
           "schema": [
             {
               "id": "Data",
               "displayName": "Data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Nome",
+              "displayName": "Nome",
               "required": false,
               "defaultMatch": false,
               "display": true,
@@ -247,9 +258,9 @@
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "d55a7425-f52d-4ac9-a004-69c146c07971",
-  "activeVersionId": "d55a7425-f52d-4ac9-a004-69c146c07971",
-  "versionCounter": 39,
+  "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
+  "activeVersionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
+  "versionCounter": 44,
   "triggerCount": 1,
   "shared": [
     {
@@ -311,9 +322,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-02-15T03:32:29.707Z",
-    "createdAt": "2026-02-15T03:32:29.707Z",
-    "versionId": "d55a7425-f52d-4ac9-a004-69c146c07971",
+    "updatedAt": "2026-02-15T03:35:11.998Z",
+    "createdAt": "2026-02-15T03:35:11.998Z",
+    "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
     "workflowId": "uAqFlM4HVWYxxtb0",
     "nodes": [
       {
@@ -414,13 +425,24 @@
               "Retornar": "={{ $json.callback_preference }}",
               "Resumo": "={{ $json.summary }}",
               "Duração": "={{ Math.floor($json.duration_seconds / 60) + 'm ' + ($json.duration_seconds % 60) + 's' }}",
-              "Fim da chamada": "={{ $json.ended_reason }}"
+              "Fim da chamada": "={{ $json.ended_reason }}",
+              "Nome": "={{ \\.customer_name || '' }}"
             },
             "matchingColumns": [],
             "schema": [
               {
                 "id": "Data",
                 "displayName": "Data",
+                "required": false,
+                "defaultMatch": false,
+                "display": true,
+                "type": "string",
+                "canBeUsedToMatch": true,
+                "removed": false
+              },
+              {
+                "id": "Nome",
+                "displayName": "Nome",
                 "required": false,
                 "defaultMatch": false,
                 "display": true,
@@ -552,18 +574,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-02-15T03:32:29.799Z",
-        "id": 526,
+        "createdAt": "2026-02-15T03:35:12.077Z",
+        "id": 528,
         "workflowId": "uAqFlM4HVWYxxtb0",
-        "versionId": "d55a7425-f52d-4ac9-a004-69c146c07971",
+        "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       },
       {
-        "createdAt": "2026-02-15T03:32:30.065Z",
-        "id": 527,
+        "createdAt": "2026-02-15T03:35:12.319Z",
+        "id": 529,
         "workflowId": "uAqFlM4HVWYxxtb0",
-        "versionId": "d55a7425-f52d-4ac9-a004-69c146c07971",
+        "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       }
