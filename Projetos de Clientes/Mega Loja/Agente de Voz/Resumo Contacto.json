@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-15T03:35:11.996Z",
+  "updatedAt": "2026-02-15T03:46:52.799Z",
   "createdAt": "2026-02-14T03:10:51.068Z",
   "id": "uAqFlM4HVWYxxtb0",
   "name": "Resumo Contacto",
@@ -27,7 +27,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers[\"x-vapi-secret\"] || \"\";\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || \"\";\n  if (expected && vapiSecret !== expected) {\n    return { _error: true };\n  }\n} catch (e) {}\n\ntry {\n  const raw = input.body || input;\n  const msg = raw.message || raw;\n  const call = msg.call || raw.call || {};\n\n  const call_id = msg.call?.id || call.id || raw.call?.id || \"unknown\";\n  const started_at = msg.startedAt || call.startedAt || \"\";\n  const ended_at = msg.endedAt || call.endedAt || \"\";\n  const customer_phone = msg.customer?.number || call.customer?.number || \"Desconhecido\";\n\n  const analysis = msg.analysis || raw.analysis || {};\n  const structured = analysis.structuredData || {};\n\n  // All structured data fields from Vapi schema\n  const intent = structured.intent || \"\";\n  const outcome = structured.outcome || \"\";\n  const customer_name = structured.customerName || \"\";\n  const customer_phone_verbal = structured.customerPhone || \"\";\n  const follow_up_needed = structured.followUpNeeded !== undefined ? structured.followUpNeeded : true;\n  const request_summary = structured.requestSummary || \"\";\n  const callback_preference = structured.callbackPreference || \"Logo que possÃ­vel\";\n\n  // Prefer structured requestSummary, fall back to analysis summary\n  const summary = analysis.summary || \"Sem resumo disponÃ­vel\";\n\n  // Best phone: verbal number if given, otherwise caller ID\n  const best_phone = customer_phone_verbal || customer_phone;\n\n  const raw_reason = msg.endedReason || call.endedReason || \"unknown\";\n  const reasonMap = {\n    \"customer-ended-call\": \"Cliente desligou\",\n    \"assistant-ended-call\": \"Assistente terminou\",\n    \"assistant-said-end-call-phrase\": \"Assistente terminou\",\n    \"voicemail\": \"Correio de voz\",\n    \"silence-timed-out\": \"Sem resposta\",\n    \"max-duration-reached\": \"DuraÃ§Ã£o mÃ¡xima atingida\",\n    \"customer-did-not-answer\": \"Cliente nÃ£o atendeu\",\n    \"customer-busy\": \"Cliente ocupado\",\n    \"phone-call-provider-closed-websocket\": \"Chamada cortada\",\n    \"pipeline-error-openai-llm-failed\": \"Erro tÃ©cnico\",\n    \"pipeline-error-deepgram-transcriber-failed\": \"Erro tÃ©cnico\",\n    \"unknown\": \"Desconhecido\"\n  };\n  const ended_reason = reasonMap[raw_reason] || raw_reason.replace(/-/g, \" \").replace(/^./, c => c.toUpperCase());\n\n  let duration_seconds = 0;\n  if (msg.durationSeconds) {\n    duration_seconds = Number(msg.durationSeconds);\n  } else if (ended_at && started_at) {\n    duration_seconds = Math.round((new Date(ended_at) - new Date(started_at)) / 1000);\n  }\n\n  return {\n    _error: false,\n    call_id,\n    started_at,\n    customer_phone,\n    customer_phone_verbal,\n    best_phone,\n    customer_name,\n    intent,\n    outcome,\n    follow_up_needed,\n    request_summary,\n    callback_preference,\n    summary,\n    ended_reason,\n    duration_seconds\n  };\n} catch (err) {\n  console.log(\"Post Call Summary processing error:\", err.message);\n  return {\n    _error: false,\n    call_id: \"error\",\n    started_at: \"\",\n    summary: \"Erro ao processar dados da chamada: \" + err.message,\n    duration_seconds: 0,\n    customer_phone: \"Desconhecido\",\n    customer_phone_verbal: \"\",\n    best_phone: \"Desconhecido\",\n    customer_name: \"\",\n    intent: \"\",\n    outcome: \"\",\n    follow_up_needed: true,\n    request_summary: \"\",\n    callback_preference: \"Logo que possÃ­vel\",\n    ended_reason: \"Erro\"\n  };\n}"
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers[\"x-vapi-secret\"] || \"\";\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || \"\";\n  if (expected && vapiSecret !== expected) {\n    return { _error: true };\n  }\n} catch (e) {}\n\ntry {\n  const raw = input.body || input;\n  const msg = raw.message || raw;\n  const call = msg.call || raw.call || {};\n\n  const call_id = msg.call?.id || call.id || raw.call?.id || \"unknown\";\n  const started_at = msg.startedAt || call.startedAt || \"\";\n  const ended_at = msg.endedAt || call.endedAt || \"\";\n  const customer_phone = msg.customer?.number || call.customer?.number || \"Desconhecido\";\n\n  const analysis = msg.analysis || raw.analysis || {};\n  const structured = analysis.structuredData || {};\n\n  // All structured data fields from Vapi schema\n  const intent = structured.intent || \"\";\n  const outcome = structured.outcome || \"\";\n  const customer_name = structured.customerName || \"\";\n  const customer_phone_verbal = structured.customerPhone || \"\";\n  const follow_up_needed = structured.followUpNeeded !== undefined ? structured.followUpNeeded : true;\n  const request_summary = structured.requestSummary || \"\";\n  const callback_preference = structured.callbackPreference || \"Logo que possível\";\n\n  // Prefer structured requestSummary, fall back to analysis summary\n  const summary = analysis.summary || \"Sem resumo disponível\";\n\n  // Best phone: verbal number if given, otherwise caller ID\n  const best_phone = customer_phone_verbal || customer_phone;\n\n  const raw_reason = msg.endedReason || call.endedReason || \"unknown\";\n  const reasonMap = {\n    \"customer-ended-call\": \"Cliente desligou\",\n    \"assistant-ended-call\": \"Assistente terminou\",\n    \"assistant-said-end-call-phrase\": \"Assistente terminou\",\n    \"voicemail\": \"Correio de voz\",\n    \"silence-timed-out\": \"Sem resposta\",\n    \"max-duration-reached\": \"Duração máxima atingida\",\n    \"customer-did-not-answer\": \"Cliente não atendeu\",\n    \"customer-busy\": \"Cliente ocupado\",\n    \"phone-call-provider-closed-websocket\": \"Chamada cortada\",\n    \"pipeline-error-openai-llm-failed\": \"Erro técnico\",\n    \"pipeline-error-deepgram-transcriber-failed\": \"Erro técnico\",\n    \"unknown\": \"Desconhecido\"\n  };\n  const ended_reason = reasonMap[raw_reason] || raw_reason.replace(/-/g, \" \").replace(/^./, c => c.toUpperCase());\n\n  let duration_seconds = 0;\n  if (msg.durationSeconds) {\n    duration_seconds = Number(msg.durationSeconds);\n  } else if (ended_at && started_at) {\n    duration_seconds = Math.round((new Date(ended_at) - new Date(started_at)) / 1000);\n  }\n\n  return {\n    _error: false,\n    call_id,\n    started_at,\n    customer_phone,\n    customer_phone_verbal,\n    best_phone,\n    customer_name,\n    intent,\n    outcome,\n    follow_up_needed,\n    request_summary,\n    callback_preference,\n    summary,\n    ended_reason,\n    duration_seconds\n  };\n} catch (err) {\n  console.log(\"Post Call Summary processing error:\", err.message);\n  return {\n    _error: false,\n    call_id: \"error\",\n    started_at: \"\",\n    summary: \"Erro ao processar dados da chamada: \" + err.message,\n    duration_seconds: 0,\n    customer_phone: \"Desconhecido\",\n    customer_phone_verbal: \"\",\n    best_phone: \"Desconhecido\",\n    customer_name: \"\",\n    intent: \"\",\n    outcome: \"\",\n    follow_up_needed: true,\n    request_summary: \"\",\n    callback_preference: \"Logo que possível\",\n    ended_reason: \"Erro\"\n  };\n}"
       },
       "id": "a95c595a-e43d-4edb-a73a-40d5350270a9",
       "name": "Process Call Data",
@@ -106,7 +106,7 @@
             "Resumo": "={{ $json.summary }}",
             "Duração": "={{ Math.floor($json.duration_seconds / 60) + 'm ' + ($json.duration_seconds % 60) + 's' }}",
             "Fim da chamada": "={{ $json.ended_reason }}",
-            "Nome": "={{ \\.customer_name || '' }}"
+            "Nome": "={{ $json.customer_name || \"\" }}"
           },
           "matchingColumns": [],
           "schema": [
@@ -258,9 +258,9 @@
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
-  "activeVersionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
-  "versionCounter": 44,
+  "versionId": "f1de8909-1a89-4217-98ec-52a673b2097f",
+  "activeVersionId": "f1de8909-1a89-4217-98ec-52a673b2097f",
+  "versionCounter": 54,
   "triggerCount": 1,
   "shared": [
     {
@@ -322,9 +322,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-02-15T03:35:11.998Z",
-    "createdAt": "2026-02-15T03:35:11.998Z",
-    "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
+    "updatedAt": "2026-02-15T03:46:52.801Z",
+    "createdAt": "2026-02-15T03:46:52.801Z",
+    "versionId": "f1de8909-1a89-4217-98ec-52a673b2097f",
     "workflowId": "uAqFlM4HVWYxxtb0",
     "nodes": [
       {
@@ -347,7 +347,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers[\"x-vapi-secret\"] || \"\";\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || \"\";\n  if (expected && vapiSecret !== expected) {\n    return { _error: true };\n  }\n} catch (e) {}\n\ntry {\n  const raw = input.body || input;\n  const msg = raw.message || raw;\n  const call = msg.call || raw.call || {};\n\n  const call_id = msg.call?.id || call.id || raw.call?.id || \"unknown\";\n  const started_at = msg.startedAt || call.startedAt || \"\";\n  const ended_at = msg.endedAt || call.endedAt || \"\";\n  const customer_phone = msg.customer?.number || call.customer?.number || \"Desconhecido\";\n\n  const analysis = msg.analysis || raw.analysis || {};\n  const structured = analysis.structuredData || {};\n\n  // All structured data fields from Vapi schema\n  const intent = structured.intent || \"\";\n  const outcome = structured.outcome || \"\";\n  const customer_name = structured.customerName || \"\";\n  const customer_phone_verbal = structured.customerPhone || \"\";\n  const follow_up_needed = structured.followUpNeeded !== undefined ? structured.followUpNeeded : true;\n  const request_summary = structured.requestSummary || \"\";\n  const callback_preference = structured.callbackPreference || \"Logo que possÃ­vel\";\n\n  // Prefer structured requestSummary, fall back to analysis summary\n  const summary = analysis.summary || \"Sem resumo disponÃ­vel\";\n\n  // Best phone: verbal number if given, otherwise caller ID\n  const best_phone = customer_phone_verbal || customer_phone;\n\n  const raw_reason = msg.endedReason || call.endedReason || \"unknown\";\n  const reasonMap = {\n    \"customer-ended-call\": \"Cliente desligou\",\n    \"assistant-ended-call\": \"Assistente terminou\",\n    \"assistant-said-end-call-phrase\": \"Assistente terminou\",\n    \"voicemail\": \"Correio de voz\",\n    \"silence-timed-out\": \"Sem resposta\",\n    \"max-duration-reached\": \"DuraÃ§Ã£o mÃ¡xima atingida\",\n    \"customer-did-not-answer\": \"Cliente nÃ£o atendeu\",\n    \"customer-busy\": \"Cliente ocupado\",\n    \"phone-call-provider-closed-websocket\": \"Chamada cortada\",\n    \"pipeline-error-openai-llm-failed\": \"Erro tÃ©cnico\",\n    \"pipeline-error-deepgram-transcriber-failed\": \"Erro tÃ©cnico\",\n    \"unknown\": \"Desconhecido\"\n  };\n  const ended_reason = reasonMap[raw_reason] || raw_reason.replace(/-/g, \" \").replace(/^./, c => c.toUpperCase());\n\n  let duration_seconds = 0;\n  if (msg.durationSeconds) {\n    duration_seconds = Number(msg.durationSeconds);\n  } else if (ended_at && started_at) {\n    duration_seconds = Math.round((new Date(ended_at) - new Date(started_at)) / 1000);\n  }\n\n  return {\n    _error: false,\n    call_id,\n    started_at,\n    customer_phone,\n    customer_phone_verbal,\n    best_phone,\n    customer_name,\n    intent,\n    outcome,\n    follow_up_needed,\n    request_summary,\n    callback_preference,\n    summary,\n    ended_reason,\n    duration_seconds\n  };\n} catch (err) {\n  console.log(\"Post Call Summary processing error:\", err.message);\n  return {\n    _error: false,\n    call_id: \"error\",\n    started_at: \"\",\n    summary: \"Erro ao processar dados da chamada: \" + err.message,\n    duration_seconds: 0,\n    customer_phone: \"Desconhecido\",\n    customer_phone_verbal: \"\",\n    best_phone: \"Desconhecido\",\n    customer_name: \"\",\n    intent: \"\",\n    outcome: \"\",\n    follow_up_needed: true,\n    request_summary: \"\",\n    callback_preference: \"Logo que possÃ­vel\",\n    ended_reason: \"Erro\"\n  };\n}"
+          "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers[\"x-vapi-secret\"] || \"\";\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || \"\";\n  if (expected && vapiSecret !== expected) {\n    return { _error: true };\n  }\n} catch (e) {}\n\ntry {\n  const raw = input.body || input;\n  const msg = raw.message || raw;\n  const call = msg.call || raw.call || {};\n\n  const call_id = msg.call?.id || call.id || raw.call?.id || \"unknown\";\n  const started_at = msg.startedAt || call.startedAt || \"\";\n  const ended_at = msg.endedAt || call.endedAt || \"\";\n  const customer_phone = msg.customer?.number || call.customer?.number || \"Desconhecido\";\n\n  const analysis = msg.analysis || raw.analysis || {};\n  const structured = analysis.structuredData || {};\n\n  // All structured data fields from Vapi schema\n  const intent = structured.intent || \"\";\n  const outcome = structured.outcome || \"\";\n  const customer_name = structured.customerName || \"\";\n  const customer_phone_verbal = structured.customerPhone || \"\";\n  const follow_up_needed = structured.followUpNeeded !== undefined ? structured.followUpNeeded : true;\n  const request_summary = structured.requestSummary || \"\";\n  const callback_preference = structured.callbackPreference || \"Logo que possível\";\n\n  // Prefer structured requestSummary, fall back to analysis summary\n  const summary = analysis.summary || \"Sem resumo disponível\";\n\n  // Best phone: verbal number if given, otherwise caller ID\n  const best_phone = customer_phone_verbal || customer_phone;\n\n  const raw_reason = msg.endedReason || call.endedReason || \"unknown\";\n  const reasonMap = {\n    \"customer-ended-call\": \"Cliente desligou\",\n    \"assistant-ended-call\": \"Assistente terminou\",\n    \"assistant-said-end-call-phrase\": \"Assistente terminou\",\n    \"voicemail\": \"Correio de voz\",\n    \"silence-timed-out\": \"Sem resposta\",\n    \"max-duration-reached\": \"Duração máxima atingida\",\n    \"customer-did-not-answer\": \"Cliente não atendeu\",\n    \"customer-busy\": \"Cliente ocupado\",\n    \"phone-call-provider-closed-websocket\": \"Chamada cortada\",\n    \"pipeline-error-openai-llm-failed\": \"Erro técnico\",\n    \"pipeline-error-deepgram-transcriber-failed\": \"Erro técnico\",\n    \"unknown\": \"Desconhecido\"\n  };\n  const ended_reason = reasonMap[raw_reason] || raw_reason.replace(/-/g, \" \").replace(/^./, c => c.toUpperCase());\n\n  let duration_seconds = 0;\n  if (msg.durationSeconds) {\n    duration_seconds = Number(msg.durationSeconds);\n  } else if (ended_at && started_at) {\n    duration_seconds = Math.round((new Date(ended_at) - new Date(started_at)) / 1000);\n  }\n\n  return {\n    _error: false,\n    call_id,\n    started_at,\n    customer_phone,\n    customer_phone_verbal,\n    best_phone,\n    customer_name,\n    intent,\n    outcome,\n    follow_up_needed,\n    request_summary,\n    callback_preference,\n    summary,\n    ended_reason,\n    duration_seconds\n  };\n} catch (err) {\n  console.log(\"Post Call Summary processing error:\", err.message);\n  return {\n    _error: false,\n    call_id: \"error\",\n    started_at: \"\",\n    summary: \"Erro ao processar dados da chamada: \" + err.message,\n    duration_seconds: 0,\n    customer_phone: \"Desconhecido\",\n    customer_phone_verbal: \"\",\n    best_phone: \"Desconhecido\",\n    customer_name: \"\",\n    intent: \"\",\n    outcome: \"\",\n    follow_up_needed: true,\n    request_summary: \"\",\n    callback_preference: \"Logo que possível\",\n    ended_reason: \"Erro\"\n  };\n}"
         },
         "id": "a95c595a-e43d-4edb-a73a-40d5350270a9",
         "name": "Process Call Data",
@@ -426,7 +426,7 @@
               "Resumo": "={{ $json.summary }}",
               "Duração": "={{ Math.floor($json.duration_seconds / 60) + 'm ' + ($json.duration_seconds % 60) + 's' }}",
               "Fim da chamada": "={{ $json.ended_reason }}",
-              "Nome": "={{ \\.customer_name || '' }}"
+              "Nome": "={{ $json.customer_name || \"\" }}"
             },
             "matchingColumns": [],
             "schema": [
@@ -574,18 +574,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-02-15T03:35:12.077Z",
-        "id": 528,
+        "createdAt": "2026-02-15T03:46:52.908Z",
+        "id": 532,
         "workflowId": "uAqFlM4HVWYxxtb0",
-        "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
+        "versionId": "f1de8909-1a89-4217-98ec-52a673b2097f",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       },
       {
-        "createdAt": "2026-02-15T03:35:12.319Z",
-        "id": 529,
+        "createdAt": "2026-02-15T03:46:53.214Z",
+        "id": 533,
         "workflowId": "uAqFlM4HVWYxxtb0",
-        "versionId": "7f276645-cc84-4a0a-92e8-a64ffeab22db",
+        "versionId": "f1de8909-1a89-4217-98ec-52a673b2097f",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       }
