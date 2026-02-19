@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Contratos — descomplica</title>
+    <meta name="robots" content="noindex, nofollow">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --green: #b5e04e;
+            --green-dark: #9bc73e;
+            --black: #000000;
+            --white: #ffffff;
+            --gray-100: #f7f7f7;
+            --gray-200: #e5e5e5;
+            --gray-300: #d4d4d4;
+            --gray-400: #a3a3a3;
+            --gray-500: #737373;
+            --gray-600: #525252;
+            --gray-800: #262626;
+            --gray-900: #171717;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            line-height: 1.5;
+        }
+
+        /* -- App Header -- */
+        .app-header {
+            background: var(--black);
+            padding: 16px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .app-header img { height: 28px; width: auto; }
+        .app-header span {
+            color: var(--gray-500);
+            font-size: 14px;
+            font-weight: 500;
+            border-left: 1px solid var(--gray-600);
+            padding-left: 16px;
+        }
+
+        /* -- Layout -- */
+        .app-layout {
+            display: grid;
+            grid-template-columns: 480px 1fr;
+            min-height: calc(100vh - 60px);
+        }
+
+        /* -- Form Panel -- */
+        .form-panel {
+            background: var(--white);
+            border-right: 1px solid var(--gray-200);
+            padding: 28px 24px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+        }
+        .form-section { margin-bottom: 24px; }
+        .form-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--gray-500);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-600);
+            margin-bottom: 4px;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            color: var(--gray-800);
+            background: var(--white);
+            transition: border-color 0.15s;
+        }
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 2px rgba(181, 224, 78, 0.15);
+        }
+        textarea { resize: vertical; min-height: 80px; }
+
+        .field-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .field-group { margin-bottom: 12px; }
+
+        /* -- Clause Sections -- */
+        .clause-section {
+            border: 1px solid var(--gray-200);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+        .clause-header {
+            padding: 10px 14px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+            background: var(--gray-100);
+            transition: background 0.15s;
+            gap: 10px;
+        }
+        .clause-header:hover { background: var(--gray-200); }
+        .clause-header-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+        .clause-header h3 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--gray-800);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .clause-header .clause-num {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--green-dark);
+            background: rgba(181, 224, 78, 0.15);
+            padding: 2px 7px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .clause-header .toggle-icon {
+            font-size: 12px;
+            color: var(--gray-500);
+            transition: transform 0.15s;
+            flex-shrink: 0;
+        }
+        .clause-section.collapsed .toggle-icon { transform: rotate(-90deg); }
+        .clause-section.collapsed .clause-body { display: none; }
+        .clause-body { padding: 12px 14px; }
+
+        /* Toggle switch */
+        .switch-track {
+            position: relative;
+            width: 36px; height: 20px;
+            background: var(--gray-300);
+            border-radius: 10px;
+            transition: all 0.15s;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+        .switch-track::after {
+            content: '';
+            position: absolute;
+            top: 2px; left: 2px;
+            width: 16px; height: 16px;
+            background: var(--white);
+            border-radius: 50%;
+            transition: all 0.15s;
+        }
+        .switch-track.active { background: var(--green); }
+        .switch-track.active::after { left: 18px; }
+
+        .clause-toggle-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .clause-toggle-label {
+            font-size: 12px;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+
+        /* Clause action buttons (move/delete) */
+        .clause-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .clause-actions button {
+            width: 26px; height: 26px;
+            border: 1px solid var(--gray-200);
+            border-radius: 5px;
+            background: var(--white);
+            color: var(--gray-500);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+            padding: 0;
+            line-height: 1;
+        }
+        .clause-actions button:hover { border-color: var(--green); color: var(--green-dark); }
+        .clause-actions button.btn-delete-clause:hover { border-color: #dc2626; color: #dc2626; }
+        .clause-actions button:disabled { opacity: 0.25; cursor: default; border-color: var(--gray-200); color: var(--gray-400); }
+
+        .clause-title-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--gray-200);
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 10px;
+        }
+        .clause-title-input:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 2px rgba(181, 224, 78, 0.15);
+        }
+
+        .btn-add-clause {
+            width: 100%;
+            padding: 9px;
+            border: 1.5px dashed var(--gray-300);
+            background: none;
+            color: var(--gray-500);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px;
+            font-family: inherit;
+            transition: all 0.15s;
+            margin-top: 6px;
+        }
+        .btn-add-clause:hover { border-color: var(--green); color: var(--green-dark); }
+
+        /* -- Buttons -- */
+        .btn-generate {
+            width: 100%;
+            padding: 14px;
+            background: var(--green);
+            color: var(--black);
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.15s;
+            margin-top: 20px;
+        }
+        .btn-generate:hover { background: var(--green-dark); }
+        .btn-generate:active { transform: scale(0.98); }
+        .btn-generate:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Cover file input */
+        .cover-upload {
+            border: 2px dashed var(--gray-300);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-bottom: 12px;
+        }
+        .cover-upload:hover { border-color: var(--green); }
+        .cover-upload.has-file { border-color: var(--green); background: rgba(181, 224, 78, 0.06); }
+        .cover-upload input[type="file"] { display: none; }
+        .cover-upload .upload-label {
+            font-size: 13px;
+            color: var(--gray-500);
+            font-weight: 500;
+        }
+        .cover-upload .upload-filename {
+            font-size: 12px;
+            color: var(--green-dark);
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        /* -- Preview Panel -- */
+        .preview-panel {
+            padding: 32px;
+            overflow-y: auto;
+            max-height: calc(100vh - 60px);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .preview-wrapper {
+            width: 210mm;
+            min-height: 297mm;
+            background: var(--white);
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
+            border-radius: 4px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        /* -- PDF Content Styles -- */
+        .pdf-content {
+            font-family: 'Inter', Arial, Helvetica, sans-serif;
+            color: var(--gray-800);
+            font-size: 13px;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            min-height: 297mm;
+        }
+        .pdf-header {
+            background: var(--black);
+            padding: 28px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pdf-header img { height: 30px; width: auto; }
+        .pdf-header .doc-type {
+            color: var(--green);
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+        .pdf-body { padding: 36px 40px 24px; flex: 1; }
+        .pdf-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 32px;
+            gap: 40px;
+        }
+        .pdf-info-block h3 {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gray-500);
+            margin-bottom: 8px;
+        }
+        .pdf-info-block p {
+            font-size: 13px;
+            color: var(--gray-800);
+            margin-bottom: 2px;
+        }
+        .pdf-info-block p strong { font-weight: 700; }
+
+        .pdf-meta {
+            display: flex;
+            gap: 28px;
+            margin-bottom: 28px;
+            padding: 12px 16px;
+            background: var(--gray-100);
+            border-radius: 6px;
+            flex-wrap: wrap;
+        }
+        .pdf-meta-item { font-size: 12px; color: var(--gray-600); }
+        .pdf-meta-item strong {
+            font-weight: 700;
+            color: var(--gray-800);
+            margin-left: 4px;
+        }
+
+        /* -- Clause Styles in PDF -- */
+        .pdf-clause {
+            margin-bottom: 20px;
+        }
+        .pdf-clause-heading {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gray-900);
+            margin-bottom: 8px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .pdf-clause-heading .clause-number {
+            color: var(--green-dark);
+            margin-right: 8px;
+        }
+        .pdf-clause-text {
+            font-size: 12px;
+            color: var(--gray-600);
+            white-space: pre-wrap;
+            line-height: 1.7;
+        }
+
+        /* -- Signature Block -- */
+        .pdf-signatures {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 2px solid var(--gray-200);
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+        }
+        .pdf-sig-col { text-align: center; }
+        .pdf-sig-col h4 {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--gray-500);
+            margin-bottom: 60px;
+        }
+        .pdf-sig-line {
+            border-top: 1px solid var(--gray-800);
+            padding-top: 8px;
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+
+        .pdf-footer {
+            background: var(--black);
+            padding: 18px 40px;
+            text-align: center;
+        }
+        .pdf-footer p {
+            font-size: 11px;
+            color: var(--gray-500);
+            margin-bottom: 2px;
+        }
+        .pdf-footer p.tagline {
+            font-style: italic;
+            color: var(--white);
+            margin-bottom: 6px;
+        }
+        .pdf-footer a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        /* -- Responsive -- */
+        @media (max-width: 1200px) {
+            .app-layout { grid-template-columns: 1fr; }
+            .form-panel {
+                max-height: none;
+                border-right: none;
+                border-bottom: 1px solid var(--gray-200);
+            }
+            .preview-panel { max-height: none; padding: 24px 16px; }
+            .preview-wrapper { width: 100%; min-height: auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- App Header -->
+    <div class="app-header">
+        <img src="https://descomplicador.pt/images/logo-footer.png" alt="descomplica">
+        <span>Gerador de Contratos</span>
+    </div>
+
+    <div class="app-layout">
+
+        <!-- FORM PANEL -->
+        <div class="form-panel">
+
+            <!-- Cover PDF -->
+            <div class="form-section">
+                <div class="form-section-title">Capa do Contrato</div>
+                <div class="cover-upload" id="cover-upload">
+                    <input type="file" id="cover-file" accept=".pdf">
+                    <div class="upload-label">Clique para carregar <strong>_cover.pdf</strong></div>
+                    <div class="upload-filename" id="cover-filename"></div>
+                </div>
+            </div>
+
+            <!-- Client Info -->
+            <div class="form-section">
+                <div class="form-section-title">Dados do Cliente</div>
+                <div class="field-group">
+                    <label for="client-name">Nome / Empresa</label>
+                    <input type="text" id="client-name" placeholder="Ex: Hotel do Livro">
+                </div>
+                <div class="field-group">
+                    <label for="client-nif">NIF</label>
+                    <input type="text" id="client-nif" placeholder="Ex: 501234567">
+                </div>
+                <div class="field-group">
+                    <label for="client-address">Morada</label>
+                    <input type="text" id="client-address" placeholder="Ex: Rua Augusta 123, 1100-048 Lisboa">
+                </div>
+                <div class="field-group">
+                    <label for="client-contact">Contacto (opcional)</label>
+                    <input type="text" id="client-contact" placeholder="Ex: +351 912 345 678">
+                </div>
+            </div>
+
+            <!-- Contract Details -->
+            <div class="form-section">
+                <div class="form-section-title">Detalhes do Contrato</div>
+                <div class="field-group">
+                    <label for="contract-type">Tipo de contrato</label>
+                    <select id="contract-type">
+                        <option value="Subscrição" selected>Subscrição</option>
+                        <option value="Implementação">Implementação</option>
+                    </select>
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label for="contract-date">Data do contrato</label>
+                        <input type="date" id="contract-date">
+                    </div>
+                    <div class="field-group">
+                        <label for="contract-start">Data de início</label>
+                        <input type="date" id="contract-start">
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label for="contract-duration">Duração</label>
+                        <select id="contract-duration">
+                            <option value="3 meses">3 meses</option>
+                            <option value="6 meses">6 meses</option>
+                            <option value="12 meses" selected>12 meses</option>
+                            <option value="Indeterminado">Indeterminado</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label for="payment-method">Método de pagamento</label>
+                        <select id="payment-method">
+                            <option value="Transferência Bancária">Transferência Bancária</option>
+                            <option value="MBWay">MBWay</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label for="monthly-value">Valor mensal (&euro;)</label>
+                        <input type="number" id="monthly-value" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                    <div class="field-group">
+                        <label for="setup-value">Valor de setup (&euro;, opcional)</label>
+                        <input type="number" id="setup-value" placeholder="0.00" min="0" step="0.01">
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="fixed-value">Valor fixo (&euro;, opcional)</label>
+                    <input type="number" id="fixed-value" placeholder="0.00" min="0" step="0.01">
+                </div>
+            </div>
+
+            <!-- Clauses -->
+            <div class="form-section">
+                <div class="form-section-title">Cláusulas</div>
+                <div id="clauses-container"></div>
+                <button type="button" class="btn-add-clause" id="btn-add-clause">+ Adicionar cláusula</button>
+            </div>
+
+            <button type="button" class="btn-generate" id="btn-generate">Gerar PDF</button>
+        </div>
+
+        <!-- PREVIEW PANEL -->
+        <div class="preview-panel">
+            <div class="preview-wrapper">
+                <div class="pdf-content" id="pdf-content">
+
+                    <!-- Header -->
+                    <div class="pdf-header">
+                        <img src="https://descomplicador.pt/images/logo-footer.png" alt="descomplica">
+                        <div style="text-align: right;">
+                            <span class="doc-type">Contrato</span>
+                            <div id="pv-contract-type-sub" style="color: var(--gray-400); font-size: 13px; font-weight: 600; letter-spacing: 0.06em; margin-top: 2px;">Subscrição</div>
+                        </div>
+                    </div>
+
+                    <!-- Body -->
+                    <div class="pdf-body" id="pdf-body">
+                        <!-- Info blocks -->
+                        <div class="pdf-info">
+                            <div class="pdf-info-block">
+                                <h3>Prestador</h3>
+                                <p><strong>André Duarte Castro Flores Brasil</strong></p>
+                                <p>NIF: 226887499</p>
+                                <p>Quinta das Almas 9</p>
+                            </div>
+                            <div class="pdf-info-block" style="text-align: right;">
+                                <h3>Cliente</h3>
+                                <p><strong id="pv-client-name">—</strong></p>
+                                <p id="pv-client-nif"></p>
+                                <p id="pv-client-address"></p>
+                                <p id="pv-client-contact"></p>
+                            </div>
+                        </div>
+
+                        <!-- Meta bar -->
+                        <div class="pdf-meta">
+                            <div class="pdf-meta-item">Data:<strong id="pv-date">—</strong></div>
+                            <div class="pdf-meta-item">Duração:<strong id="pv-duration">12 meses</strong></div>
+                            <div class="pdf-meta-item">Início:<strong id="pv-start">—</strong></div>
+                            <div class="pdf-meta-item">Valor mensal:<strong id="pv-monthly">—</strong></div>
+                            <div class="pdf-meta-item" id="pv-setup-wrap" style="display:none">Setup:<strong id="pv-setup">—</strong></div>
+                            <div class="pdf-meta-item" id="pv-fixed-wrap" style="display:none">Valor fixo:<strong id="pv-fixed">—</strong></div>
+                            <div class="pdf-meta-item">Pagamento:<strong id="pv-payment">Transferência Bancária</strong></div>
+                        </div>
+
+                        <!-- Clauses -->
+                        <div id="pv-clauses"></div>
+
+                        <!-- Signature block -->
+                        <div class="pdf-signatures">
+                            <div class="pdf-sig-col">
+                                <h4>O Prestador</h4>
+                                <div class="pdf-sig-line">André Duarte Castro Flores Brasil</div>
+                            </div>
+                            <div class="pdf-sig-col">
+                                <h4>O Cliente</h4>
+                                <div class="pdf-sig-line" id="pv-sig-client">—</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Footer -->
+                    <div class="pdf-footer">
+                        <p class="tagline">Trabalho a fluir, negócio a crescer.</p>
+                        <p><a href="https://descomplicador.pt">descomplicador.pt</a></p>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+
+        // =========================================================
+        // Default clause definitions (all pt-PT)
+        // =========================================================
+        var DEFAULT_CLAUSES = [
+            {
+                id: 'objeto',
+                title: 'Objeto do Contrato',
+                enabled: true,
+                text: 'O presente contrato tem por objeto a prestação de serviços de desenvolvimento web, automação e integração de sistemas digitais, conforme descrito e acordado entre as partes.\n\nOs serviços incluem, mas não se limitam a: criação e manutenção de websites, implementação de chatbots e assistentes virtuais, automação de processos internos e integração com plataformas de terceiros.'
+            },
+            {
+                id: 'duracao',
+                title: 'Duração e Renovação',
+                enabled: true,
+                text: 'O presente contrato tem duração por um período indeterminado, com periodicidade mensal.\n\nO contrato renova-se automaticamente por períodos de periodicidade iguais e sucessivos, salvo denúncia por qualquer das partes com um pré-aviso mínimo de 5 (cinco) dias antes do termo do período em curso.'
+            },
+            {
+                id: 'valores',
+                title: 'Valores e Pagamentos',
+                enabled: true,
+                text: 'O Cliente obriga-se ao pagamento do valor mensal indicado nos detalhes do contrato, a liquidar até ao dia seguinte ao da data do contrato, pelo método de pagamento acordado.\n\nO Prestador reserva-se ao direito de suspender os serviços após 5 (cinco) dias de atraso.'
+            },
+            {
+                id: 'obrigacoes-prestador',
+                title: 'Obrigações do Prestador',
+                enabled: true,
+                text: 'O Prestador obriga-se a:\n\na) Executar os serviços contratados com diligência, competência e de acordo com as melhores práticas do setor;\nb) Manter o Cliente informado sobre o progresso dos trabalhos;\nc) Garantir a disponibilidade dos sistemas desenvolvidos, dentro dos limites razoáveis;\nd) Corrigir eventuais erros ou falhas nos serviços prestados, sem custos adicionais, num prazo razoável;\ne) Cumprir os prazos acordados para cada entrega.'
+            },
+            {
+                id: 'obrigacoes-cliente',
+                title: 'Obrigações do Cliente',
+                enabled: true,
+                text: 'O Cliente obriga-se a:\n\na) Fornecer atempadamente toda a informação, conteúdos e acessos necessários à execução dos serviços;\nb) Efetuar os pagamentos nos termos e prazos acordados;\nc) Designar um interlocutor responsável pela comunicação com o Prestador;\nd) Validar e aprovar as entregas dentro de um prazo razoável, não superior a 7 (sete) dias úteis;\ne) Não utilizar os serviços ou sistemas desenvolvidos para fins ilícitos ou contrários à lei.'
+            },
+            {
+                id: 'propriedade-intelectual',
+                title: 'Propriedade Intelectual',
+                enabled: true,
+                text: 'Todo o código-fonte, design, conteúdos e materiais desenvolvidos especificamente para o Cliente no âmbito do presente contrato são propriedade do Cliente após o pagamento integral dos valores devidos, no caso de modalidade de Implementação.\n\nO Prestador reserva-se o direito de reutilizar componentes genéricos, bibliotecas e metodologias que não constituam trabalho exclusivo para o Cliente.\n\nO Prestador poderá utilizar o projeto como referência no seu portfólio, salvo acordo escrito em contrário.'
+            },
+            {
+                id: 'confidencialidade',
+                title: 'Confidencialidade',
+                enabled: true,
+                text: 'Ambas as partes comprometem-se a manter sigilo sobre toda a informação confidencial a que tenham acesso no âmbito do presente contrato, incluindo dados comerciais, técnicos, estratégicos e pessoais.\n\nEsta obrigação mantém-se em vigor durante a vigência do contrato e por um período de 2 (dois) anos após a sua cessação.'
+            },
+            {
+                id: 'rgpd',
+                title: 'Proteção de Dados (RGPD)',
+                enabled: true,
+                text: 'As partes comprometem-se a cumprir o Regulamento Geral sobre a Proteção de Dados (RGPD) e demais legislação aplicável em matéria de proteção de dados pessoais.\n\nO Prestador atuará como subcontratante no tratamento de dados pessoais do Cliente, comprometendo-se a:\n\na) Tratar os dados pessoais apenas para as finalidades previstas no presente contrato;\nb) Implementar medidas técnicas e organizativas adequadas para garantir a segurança dos dados;\nc) Notificar o Cliente de qualquer violação de dados no prazo de 72 (setenta e duas) horas;\nd) Eliminar ou devolver os dados pessoais no termo do contrato, conforme instruído pelo Cliente.'
+            },
+            {
+                id: 'rescisao',
+                title: 'Rescisão',
+                enabled: true,
+                text: 'Qualquer das partes pode rescindir o presente contrato mediante comunicação escrita com um pré-aviso mínimo de 5 (cinco) dias.\n\nConstituem justa causa de rescisão imediata:\n\na) O incumprimento grave ou reiterado das obrigações contratuais;\nb) A insolvência ou dissolução de qualquer das partes;\nc) O atraso no pagamento superior a 5 (cinco) dias.\n\nEm caso de rescisão, o Cliente é responsável pelo pagamento dos serviços já prestados até à data de cessação.'
+            },
+            {
+                id: 'forca-maior',
+                title: 'Força Maior',
+                enabled: true,
+                text: 'Nenhuma das partes será responsável pelo incumprimento das suas obrigações quando este resulte de situações de força maior, designadamente catástrofes naturais, guerras, pandemias, atos governamentais, falhas generalizadas de telecomunicações ou energia, ou outras circunstâncias imprevisíveis e fora do controlo razoável das partes.\n\nA parte afetada deverá notificar a outra no mais breve prazo possível.'
+            },
+            {
+                id: 'foro',
+                title: 'Foro Competente',
+                enabled: true,
+                text: 'Para a resolução de quaisquer litígios emergentes do presente contrato, as partes elegem o foro da comarca de Angra do Heroísmo, com expressa renúncia a qualquer outro.'
+            }
+        ];
+
+        // =========================================================
+        // DOM References
+        // =========================================================
+        var clientNameInput = document.getElementById('client-name');
+        var clientNifInput = document.getElementById('client-nif');
+        var clientAddressInput = document.getElementById('client-address');
+        var clientContactInput = document.getElementById('client-contact');
+
+        var contractTypeSelect = document.getElementById('contract-type');
+        var contractDateInput = document.getElementById('contract-date');
+        var contractStartInput = document.getElementById('contract-start');
+        var durationSelect = document.getElementById('contract-duration');
+        var paymentSelect = document.getElementById('payment-method');
+        var monthlyInput = document.getElementById('monthly-value');
+        var setupInput = document.getElementById('setup-value');
+        var fixedInput = document.getElementById('fixed-value');
+
+        var clausesContainer = document.getElementById('clauses-container');
+        var btnAddClause = document.getElementById('btn-add-clause');
+        var btnGenerate = document.getElementById('btn-generate');
+        var clauseIdCounter = 100;
+
+        // Cover file
+        var coverUpload = document.getElementById('cover-upload');
+        var coverFileInput = document.getElementById('cover-file');
+        var coverFilename = document.getElementById('cover-filename');
+        var coverPdfBytes = null;
+
+        // Preview refs
+        var pvContractTypeSub = document.getElementById('pv-contract-type-sub');
+        var pvClientName = document.getElementById('pv-client-name');
+        var pvClientNif = document.getElementById('pv-client-nif');
+        var pvClientAddress = document.getElementById('pv-client-address');
+        var pvClientContact = document.getElementById('pv-client-contact');
+        var pvDate = document.getElementById('pv-date');
+        var pvDuration = document.getElementById('pv-duration');
+        var pvStart = document.getElementById('pv-start');
+        var pvMonthly = document.getElementById('pv-monthly');
+        var pvSetup = document.getElementById('pv-setup');
+        var pvSetupWrap = document.getElementById('pv-setup-wrap');
+        var pvFixed = document.getElementById('pv-fixed');
+        var pvFixedWrap = document.getElementById('pv-fixed-wrap');
+        var pvPayment = document.getElementById('pv-payment');
+        var pvClauses = document.getElementById('pv-clauses');
+        var pvSigClient = document.getElementById('pv-sig-client');
+
+        // Set default date to today
+        var today = new Date().toISOString().split('T')[0];
+        contractDateInput.value = today;
+        contractStartInput.value = today;
+
+        // =========================================================
+        // Clause state
+        // =========================================================
+        var clauses = DEFAULT_CLAUSES.map(function(c) {
+            return { id: c.id, title: c.title, enabled: c.enabled, text: c.text };
+        });
+
+        // =========================================================
+        // Build clause form UI
+        // =========================================================
+        function buildClauseUI() {
+            clausesContainer.innerHTML = '';
+            clauses.forEach(function(clause, idx) {
+                var section = document.createElement('div');
+                section.className = 'clause-section' + (clause.enabled ? '' : ' collapsed');
+                section.dataset.clauseId = clause.id;
+
+                var header = document.createElement('div');
+                header.className = 'clause-header';
+
+                var headerLeft = document.createElement('div');
+                headerLeft.className = 'clause-header-left';
+
+                var num = document.createElement('span');
+                num.className = 'clause-num';
+                num.textContent = (idx + 1) + '.ª';
+                headerLeft.appendChild(num);
+
+                var h3 = document.createElement('h3');
+                h3.textContent = clause.title;
+                headerLeft.appendChild(h3);
+
+                header.appendChild(headerLeft);
+
+                // Action buttons (move up, move down, delete)
+                var actions = document.createElement('div');
+                actions.className = 'clause-actions';
+
+                var btnUp = document.createElement('button');
+                btnUp.type = 'button';
+                btnUp.innerHTML = '&#9650;';
+                btnUp.title = 'Mover para cima';
+                btnUp.disabled = (idx === 0);
+                btnUp.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    moveClause(clause.id, -1);
+                });
+                actions.appendChild(btnUp);
+
+                var btnDown = document.createElement('button');
+                btnDown.type = 'button';
+                btnDown.innerHTML = '&#9660;';
+                btnDown.title = 'Mover para baixo';
+                btnDown.disabled = (idx === clauses.length - 1);
+                btnDown.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    moveClause(clause.id, 1);
+                });
+                actions.appendChild(btnDown);
+
+                if (clause.custom) {
+                    var btnDel = document.createElement('button');
+                    btnDel.type = 'button';
+                    btnDel.className = 'btn-delete-clause';
+                    btnDel.innerHTML = '&#10005;';
+                    btnDel.title = 'Remover cláusula';
+                    btnDel.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        deleteClause(clause.id);
+                    });
+                    actions.appendChild(btnDel);
+                }
+
+                header.appendChild(actions);
+
+                var toggle = document.createElement('span');
+                toggle.className = 'toggle-icon';
+                toggle.textContent = '\u25BC';
+                header.appendChild(toggle);
+
+                section.appendChild(header);
+
+                var body = document.createElement('div');
+                body.className = 'clause-body';
+
+                // Editable title for custom clauses
+                if (clause.custom) {
+                    var titleInput = document.createElement('input');
+                    titleInput.type = 'text';
+                    titleInput.className = 'clause-title-input';
+                    titleInput.value = clause.title;
+                    titleInput.placeholder = 'Título da cláusula';
+                    titleInput.addEventListener('input', function() {
+                        clause.title = titleInput.value;
+                        h3.textContent = titleInput.value;
+                        updatePreview();
+                    });
+                    titleInput.addEventListener('click', function(e) { e.stopPropagation(); });
+                    body.appendChild(titleInput);
+                }
+
+                // Enable/disable toggle
+                var toggleRow = document.createElement('div');
+                toggleRow.className = 'clause-toggle-row';
+
+                var switchTrack = document.createElement('div');
+                switchTrack.className = 'switch-track' + (clause.enabled ? ' active' : '');
+                switchTrack.dataset.clauseId = clause.id;
+                toggleRow.appendChild(switchTrack);
+
+                var toggleLabel = document.createElement('span');
+                toggleLabel.className = 'clause-toggle-label';
+                toggleLabel.textContent = clause.enabled ? 'Ativa' : 'Desativada';
+                toggleRow.appendChild(toggleLabel);
+
+                body.appendChild(toggleRow);
+
+                // Textarea
+                var ta = document.createElement('textarea');
+                ta.value = clause.text;
+                ta.rows = 6;
+                ta.dataset.clauseId = clause.id;
+                ta.style.opacity = clause.enabled ? '1' : '0.4';
+                body.appendChild(ta);
+
+                section.appendChild(body);
+                clausesContainer.appendChild(section);
+
+                // Events
+                header.addEventListener('click', function() {
+                    section.classList.toggle('collapsed');
+                });
+
+                switchTrack.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    var c = clauses.find(function(x) { return x.id === clause.id; });
+                    c.enabled = !c.enabled;
+                    switchTrack.classList.toggle('active', c.enabled);
+                    toggleLabel.textContent = c.enabled ? 'Ativa' : 'Desativada';
+                    ta.style.opacity = c.enabled ? '1' : '0.4';
+                    updatePreview();
+                });
+
+                ta.addEventListener('input', function() {
+                    var c = clauses.find(function(x) { return x.id === clause.id; });
+                    c.text = ta.value;
+                    updatePreview();
+                });
+            });
+        }
+
+        // =========================================================
+        // Clause reorder / add / delete
+        // =========================================================
+        function moveClause(clauseId, direction) {
+            var idx = clauses.findIndex(function(c) { return c.id === clauseId; });
+            if (idx < 0) return;
+            var newIdx = idx + direction;
+            if (newIdx < 0 || newIdx >= clauses.length) return;
+            var temp = clauses[idx];
+            clauses[idx] = clauses[newIdx];
+            clauses[newIdx] = temp;
+            buildClauseUI();
+            updatePreview();
+        }
+
+        function deleteClause(clauseId) {
+            clauses = clauses.filter(function(c) { return c.id !== clauseId; });
+            buildClauseUI();
+            updatePreview();
+        }
+
+        function addClause() {
+            clauseIdCounter++;
+            clauses.push({
+                id: 'custom-' + clauseIdCounter,
+                title: 'Nova Cláusula',
+                enabled: true,
+                text: '',
+                custom: true
+            });
+            buildClauseUI();
+            updatePreview();
+            // Scroll to the new clause and expand it
+            var sections = clausesContainer.querySelectorAll('.clause-section');
+            var last = sections[sections.length - 1];
+            if (last) {
+                last.classList.remove('collapsed');
+                last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        btnAddClause.addEventListener('click', addClause);
+
+        // =========================================================
+        // Cover PDF upload
+        // =========================================================
+        coverUpload.addEventListener('click', function() {
+            coverFileInput.click();
+        });
+
+        coverFileInput.addEventListener('change', function() {
+            var file = coverFileInput.files[0];
+            if (file) {
+                coverFilename.textContent = file.name;
+                coverUpload.classList.add('has-file');
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    coverPdfBytes = new Uint8Array(e.target.result);
+                };
+                reader.readAsArrayBuffer(file);
+            } else {
+                coverFilename.textContent = '';
+                coverUpload.classList.remove('has-file');
+                coverPdfBytes = null;
+            }
+        });
+
+        // =========================================================
+        // Format helpers
+        // =========================================================
+        function formatCurrency(val) {
+            var n = parseFloat(val);
+            if (isNaN(n)) return '—';
+            return n.toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' \u20AC';
+        }
+
+        function formatDatePT(dateStr) {
+            if (!dateStr) return '—';
+            var parts = dateStr.split('-');
+            return parts[2] + '/' + parts[1] + '/' + parts[0];
+        }
+
+        function escapeHtml(str) {
+            var div = document.createElement('div');
+            div.textContent = str;
+            return div.innerHTML;
+        }
+
+        // =========================================================
+        // Update preview
+        // =========================================================
+        function updatePreview() {
+            // Contract type subheader
+            pvContractTypeSub.textContent = contractTypeSelect.value;
+
+            // Client
+            pvClientName.textContent = clientNameInput.value || '—';
+            pvClientNif.textContent = clientNifInput.value ? 'NIF: ' + clientNifInput.value : '';
+            pvClientAddress.textContent = clientAddressInput.value || '';
+            pvClientContact.textContent = clientContactInput.value || '';
+
+            // Meta
+            pvDate.textContent = formatDatePT(contractDateInput.value);
+            pvDuration.textContent = durationSelect.value;
+            pvStart.textContent = formatDatePT(contractStartInput.value);
+            pvMonthly.textContent = formatCurrency(monthlyInput.value);
+            pvPayment.textContent = paymentSelect.value;
+
+            var setupVal = parseFloat(setupInput.value);
+            if (setupVal > 0) {
+                pvSetupWrap.style.display = '';
+                pvSetup.textContent = formatCurrency(setupInput.value);
+            } else {
+                pvSetupWrap.style.display = 'none';
+            }
+
+            var fixedVal = parseFloat(fixedInput.value);
+            if (fixedVal > 0) {
+                pvFixedWrap.style.display = '';
+                pvFixed.textContent = formatCurrency(fixedInput.value);
+            } else {
+                pvFixedWrap.style.display = 'none';
+            }
+
+            // Signatures
+            pvSigClient.textContent = clientNameInput.value || '—';
+
+            // Clauses
+            var enabledNum = 0;
+            var html = '';
+            clauses.forEach(function(c) {
+                if (!c.enabled) return;
+                enabledNum++;
+                html += '<div class="pdf-clause">';
+                html += '<div class="pdf-clause-heading"><span class="clause-number">' + enabledNum + '.</span>' + escapeHtml(c.title) + '</div>';
+                html += '<div class="pdf-clause-text">' + escapeHtml(c.text) + '</div>';
+                html += '</div>';
+            });
+            pvClauses.innerHTML = html;
+        }
+
+        // =========================================================
+        // Attach form change listeners
+        // =========================================================
+        var allInputs = [
+            clientNameInput, clientNifInput, clientAddressInput, clientContactInput,
+            contractDateInput, contractStartInput, monthlyInput, setupInput, fixedInput
+        ];
+        allInputs.forEach(function(el) {
+            el.addEventListener('input', updatePreview);
+        });
+        contractTypeSelect.addEventListener('change', updatePreview);
+        durationSelect.addEventListener('change', updatePreview);
+        paymentSelect.addEventListener('change', updatePreview);
+
+        // =========================================================
+        // Smart page breaks (same pattern as quote generator)
+        // =========================================================
+        function getBreakSafeZones(bodyEl) {
+            var bodyTop = bodyEl.getBoundingClientRect().top;
+            var zones = [];
+
+            // Each clause heading is a safe break zone
+            var headings = bodyEl.querySelectorAll('.pdf-clause-heading');
+            headings.forEach(function(el) {
+                var top = el.getBoundingClientRect().top - bodyTop;
+                if (top > 0) zones.push(top);
+            });
+
+            // Signature block
+            var sigs = bodyEl.querySelector('.pdf-signatures');
+            if (sigs && sigs.offsetParent !== null) {
+                var top = sigs.getBoundingClientRect().top - bodyTop;
+                if (top > 0) zones.push(top);
+            }
+
+            zones.sort(function(a, b) { return a - b; });
+            var unique = [];
+            zones.forEach(function(z) {
+                if (unique.length === 0 || z - unique[unique.length - 1] > 5) unique.push(z);
+            });
+            return unique;
+        }
+
+        function calculateSmartPageBreaks(bodyAvailPx, bodyTotalPx, breakZonesPx, contPaddingPx) {
+            var pages = [];
+            var cursor = 0;
+
+            while (cursor < bodyTotalPx - 1) {
+                var avail = (pages.length === 0) ? bodyAvailPx : bodyAvailPx - contPaddingPx;
+                var idealEnd = cursor + avail;
+
+                if (idealEnd >= bodyTotalPx - 1) {
+                    pages.push({ startPx: cursor, heightPx: bodyTotalPx - cursor });
+                    break;
+                }
+
+                var bestBreak = idealEnd;
+                var bestAbove = -1;
+
+                for (var i = 0; i < breakZonesPx.length; i++) {
+                    var z = breakZonesPx[i];
+                    if (z <= cursor) continue;
+                    if (z <= idealEnd) {
+                        bestAbove = z;
+                    }
+                }
+
+                if (bestAbove > cursor) {
+                    bestBreak = bestAbove;
+                }
+
+                pages.push({ startPx: cursor, heightPx: bestBreak - cursor });
+                cursor = bestBreak;
+            }
+
+            return pages;
+        }
+
+        // =========================================================
+        // PDF Generation
+        // =========================================================
+        btnGenerate.addEventListener('click', function() {
+            var clientSlug = (clientNameInput.value.trim() || 'cliente')
+                .toLowerCase()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/(^-|-$)/g, '');
+            var dateSlug = contractDateInput.value || 'sem-data';
+            var filename = 'contrato-' + clientSlug + '-' + dateSlug + '.pdf';
+
+            btnGenerate.textContent = 'A gerar...';
+            btnGenerate.disabled = true;
+
+            var headerEl = document.querySelector('#pdf-content .pdf-header');
+            var bodyEl   = document.querySelector('#pdf-content .pdf-body');
+            var footerEl = document.querySelector('#pdf-content .pdf-footer');
+
+            // Measure break-safe zones BEFORE rendering
+            var breakZonesCSS = getBreakSafeZones(bodyEl);
+
+            var originalFlex = bodyEl.style.flex;
+            var originalMinHeight = document.querySelector('.pdf-content').style.minHeight;
+            bodyEl.style.flex = 'none';
+            document.querySelector('.pdf-content').style.minHeight = 'auto';
+
+            var H2C_SCALE = 2;
+            var h2cOpt = { scale: H2C_SCALE, letterRendering: true, scrollY: 0, scrollX: 0 };
+
+            var breakZonesPx = breakZonesCSS.map(function(z) { return Math.round(z * H2C_SCALE); });
+
+            Promise.all([
+                html2canvas(headerEl, h2cOpt),
+                html2canvas(bodyEl, h2cOpt),
+                html2canvas(footerEl, h2cOpt)
+            ]).then(function(canvases) {
+                bodyEl.style.flex = originalFlex;
+                document.querySelector('.pdf-content').style.minHeight = originalMinHeight;
+
+                var headerCanvas = canvases[0];
+                var bodyCanvas   = canvases[1];
+                var footerCanvas = canvases[2];
+
+                var pdf = new jspdf.jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+                var pw = 210;
+                var ph = 297;
+
+                var mmPerPx = pw / bodyCanvas.width;
+                var headerH = headerCanvas.height * mmPerPx;
+                var footerH = footerCanvas.height * mmPerPx;
+
+                var footerPadding = 8;
+                var headerPadding = 6;
+                var bodyAvailH = ph - headerH - footerH - footerPadding;
+                var bodyAvailPx = bodyAvailH / mmPerPx;
+                var bodyTotalPx = bodyCanvas.height;
+
+                var contPaddingPx = headerPadding / mmPerPx;
+                var pageBreaks = calculateSmartPageBreaks(bodyAvailPx, bodyTotalPx, breakZonesPx, contPaddingPx);
+
+                for (var i = 0; i < pageBreaks.length; i++) {
+                    if (i > 0) pdf.addPage();
+
+                    var hImg = headerCanvas.toDataURL('image/jpeg', 0.98);
+                    pdf.addImage(hImg, 'JPEG', 0, 0, pw, headerH);
+
+                    var srcY = pageBreaks[i].startPx;
+                    var srcH = pageBreaks[i].heightPx;
+
+                    var sliceCanvas = document.createElement('canvas');
+                    sliceCanvas.width = bodyCanvas.width;
+                    sliceCanvas.height = srcH;
+                    var ctx = sliceCanvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                    ctx.drawImage(bodyCanvas, 0, srcY, bodyCanvas.width, srcH, 0, 0, bodyCanvas.width, srcH);
+                    var bImg = sliceCanvas.toDataURL('image/jpeg', 0.98);
+
+                    var actualBodyH = srcH * mmPerPx;
+                    var bodyTopY = headerH + (i > 0 ? headerPadding : 0);
+                    pdf.addImage(bImg, 'JPEG', 0, bodyTopY, pw, actualBodyH);
+
+                    var fImg = footerCanvas.toDataURL('image/jpeg', 0.98);
+                    pdf.addImage(fImg, 'JPEG', 0, ph - footerH, pw, footerH);
+                }
+
+                // Get the body PDF as ArrayBuffer
+                var bodyPdfBytes = pdf.output('arraybuffer');
+
+                // Merge with cover if present
+                if (coverPdfBytes) {
+                    mergeCoverAndBody(coverPdfBytes, bodyPdfBytes, filename);
+                } else {
+                    // No cover — download body directly
+                    pdf.save(filename);
+                    btnGenerate.textContent = 'Gerar PDF';
+                    btnGenerate.disabled = false;
+                }
+
+            }).catch(function(err) {
+                console.error('PDF generation error:', err);
+                btnGenerate.textContent = 'Gerar PDF';
+                btnGenerate.disabled = false;
+                alert('Erro ao gerar PDF: ' + (err.message || err));
+            });
+        });
+
+        // =========================================================
+        // Merge cover PDF + body PDF using pdf-lib
+        // =========================================================
+        function mergeCoverAndBody(coverBytes, bodyBytes, filename) {
+            var PDFDocument = PDFLib.PDFDocument;
+
+            PDFDocument.create().then(function(mergedPdf) {
+                return Promise.all([
+                    PDFDocument.load(coverBytes),
+                    PDFDocument.load(bodyBytes)
+                ]).then(function(docs) {
+                    var coverDoc = docs[0];
+                    var bodyDoc = docs[1];
+
+                    // Copy all pages from cover (typically just 1)
+                    return mergedPdf.copyPages(coverDoc, coverDoc.getPageIndices()).then(function(coverPages) {
+                        coverPages.forEach(function(page) {
+                            mergedPdf.addPage(page);
+                        });
+
+                        // Copy all body pages
+                        return mergedPdf.copyPages(bodyDoc, bodyDoc.getPageIndices()).then(function(bodyPages) {
+                            bodyPages.forEach(function(page) {
+                                mergedPdf.addPage(page);
+                            });
+
+                            return mergedPdf.save();
+                        });
+                    });
+                });
+            }).then(function(mergedBytes) {
+                // Download
+                var blob = new Blob([mergedBytes], { type: 'application/pdf' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                btnGenerate.textContent = 'Gerar PDF';
+                btnGenerate.disabled = false;
+            }).catch(function(err) {
+                console.error('PDF merge error:', err);
+                btnGenerate.textContent = 'Gerar PDF';
+                btnGenerate.disabled = false;
+                alert('Erro ao fundir PDFs: ' + (err.message || err));
+            });
+        }
+
+        // =========================================================
+        // Init
+        // =========================================================
+        buildClauseUI();
+        updatePreview();
+    })();
+    </script>
+
+</body>
+</html>
