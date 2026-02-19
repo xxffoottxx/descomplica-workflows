@@ -1416,13 +1416,15 @@
 
                     if (pg.qrDataUrl && qrImgEl) {
                         // Measure position BEFORE hiding (while layout is in capture mode)
+                        // Use mm-based absolute values so trimming doesn't shift QR placement
                         var bodyRect = bodyEl.getBoundingClientRect();
                         var qrRect = qrImgEl.getBoundingClientRect();
+                        var pxToMm = pw / bodyRect.width;
                         qrPosMm = {
-                            leftPct: (qrRect.left - bodyRect.left) / bodyRect.width,
-                            topPct: (qrRect.top - bodyRect.top) / bodyRect.height,
-                            widthPct: qrRect.width / bodyRect.width,
-                            heightPct: qrRect.height / bodyRect.height
+                            leftMm: (qrRect.left - bodyRect.left) * pxToMm,
+                            topMm: (qrRect.top - bodyRect.top) * pxToMm,
+                            widthMm: qrRect.width * pxToMm,
+                            heightMm: qrRect.height * pxToMm
                         };
                         // Hide QR so html2canvas renders blank space there
                         qrImgEl.style.visibility = 'hidden';
@@ -1447,9 +1449,34 @@
                     var scale = pw / bodyCanvas.width;
                     var headerH = headerCanvas.height * scale;
                     var footerH = footerCanvas.height * scale;
-                    var footerPadding = 6;
+                    var footerPadding = 2;
                     var bodyAvailH = ph - headerH - footerH - footerPadding;
-                    var bodyTotalH = bodyCanvas.height * scale;
+
+                    // ── Trim trailing whitespace from body canvas ──
+                    // Scan from the bottom of the body canvas upward to find
+                    // the last row that has non-white pixels, then treat that
+                    // as the true content height. This prevents blank pages
+                    // caused by extra padding/margin in the preview layout.
+                    var bodyCtxScan = bodyCanvas.getContext('2d');
+                    var trimmedBodyHeight = bodyCanvas.height;
+                    var scanRowWidth = bodyCanvas.width;
+                    for (var scanY = bodyCanvas.height - 1; scanY >= 0; scanY--) {
+                        var rowData = bodyCtxScan.getImageData(0, scanY, scanRowWidth, 1).data;
+                        var hasContent = false;
+                        // Sample every 4th pixel for performance (still catches any non-white)
+                        for (var sx = 0; sx < rowData.length; sx += 16) {
+                            if (rowData[sx] < 250 || rowData[sx + 1] < 250 || rowData[sx + 2] < 250) {
+                                hasContent = true;
+                                break;
+                            }
+                        }
+                        if (hasContent) {
+                            trimmedBodyHeight = scanY + 1;
+                            break;
+                        }
+                    }
+
+                    var bodyTotalH = trimmedBodyHeight * scale;
 
                     var totalSubPages = Math.max(1, Math.ceil(bodyTotalH / bodyAvailH));
                     var bodySlicePx = Math.floor(bodyAvailH / scale);
@@ -1461,7 +1488,17 @@
                         pdf.addImage(hImg, 'JPEG', 0, 0, pw, headerH);
 
                         var srcY = sp * bodySlicePx;
-                        var srcH = Math.min(bodySlicePx, bodyCanvas.height - srcY);
+                        var srcH = Math.min(bodySlicePx, trimmedBodyHeight - srcY);
+
+                        // Skip sub-pages with negligible content (less than 2px)
+                        if (srcH <= 2) {
+                            // Remove the page we just added for this empty sub-page
+                            if (sp > 0) {
+                                var pageCount = pdf.internal.getNumberOfPages();
+                                pdf.deletePage(pageCount);
+                            }
+                            continue;
+                        }
 
                         var sliceCanvas = document.createElement('canvas');
                         sliceCanvas.width = bodyCanvas.width;
@@ -1482,16 +1519,16 @@
 
                         // ── Place QR directly on PDF (bypasses canvas entirely) ──
                         if (qrPosMm && pg.qrDataUrl) {
-                            var qrTopInBody = qrPosMm.topPct * bodyTotalH;
+                            var qrTopInBody = qrPosMm.topMm;
                             var sliceTopMm = sp * bodyAvailH;
                             var sliceBottomMm = sliceTopMm + bodyAvailH;
 
                             // Check if QR falls on this sub-page
                             if (qrTopInBody >= sliceTopMm && qrTopInBody < sliceBottomMm) {
-                                var qrPdfX = qrPosMm.leftPct * pw;
+                                var qrPdfX = qrPosMm.leftMm;
                                 var qrPdfY = headerH + (qrTopInBody - sliceTopMm);
-                                var qrPdfW = qrPosMm.widthPct * pw;
-                                var qrPdfH = qrPosMm.heightPct * bodyTotalH;
+                                var qrPdfW = qrPosMm.widthMm;
+                                var qrPdfH = qrPosMm.heightMm;
                                 pdf.addImage(pg.qrDataUrl, 'PNG', qrPdfX, qrPdfY, qrPdfW, qrPdfH);
                             }
                         }
