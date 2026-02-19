@@ -150,18 +150,35 @@ app.post('/brand-invoice', async (req, res) => {
         const genError = await page.evaluate(() => window.__brandGenError);
         if (genError) throw new Error('PDF generation failed: ' + genError);
 
-        // Wait for download to finish writing
-        await new Promise(r => setTimeout(r, 2000));
-
-        // Find the downloaded file
-        const downloadedFiles = fs.readdirSync(downloadDir);
-        const pdfFile = downloadedFiles.find(f => f.endsWith('.pdf'));
-
-        if (!pdfFile) {
-            throw new Error('No PDF downloaded. Files in dir: ' + downloadedFiles.join(', '));
+        // Poll for downloaded file (wait up to 15s for file to be fully written)
+        let pdfFile = null;
+        let pdfBuffer = null;
+        for (let attempt = 0; attempt < 30; attempt++) {
+            await new Promise(r => setTimeout(r, 500));
+            const files = fs.readdirSync(downloadDir);
+            const candidate = files.find(f => f.endsWith('.pdf'));
+            if (candidate) {
+                const filePath = path.join(downloadDir, candidate);
+                const stat = fs.statSync(filePath);
+                if (stat.size > 0) {
+                    // Wait one more tick to ensure write is flushed
+                    await new Promise(r => setTimeout(r, 200));
+                    pdfFile = candidate;
+                    pdfBuffer = fs.readFileSync(filePath);
+                    break;
+                }
+            }
         }
 
-        const pdfBuffer = fs.readFileSync(path.join(downloadDir, pdfFile));
+        if (!pdfFile || !pdfBuffer) {
+            const files = fs.readdirSync(downloadDir);
+            throw new Error('No valid PDF downloaded after 15s. Files in dir: ' + files.join(', '));
+        }
+
+        if (pdfBuffer.length < 100) {
+            throw new Error('Downloaded PDF is too small (' + pdfBuffer.length + ' bytes) — likely corrupted or empty');
+        }
+
         const outputBase64 = pdfBuffer.toString('base64');
 
         const elapsed = Date.now() - start;
