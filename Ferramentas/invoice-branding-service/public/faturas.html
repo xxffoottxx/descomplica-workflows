@@ -316,7 +316,13 @@
 
         .pdf-body { padding: 28px 36px 20px; flex: 1; }
 
-        /* Copy badge */
+        /* Copy badge row */
+        .pdf-copy-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
         .pdf-copy-badge {
             display: inline-block;
             padding: 3px 10px;
@@ -325,7 +331,6 @@
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            margin-bottom: 16px;
         }
         .pdf-copy-badge.original { background: #dcfce7; color: #15803d; }
         .pdf-copy-badge.duplicado { background: #dbeafe; color: #1d4ed8; }
@@ -489,17 +494,19 @@
         .pdf-totals-row.grand-total .label { color: var(--black); font-weight: 800; }
         .pdf-totals-row.grand-total .value { color: var(--black); }
 
-        /* IBAN */
+        /* IBAN (inside copy row) */
         .pdf-iban {
-            display: flex;
-            justify-content: flex-end;
-            margin-bottom: 20px;
             font-size: 10px;
+            display: flex;
+            align-items: center;
         }
         .pdf-iban .label {
-            color: var(--gray-500);
-            font-weight: 600;
+            background: var(--green);
+            color: var(--black);
+            font-weight: 800;
             margin-right: 6px;
+            padding: 1px 6px;
+            border-radius: 3px;
         }
         .pdf-iban .value {
             color: var(--gray-700);
@@ -1177,8 +1184,11 @@
             // ── Body ──
             html += '<div class="pdf-body">';
 
-            // Copy badge
+            // Copy badge + IBAN row
+            html += '<div class="pdf-copy-row">';
             html += '<span class="pdf-copy-badge ' + copyClass + '">' + escapeHtml(data.copyType || 'Original') + '</span>';
+            html += '<div class="pdf-iban"><span class="label">IBAN</span><span class="value">PT50 0023 0000 4561 0178 4269 4</span></div>';
+            html += '</div>';
 
             // Meta bar
             html += '<div class="pdf-meta">';
@@ -1319,12 +1329,6 @@
                 html += '</div>';
             }
             html += '</div></div>';
-
-            // IBAN
-            html += '<div class="pdf-iban">';
-            html += '<span class="label">IBAN:</span>';
-            html += '<span class="value">PT50 0023 0000 4561 0178 4269 4</span>';
-            html += '</div>';
 
             // QR + Legal
             html += '<div class="pdf-legal">';
@@ -1515,8 +1519,8 @@
                         var srcY = sp * bodySlicePx;
                         var srcH = Math.min(bodySlicePx, trimmedBodyHeight - srcY);
 
-                        // Skip sub-pages with negligible content (less than 2px)
-                        if (srcH <= 2) {
+                        // Skip sub-pages with negligible content (less than ~4mm real height)
+                        if (srcH <= 50) {
                             // Remove the page we just added for this empty sub-page
                             if (sp > 0) {
                                 var pageCount = pdf.internal.getNumberOfPages();
