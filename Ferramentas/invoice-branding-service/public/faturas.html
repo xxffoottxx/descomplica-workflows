@@ -489,6 +489,25 @@
         .pdf-totals-row.grand-total .label { color: var(--black); font-weight: 800; }
         .pdf-totals-row.grand-total .value { color: var(--black); }
 
+        /* IBAN */
+        .pdf-iban {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 20px;
+            font-size: 10px;
+        }
+        .pdf-iban .label {
+            color: var(--gray-500);
+            font-weight: 600;
+            margin-right: 6px;
+        }
+        .pdf-iban .value {
+            color: var(--gray-700);
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            font-variant-numeric: tabular-nums;
+        }
+
         /* QR + Legal section */
         .pdf-legal {
             display: flex;
@@ -1300,6 +1319,12 @@
                 html += '</div>';
             }
             html += '</div></div>';
+
+            // IBAN
+            html += '<div class="pdf-iban">';
+            html += '<span class="label">IBAN:</span>';
+            html += '<span class="value">PT50 0023 0000 4561 0178 4269 4</span>';
+            html += '</div>';
 
             // QR + Legal
             html += '<div class="pdf-legal">';
