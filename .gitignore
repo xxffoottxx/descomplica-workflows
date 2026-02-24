@@ -48,6 +48,7 @@ coverage/
 *.tmp
 *.temp
 .cache
+*.bak.*
 
 # OS
 Thumbs.db
