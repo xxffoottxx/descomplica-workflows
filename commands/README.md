@@ -61,39 +61,69 @@ python commands/sync-n8n-status.py --json
 
 ---
 
-### 📋 sync-n8n-export.py (NOT YET IMPLEMENTED)
+### ✅ sync-n8n-export.py (IMPLEMENTED)
 
-Export workflows from production VM to local files.
+**Export workflows** — Pull latest workflow versions from production VM to local files.
 
-**Planned usage:**
+**Usage:**
 ```bash
-# Export all workflows
+# Export all workflows (interactive confirmation)
 python commands/sync-n8n-export.py
 
-# Export specific workflow
-python commands/sync-n8n-export.py 42
+# Auto-confirm all exports
+python commands/sync-n8n-export.py --yes
 
-# Dry run (show what would be exported)
+# Preview what would be exported
 python commands/sync-n8n-export.py --dry-run
+
+# Force export even with uncommitted changes (dangerous)
+python commands/sync-n8n-export.py --force --yes
 ```
+
+**Safety features:**
+- Checks for uncommitted changes (aborts unless `--force`)
+- Shows diff preview before exporting
+- Requires confirmation (unless `--yes`)
+- Creates timestamped backups (`.bak` files)
+- Validates JSON before writing
+
+**When to use:**
+- VM has newer version (after making changes in n8n UI)
+- After other team members deploy to VM
+- To recover from local file corruption
 
 ---
 
-### 📋 sync-n8n-deploy.py (NOT YET IMPLEMENTED)
+### ✅ sync-n8n-deploy.py (IMPLEMENTED)
 
-Deploy local workflows to production VM.
+**Deploy workflows** — Push local workflow changes to production VM.
 
-**Planned usage:**
+**Usage:**
 ```bash
-# Deploy all workflows
+# Deploy all workflows (interactive confirmation)
 python commands/sync-n8n-deploy.py
 
-# Deploy specific workflows
-python commands/sync-n8n-deploy.py 42 37 --activate
+# Deploy and activate workflows
+python commands/sync-n8n-deploy.py --activate --yes
 
-# Dry run
+# Preview what would be deployed
 python commands/sync-n8n-deploy.py --dry-run
+
+# Force deploy even if VM is newer (dangerous)
+python commands/sync-n8n-deploy.py --force --yes
 ```
+
+**Safety features:**
+- Checks for uncommitted changes (aborts unless `--force`)
+- Detects conflicts (VM version newer than local)
+- Shows diff preview before deploying
+- Requires confirmation (unless `--yes`)
+- Validates JSON before uploading
+
+**When to use:**
+- After editing workflows locally
+- After committing workflow changes to GitHub
+- To push configuration updates to production
 
 ---
 
