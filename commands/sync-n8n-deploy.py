@@ -66,9 +66,27 @@ BLUE = "\033[34m"
 CYAN = "\033[36m"
 GRAY = "\033[90m"
 
+# Load environment variables from .env file
+def load_env():
+    """Load environment variables from .env file in project root."""
+    env_file = Path(__file__).parent.parent / '.env'
+    if env_file.exists():
+        with open(env_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith('#') and '=' in line:
+                    key, value = line.split('=', 1)
+                    os.environ.setdefault(key.strip(), value.strip())
+
+load_env()
+
 # n8n API configuration
-N8N_BASE_URL = "https://n8n.descomplicador.pt/api/v1"
-N8N_API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiZDQwYWYwYS1kZWEwLTQ5MzYtYmNkNC1lMTUxYzlkOGZjOGIiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwiaWF0IjoxNzcwNjgxNTU4fQ.5DjZY1bGwJOd-TnPl54ICAzOlvU0p_NwfSngsLEjVTM"
+N8N_BASE_URL = os.getenv('N8N_API_URL', 'https://n8n.descomplicador.pt/api/v1')
+N8N_API_KEY = os.getenv('N8N_API_KEY')
+
+if not N8N_API_KEY:
+    print(f"{RED}✗ Error: N8N_API_KEY not found in environment or .env file{RESET}", file=sys.stderr)
+    sys.exit(1)
 
 # Project root
 PROJECT_ROOT = Path(__file__).parent.parent.absolute()

@@ -4,6 +4,29 @@ Automation tools for managing n8n workflow synchronization between local files, 
 
 ---
 
+## Setup
+
+**1. Configure environment variables**
+
+Copy `.env.example` to `.env` and add your n8n API key:
+
+```bash
+cp .env.example .env
+# Edit .env and add your API key
+```
+
+The `.env` file should contain:
+```
+N8N_API_URL=https://n8n.descomplicador.pt/api/v1
+N8N_API_KEY=your_actual_api_key_here
+```
+
+**Get your API key:** n8n Settings → API → Create API Key
+
+⚠️ **Security:** The `.env` file is gitignored and never committed to the repository.
+
+---
+
 ## Quick Start
 
 ### Check sync status
