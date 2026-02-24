@@ -184,19 +184,21 @@ Projetos de Clientes/
 
 ## Git Activity
 
-**Commits:** 5
+**Commits:** 7
 ```
 7640f1b - Implement sync-n8n-status.py (status checker + workflow map)
 9de05e9 - Export latest n8n workflows + sync-n8n-export.py implementation
 c122a1b - Implement sync-n8n-deploy.py for pushing workflows to VM
 e757dbe - Update sync implementation summary with deploy script completion
 4302747 - Move n8n API key to environment variables for security
+791cac2 - Update implementation summary: API key security migration complete
+fe93ef7 - Add .gitignore rule for backup files and remove committed backups
 ```
 
 **Lines Changed:**
-- +15,355 insertions (workflow updates + all scripts + docs + env setup)
-- -1,249 deletions (old workflow state + doc updates + old env template)
-- Net: +14,106 lines
+- +15,356 insertions (workflow updates + all scripts + docs + env setup)
+- -7,351 deletions (old workflow state + doc updates + old env template + backup files)
+- Net: +8,005 lines (significantly reduced by backup cleanup)
 
 **Pushed to:** `origin/main` (GitHub)
 
@@ -317,6 +319,26 @@ When you run `sync-n8n-export.py`, the assumption is:
 
 ---
 
+## 5. Backup File Cleanup
+**Status:** ✅ Complete, committed
+
+**Repository Cleanup:**
+- Added `*.bak.*` pattern to `.gitignore`
+- Removed 17 committed backup files from git tracking
+- Reduced repository size by ~6,100 lines
+
+**Impact:**
+- Future backup files created by sync scripts will not be committed
+- Backup files still created locally for safety
+- Cleaner git history without redundant backup data
+
+**Files Removed:**
+- All `.bak.20260224_*` timestamped backups from initial sync
+- Backup files no longer tracked in version control
+- Original workflow files remain untouched
+
+---
+
 ## Remaining Work (Not Yet Implemented)
 
 ### Future Scripts
@@ -383,13 +405,14 @@ python commands/sync-n8n-deploy.py --activate --yes
 |--------|-------|
 | **Total implementation time** | ~3.5 hours |
 | **Lines of code written** | 1,335 (Python) |
-| **Documentation written** | 520 lines |
+| **Documentation written** | 540 lines |
 | **Workflows scanned** | 40 files |
 | **Drift fixed** | 17 workflows |
-| **Backups created** | 17 files |
+| **Backups created** | 17 files (then cleaned from repo) |
 | **API calls made** | ~50 (workflow fetches) |
-| **Git commits** | 5 |
+| **Git commits** | 7 |
 | **Lines changed in workflows** | +14,433 / -1,181 |
+| **Repository cleanup** | -6,102 lines (backup files removed) |
 | **Security improvements** | API key moved to environment |
 
 ---
@@ -414,11 +437,6 @@ python commands/sync-n8n-deploy.py --activate --yes
    - Not a problem, they're intentionally local-only
    - Examples: Chatflow duplicates, test evaluators, package.json files
 
-2. **Backup files committed to Git**
-   - `.bak` files were included in the commit
-   - Not harmful, but could be gitignored in future
-   - Can be removed later with `git rm *.bak.*`
-
 ---
 
 ## Next Steps
@@ -430,8 +448,8 @@ python commands/sync-n8n-deploy.py --activate --yes
 
 ### Short-term
 4. ⏳ Set up pre-commit hook to prevent commits with drift
-5. ⏳ Add .gitignore rule for *.bak.* files
-6. ⏳ Clean up committed backup files (optional)
+5. ✅ Add .gitignore rule for *.bak.* files
+6. ✅ Clean up committed backup files
 
 ### Long-term
 7. ⏳ Implement sync-n8n-full.py (complete 3-way sync)
