@@ -1,80 +1,73 @@
 {
+  "updatedAt": "2026-02-07T05:10:16.303Z",
+  "createdAt": "2026-01-26T16:16:09.420Z",
+  "id": "7OwppSAjs5-RpGOLiPv8W",
   "name": "Vapi - Send SMS Confirmation",
+  "description": null,
+  "active": false,
+  "isArchived": true,
   "nodes": [
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "send-sms-v3",
+        "path": "send-sms",
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "044c072d-e6a3-4f55-8807-c82aeba7f169",
+      "id": "ae66fbdb-67e2-4233-873b-e6393f864797",
       "name": "Webhook - Receive from Vapi",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        96,
+        0,
         0
       ],
       "webhookId": "d838c01b-dd03-4d8d-9c0f-9f118a8337e6"
     },
     {
       "parameters": {
-        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Validate phone\n  if (!body.phone_number) {\n    return { _error: true, errorMessage: 'O numero de telefone e obrigatorio para enviar SMS.', toolCallId };\n  }\n  if (!body.message) {\n    return { _error: true, errorMessage: 'A mensagem e obrigatoria para enviar SMS.', toolCallId };\n  }\n\n  // Format phone number\n  let phone = body.phone_number.toString().replace(/\\s+/g, '');\n  const digitsOnly = phone.replace(/[^0-9]/g, '');\n  if (digitsOnly.length < 9) {\n    return { _error: true, errorMessage: 'Numero de telefone invalido. Por favor, indique um numero valido.', toolCallId };\n  }\n\n  // Add Portugal country code if not present\n  if (!phone.startsWith('+')) {\n    if (phone.startsWith('00')) {\n      phone = '+' + phone.substring(2);\n    } else if (phone.startsWith('351')) {\n      phone = '+' + phone;\n    } else if (/^[29]/.test(phone)) {\n      phone = '+351' + phone;\n    } else {\n      phone = '+351' + phone;\n    }\n  }\n\n  // Prepare message\n  const templates = {\n    'confirmation': 'Ola' + (body.customer_name ? ' ' + body.customer_name : '') + '! ' + body.message,\n    'reminder': 'Lembrete: ' + body.message,\n    'cancellation': 'Cancelamento: ' + body.message,\n    'custom': body.message\n  };\n  const messageType = body.message_type || 'custom';\n  const finalMessage = templates[messageType] || body.message;\n\n  return {\n    _error: false,\n    to: phone,\n    message: finalMessage,\n    customer_name: body.customer_name || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao preparar o SMS. Por favor, tente novamente.', toolCallId };\n}"
-      },
-      "id": "b94e14be-0270-45b0-9557-042104521665",
-      "name": "Extract & Validate SMS",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        272,
-        0
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": ""
-          },
-          "conditions": [
+        "values": {
+          "string": [
             {
-              "id": "b1c2d3e4-0006-4000-8000-000000000001",
-              "leftValue": "={{ $json._error }}",
-              "rightValue": "",
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
+              "name": "phone_number",
+              "value": "={{ $json.body.phone_number }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.body.message }}"
+            },
+            {
+              "name": "message_type",
+              "value": "={{ $json.body.message_type || 'confirmation' }}"
+            },
+            {
+              "name": "customer_name",
+              "value": "={{ $json.body.customer_name || '' }}"
             }
-          ],
-          "combinator": "and"
+          ]
         },
         "options": {}
       },
-      "id": "6047fda8-b29d-4c69-a60b-c55515acf331",
-      "name": "Check for Errors",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2,
+      "id": "4ab4dd3a-cb25-45fe-b6fa-feae7d0b3cfb",
+      "name": "Extract SMS Data",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
       "position": [
-        448,
+        208,
         0
       ]
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.errorMessage }] } }}",
-        "options": {}
+        "functionCode": "// Format phone number to international format if needed\nlet phone = $json.phone_number.toString().replace(/\\s+/g, '');\n\n// Add Portugal country code if not present\nif (!phone.startsWith('+')) {\n  if (phone.startsWith('00')) {\n    phone = '+' + phone.substring(2);\n  } else if (phone.startsWith('351')) {\n    phone = '+' + phone;\n  } else if (phone.startsWith('9') || phone.startsWith('2')) {\n    phone = '+351' + phone;\n  }\n}\n\n// Prepare message templates\nconst templates = {\n  'confirmation': `Olá${$json.customer_name ? ' ' + $json.customer_name : ''}! ${$json.message}`,\n  'reminder': `Lembrete: ${$json.message}`,\n  'cancellation': `Cancelamento: ${$json.message}`,\n  'custom': $json.message\n};\n\nconst messageType = $json.message_type || 'custom';\nconst finalMessage = templates[messageType] || $json.message;\n\nreturn {\n  to: phone,\n  message: finalMessage,\n  original_phone: $json.phone_number\n};"
       },
-      "id": "0ea4b82a-2b3f-4a01-b612-38470403863a",
-      "name": "Respond Error to Vapi",
-      "type": "n8n-nodes-base.respondToWebhook",
+      "id": "40b432f5-c1c6-4185-a1b3-d88d8a55b3e0",
+      "name": "Format SMS",
+      "type": "n8n-nodes-base.function",
       "typeVersion": 1,
       "position": [
-        672,
-        -80
+        400,
+        0
       ]
     },
     {
@@ -98,109 +91,101 @@
         },
         "options": {}
       },
-      "id": "9d95894c-e42d-46e5-b0e0-ade0fe1db237",
+      "id": "792854c2-3bf1-435e-a62f-8ea64234f47c",
       "name": "Send SMS (Zadarma)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        672,
-        64
+        608,
+        176
       ],
-      "retryOnFail": true,
-      "maxTries": 2,
-      "waitBetweenTries": 2000,
-      "credentials": {
-        "httpHeaderAuth": {
-          "id": "KhqgAMIOVb6glj8J",
-          "name": "Header Auth account 2"
-        }
-      },
-      "continueOnFail": true,
-      "notes": "Zadarma SMS API. Ensure credentials are configured."
+      "notes": "Option 2: Zadarma - Since you already have Zadarma, you can use their SMS service. Enable only one SMS sender node."
     },
     {
       "parameters": {
-        "jsCode": "const smsResult = $input.item.json;\nconst extractData = $('Extract & Validate SMS').item.json;\n\n// Check if SMS send failed\nif (smsResult.error || (smsResult.status && smsResult.status !== 'success')) {\n  return {\n    message: 'Desculpe, nao foi possivel enviar o SMS neste momento. Pode tentar novamente mais tarde.',\n    toolCallId: extractData.toolCallId\n  };\n}\n\n// Success response without phone number (voice-friendly)\nreturn {\n  message: 'SMS enviado com sucesso.',\n  toolCallId: extractData.toolCallId\n};"
+        "values": {
+          "string": [
+            {
+              "name": "success",
+              "value": "true"
+            },
+            {
+              "name": "message",
+              "value": "SMS enviado com sucesso para {{ $('Format SMS').item.json.to }}"
+            },
+            {
+              "name": "phone",
+              "value": "={{ $('Format SMS').item.json.to }}"
+            }
+          ]
+        },
+        "options": {}
       },
-      "id": "8f7cb8c8-ee8f-489e-ba77-bf4704d7f6fa",
-      "name": "Handle SMS Result",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "id": "e3b188ae-c5bb-4e5b-af97-3eefc7fefa6b",
+      "name": "Format Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
       "position": [
-        848,
-        64
+        608,
+        0
       ]
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.message }] } }}",
+        "responseBody": "={{ JSON.stringify($json) }}",
         "options": {}
       },
-      "id": "29519603-7136-44ca-ad62-88f25feae40f",
+      "id": "d416a203-e00d-4eeb-9dbf-076d6f278f35",
       "name": "Respond to Vapi",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
       "position": [
-        1024,
-        64
+        800,
+        0
       ]
     }
   ],
-  "pinData": {},
   "connections": {
     "Webhook - Receive from Vapi": {
       "main": [
         [
           {
-            "node": "Extract & Validate SMS",
+            "node": "Extract SMS Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Extract & Validate SMS": {
+    "Extract SMS Data": {
       "main": [
         [
           {
-            "node": "Check for Errors",
+            "node": "Format SMS",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Check for Errors": {
+    "Format SMS": {
       "main": [
-        [
-          {
-            "node": "Respond Error to Vapi",
-            "type": "main",
-            "index": 0
-          }
-        ],
         [
           {
             "node": "Send SMS (Zadarma)",
             "type": "main",
             "index": 0
-          }
-        ]
-      ]
-    },
-    "Send SMS (Zadarma)": {
-      "main": [
-        [
+          },
           {
-            "node": "Handle SMS Result",
+            "node": "Format Success Response",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Handle SMS Result": {
+    "Format Success Response": {
       "main": [
         [
           {
@@ -212,16 +197,75 @@
       ]
     }
   },
-  "active": true,
   "settings": {
-    "errorWorkflow": "TPPQG2kMx9dcdNfU",
-    "availableInMCP": false,
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "availableInMCP": false
   },
-  "versionId": "b94a1a83-3e6a-48e3-a7f5-955478e180c2",
-  "meta": {
-    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
-  },
-  "id": "qdOyIserumyIhxbar_xmJ",
-  "tags": []
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "9585e953-5867-422a-a818-66f31ef4aee9",
+  "activeVersionId": null,
+  "versionCounter": 4,
+  "triggerCount": 0,
+  "shared": [
+    {
+      "updatedAt": "2026-01-26T16:16:09.420Z",
+      "createdAt": "2026-01-26T16:16:09.420Z",
+      "role": "workflow:owner",
+      "workflowId": "7OwppSAjs5-RpGOLiPv8W",
+      "projectId": "Ngf6hTAwSZXVFW0A",
+      "project": {
+        "updatedAt": "2026-01-22T23:42:59.496Z",
+        "createdAt": "2026-01-22T23:41:53.441Z",
+        "id": "Ngf6hTAwSZXVFW0A",
+        "name": "André andrefloresbrasil@gmail.com <andrefloresbrasil@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
+        "projectRelations": [
+          {
+            "updatedAt": "2026-01-22T23:41:53.441Z",
+            "createdAt": "2026-01-22T23:41:53.441Z",
+            "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
+            "projectId": "Ngf6hTAwSZXVFW0A",
+            "user": {
+              "updatedAt": "2026-02-24T02:17:08.698Z",
+              "createdAt": "2026-01-22T23:41:51.823Z",
+              "id": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
+              "email": "andrefloresbrasil@gmail.com",
+              "firstName": "André",
+              "lastName": "andrefloresbrasil@gmail.com",
+              "personalizationAnswers": {
+                "version": "v4",
+                "personalization_survey_submitted_at": "2026-01-22T23:43:09.282Z",
+                "personalization_survey_n8n_version": "2.4.5",
+                "companySize": "<20",
+                "companyType": "saas",
+                "role": "business-owner",
+                "reportedSource": "youtube"
+              },
+              "settings": {
+                "userActivated": true,
+                "easyAIWorkflowOnboarded": true,
+                "firstSuccessfulWorkflowId": "FxVMXrBqcRpFL2LSUxZF1",
+                "userActivatedAt": 1769126574967,
+                "npsSurvey": {
+                  "responded": true,
+                  "lastShownAt": 1769443602440
+                }
+              },
+              "disabled": false,
+              "mfaEnabled": false,
+              "lastActiveAt": "2026-02-24",
+              "isPending": false
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [],
+  "activeVersion": null
 }

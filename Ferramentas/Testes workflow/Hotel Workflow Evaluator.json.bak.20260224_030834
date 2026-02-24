@@ -1,0 +1,650 @@
+{
+  "name": "Hotel Workflow Evaluator",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1n4xNqXGxLEPfs0R2Xl74JZAX1imG2HZW0r45Ez_YoZQ/edit?gid=0#gid=0"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0"
+        }
+      },
+      "id": "e8e39072-0a6e-4bdc-ab19-a82430ab9696",
+      "name": "When fetching test case row",
+      "type": "n8n-nodes-base.evaluationTrigger",
+      "position": [
+        -512,
+        700
+      ],
+      "typeVersion": 4.6,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbhUm6aWuB9yVNAm",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "77b12ccd-eec8-416e-931d-c8e38b6892be",
+      "name": "When clicking 'Execute workflow'",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -512,
+        892
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assign-test-id",
+              "name": "test_id",
+              "type": "string",
+              "value": "={{ $json.test_id }}"
+            },
+            {
+              "id": "assign-intent",
+              "name": "expected_intent",
+              "type": "string",
+              "value": "={{ $json.intent }}"
+            },
+            {
+              "id": "assign-query",
+              "name": "query",
+              "type": "string",
+              "value": "={{ $json.query }}"
+            },
+            {
+              "id": "assign-language",
+              "name": "expected_language",
+              "type": "string",
+              "value": "={{ $json.language }}"
+            },
+            {
+              "id": "assign-session",
+              "name": "session_id",
+              "type": "string",
+              "value": "={{ $json.test_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f83818f3-e71f-41d9-b2d8-be8ccabf6713",
+      "name": "Get Test Input",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -288,
+        700
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "manual-test-id",
+              "name": "test_id",
+              "type": "string",
+              "value": "manual-test-{{ $now.format('yyyyMMdd-HHmmss') }}"
+            },
+            {
+              "id": "manual-intent",
+              "name": "expected_intent",
+              "type": "string",
+              "value": "room_info"
+            },
+            {
+              "id": "manual-query",
+              "name": "query",
+              "type": "string",
+              "value": "What types of rooms do you have available?"
+            },
+            {
+              "id": "manual-language",
+              "name": "expected_language",
+              "type": "string",
+              "value": "en"
+            },
+            {
+              "id": "manual-session",
+              "name": "session_id",
+              "type": "string",
+              "value": "manual-session-{{ $now.format('yyyyMMdd-HHmmss') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7026156d-a41b-4bdb-93dc-98cd67b4529b",
+      "name": "Get Manual Input",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -288,
+        892
+      ],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/hotel-support",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": \"{{ $json.query }}\",\n  \"session_id\": \"{{ $json.session_id }}\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "bb1a0ea2-65c7-4df2-a4cb-dcbf38aaa5d2",
+      "name": "Call Hotel Workflow",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -64,
+        796
+      ],
+      "typeVersion": 4.2,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse and validate Hotel Workflow response (robust)\n// Returns standardized fields and parse flags so downstream calculators are deterministic.\n// FIXED: Now retrieves original test input data from previous nodes\n\nconst items = $input.all();\nconst results = [];\n\n// Retrieve original test input data from the appropriate node\n// The workflow has two possible paths: evaluation trigger or manual trigger\nlet testInputNode;\ntry {\n  testInputNode = $('Get Test Input').all();\n} catch (e) {\n  try {\n    testInputNode = $('Get Manual Input').all();\n  } catch (e2) {\n    testInputNode = [];\n  }\n}\n\nfor (let i = 0; i < items.length; i++) {\n  const item = items[i];\n  const httpResponse = item.json || {};\n  \n  // Get corresponding test input (by index, since they match 1:1)\n  const testInput = testInputNode[i]?.json || {};\n  \n  const httpStatus = httpResponse.statusCode || httpResponse.status || (httpResponse.response && httpResponse.response.status) || 0;\n\n  // raw HTTP body can be in httpResponse.body, httpResponse.response.body, or httpResponse itself\n  let rawBody = httpResponse.body ?? httpResponse.response ?? httpResponse;\n  let parsedBody = {};\n  let parse_error = false;\n  let formatted = false;\n\n  // If rawBody is a string, try to JSON.parse; otherwise, if it's object assume it's already parsed.\n  if (typeof rawBody === 'string') {\n    // Try JSON parse\n    try {\n      parsedBody = JSON.parse(rawBody);\n      formatted = true;\n    } catch (err) {\n      // Not JSON — keep raw string and set parse_error true\n      parsedBody = { raw_text: rawBody };\n      parse_error = true;\n    }\n  } else if (typeof rawBody === 'object' && rawBody !== null) {\n    // Some HTTP clients wrap response in { body: {...}, statusCode: ... } etc.\n    // Try to find likely fields inside the object.\n    if (rawBody.body && (typeof rawBody.body === 'string' || typeof rawBody.body === 'object')) {\n      // prefer rawBody.body if present\n      if (typeof rawBody.body === 'string') {\n        try {\n          parsedBody = JSON.parse(rawBody.body);\n          formatted = true;\n        } catch (err) {\n          parsedBody = { raw_text: rawBody.body };\n          parse_error = true;\n        }\n      } else {\n        parsedBody = rawBody.body;\n        formatted = true;\n      }\n    } else {\n      parsedBody = rawBody;\n      formatted = true;\n    }\n  } else {\n    parsedBody = {};\n    parse_error = true;\n  }\n\n  // Normalise fields (guarantee presence)\n  const actual_response = (parsedBody.response !== undefined)\n    ? parsedBody.response\n    : (parsedBody.raw_text ?? parsedBody.text ?? parsedBody.message ?? '');\n\n  const actual_intent = parsedBody.intent ?? 'unknown';\n  const actual_session_id = parsedBody.session_id ?? parsedBody.sessionId ?? parsedBody.session ?? '';\n  const reference_id = parsedBody.reference_id ?? parsedBody.referenceId ?? null;\n  const reservation_submitted = parsedBody.reservation_submitted ?? parsedBody.reservationSubmitted ?? false;\n\n  // Provide a normalized agent_response JSON string (safe)\n  let agent_response_json_str;\n  try {\n    agent_response_json_str = JSON.stringify(parsedBody);\n  } catch (err) {\n    agent_response_json_str = String(parsedBody);\n  }\n\n  // Detect language in response (basic detection)\n  const detectLanguage = (text) => {\n    if (!text) return 'unknown';\n    // Portuguese detection\n    if (/\\b(obrigado|por favor|olá|sim|não|como|que|para)\\b/i.test(text)) {\n      // Check for Brazilian Portuguese indicators\n      if (/\\b(você|pra|tá|vocês)\\b/i.test(text)) {\n        return 'pt-BR';\n      }\n      return 'pt-PT';\n    }\n    // English detection\n    if (/\\b(hello|thank|please|yes|no|how|what|for|the|and)\\b/i.test(text)) {\n      return 'en';\n    }\n    // Spanish detection\n    if (/\\b(hola|gracias|por favor|sí|cómo|qué|para)\\b/i.test(text)) {\n      return 'es';\n    }\n    // French detection\n    if (/\\b(bonjour|merci|s'il vous plaît|oui|non|comment|quoi)\\b/i.test(text)) {\n      return 'fr';\n    }\n    return 'en'; // default\n  };\n\n  // Combine test input data with parsed response data\n  const parsed = {\n    // Original test input fields (from Get Test Input or Get Manual Input)\n    test_id: testInput.test_id ?? null,\n    expected_intent: testInput.expected_intent ?? null,\n    expected_language: testInput.expected_language ?? 'en',\n    query: testInput.query ?? '',\n    session_id: testInput.session_id ?? null,\n    \n    // HTTP response metadata\n    http_status: Number(httpStatus) || 0,\n    \n    // Parsed agent response fields\n    agent_response: agent_response_json_str,\n    actual_intent: String(actual_intent),\n    actual_response: String(actual_response),\n    actual_session_id: String(actual_session_id),\n    reference_id: reference_id,\n    reservation_submitted: !!reservation_submitted,\n    \n    // Parse status flags\n    parse_error: !!parse_error,\n    raw_body: (typeof rawBody === 'string') ? rawBody : (rawBody && Object.keys(rawBody).length ? JSON.stringify(rawBody) : ''),\n    formatted: !!formatted,\n    \n    // Detected language\n    detected_language: detectLanguage(String(actual_response)),\n    \n    // Timestamp\n    timestamp: new Date().toISOString()\n  };\n\n  results.push({ json: parsed });\n}\n\nreturn results;"
+      },
+      "id": "bd7b4515-642f-4478-abce-53eb79e21a6e",
+      "name": "Parse Hotel Response",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        160,
+        796
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "checkIfEvaluating"
+      },
+      "id": "d0d7ff17-316d-4876-835c-a8d22c8f7799",
+      "name": "Evaluation?",
+      "type": "n8n-nodes-base.evaluation",
+      "position": [
+        384,
+        796
+      ],
+      "typeVersion": 4.7
+    },
+    {
+      "parameters": {},
+      "id": "718dde1c-41dd-4679-86d9-1413154080f3",
+      "name": "Return Manual Test Result",
+      "type": "n8n-nodes-base.noOp",
+      "position": [
+        384,
+        1024
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate Intent Classification Accuracy\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Check for parse errors first\n  if (data.parse_error === true) {\n    results.push({\n      json: {\n        ...data,\n        intent_accuracy: 0,\n        intent_match_details: 'PARSE ERROR: Unable to evaluate intent due to malformed response'\n      }\n    });\n    continue;\n  }\n  \n  const expected = (data.expected_intent || '').toLowerCase().trim();\n  const actual = (data.actual_intent || '').toLowerCase().trim();\n  \n  const intentAccuracy = expected === actual ? 1 : 0;\n  \n  results.push({\n    json: {\n      ...data,\n      intent_accuracy: intentAccuracy,\n      intent_match_details: `Expected: ${expected}, Actual: ${actual}`\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "8ecae4a7-cdcd-4d86-b1a3-ef4d9331008f",
+      "name": "Calculate Intent Accuracy",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        688,
+        416
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate Language Consistency Score\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Check for parse errors first\n  if (data.parse_error === true) {\n    results.push({\n      json: {\n        ...data,\n        language_score: 0,\n        language_notes: 'PARSE ERROR: Unable to evaluate language due to malformed response'\n      }\n    });\n    continue;\n  }\n  \n  const expected = (data.expected_language || '').toLowerCase().trim();\n  const detected = (data.detected_language || '').toLowerCase().trim();\n  \n  let languageScore = 0;\n  let languageNotes = '';\n  \n  // Exact match\n  if (expected === detected) {\n    languageScore = 1;\n    languageNotes = 'Language matches exactly';\n  } \n  // Special case: pt-PT vs pt-BR\n  else if (expected === 'pt-pt' && detected === 'pt-br') {\n    languageScore = 0;\n    languageNotes = 'CRITICAL: Used Brazilian Portuguese instead of European Portuguese';\n  }\n  // Base language match (en vs en-US)\n  else if (expected.split('-')[0] === detected.split('-')[0]) {\n    languageScore = 0.8;\n    languageNotes = 'Base language matches, dialect differs';\n  }\n  // No match\n  else {\n    languageScore = 0;\n    languageNotes = `Language mismatch: expected ${expected}, got ${detected}`;\n  }\n  \n  results.push({\n    json: {\n      ...data,\n      language_score: languageScore,\n      language_notes: languageNotes\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "68ef7a43-0d02-4fcf-ae46-857954a967d2",
+      "name": "Calculate Language Consistency",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        688,
+        608
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "operation": "setMetrics",
+        "metric": "helpfulness",
+        "userQuery": "={{ $json.query }}",
+        "actualAnswer": "={{ $json.actual_response || 'No response provided' }}",
+        "options": {}
+      },
+      "id": "8c1558ac-3d9a-4063-aa4d-c144aa3be909",
+      "name": "Calculate Response Quality",
+      "type": "n8n-nodes-base.evaluation",
+      "position": [
+        624,
+        784
+      ],
+      "typeVersion": 4.7,
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "05b78108-e102-4bf2-bc94-9cf46099d004",
+      "name": "Gemini Evaluator",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "position": [
+        944,
+        560
+      ],
+      "typeVersion": 1,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "tN9JeYYTKoLY4gAQ",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate Reservation Data Completeness\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Check for parse errors first\n  if (data.parse_error === true) {\n    results.push({\n      json: {\n        ...data,\n        reservation_score: 0,\n        reservation_notes: 'PARSE ERROR: Unable to evaluate reservation data due to malformed response'\n      }\n    });\n    continue;\n  }\n  \n  const intent = (data.actual_intent || '').toLowerCase();\n  const isReservationIntent = ['taxi_reservation', 'diner_reservation'].includes(intent);\n  \n  let reservationScore = null; // N/A by default\n  let reservationNotes = 'Not a reservation intent';\n  \n  if (isReservationIntent) {\n    const referenceId = data.reference_id;\n    const submitted = data.reservation_submitted;\n    \n    // Check reference ID format\n    const hasValidFormat = referenceId && /^(TAXI|DINER)-\\d+-[a-z0-9]+$/i.test(referenceId);\n    \n    if (submitted && hasValidFormat) {\n      reservationScore = 1;\n      reservationNotes = `Valid reservation: ${referenceId}`;\n    } else if (!submitted) {\n      reservationScore = 0.5;\n      reservationNotes = 'Collecting information (multi-turn in progress)';\n    } else if (!hasValidFormat) {\n      reservationScore = 0;\n      reservationNotes = 'Invalid or missing reference ID format';\n    }\n  }\n  \n  results.push({\n    json: {\n      ...data,\n      reservation_score: reservationScore,\n      reservation_notes: reservationNotes\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "7272d4bf-3fa2-4989-9743-585b89ea9581",
+      "name": "Calculate Reservation Completeness",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        688,
+        960
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "jsCode": "// Calculate Error Handling Score\nconst items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const data = item.json;\n  \n  const httpStatus = data.http_status || 0;\n  const response = (data.actual_response || '').toLowerCase();\n  \n  let errorScore = null; // N/A by default\n  let errorNotes = 'Not an error test';\n  \n  // Check for parse errors first (CRITICAL)\n  if (data.parse_error === true) {\n    errorScore = 0;\n    errorNotes = `Unparsable response - ${data.raw_body ? 'raw body: ' + String(data.raw_body).substring(0, 100) : 'no body'}`;\n  }\n  // Check if this was an error scenario (5xx, timeout, etc.)\n  else if (httpStatus >= 500 || httpStatus === 0) {\n    // Error occurred - check for graceful handling\n    if (response.includes('technical difficulties') || \n        response.includes('experiencing issues') ||\n        response.includes('try again') ||\n        response.includes('apologize')) {\n      errorScore = 1;\n      errorNotes = 'Graceful error message provided';\n    } else {\n      errorScore = 0;\n      errorNotes = 'Poor error handling or exposed technical details';\n    }\n  }\n  // Check for error messages in 200 responses (shouldn't happen)\n  else if (httpStatus === 200 && \n           (response.includes('error:') || \n            response.includes('exception') ||\n            response.includes('stack trace'))) {\n    errorScore = 0;\n    errorNotes = 'Technical error details exposed to user';\n  }\n  // Check for parse error on successful response (malformed JSON in 200)\n  else if (httpStatus === 200 && data.parse_error === true) {\n    errorScore = 0.2;\n    errorNotes = 'Response returned 200 but body is malformed/unparsable';\n  }\n  \n  results.push({\n    json: {\n      ...data,\n      error_handling: errorScore,\n      error_notes: errorNotes\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "c6659752-be9e-4c93-81cb-7d952f960068",
+      "name": "Calculate Error Handling",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        688,
+        1152
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "numberInputs": 5,
+        "options": {}
+      },
+      "id": "fd0424e4-fa3c-4cbb-9e51-47c26756a45c",
+      "name": "Merge All Metrics",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        976,
+        736
+      ],
+      "typeVersion": 3,
+      "inputs": [
+        {
+          "type": "main"
+        },
+        {
+          "type": "main"
+        },
+        {
+          "type": "main"
+        },
+        {
+          "type": "main"
+        },
+        {
+          "type": "main"
+        }
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all metrics with weighted scoring\nconst items = $input.all();\nconst results = [];\n\n// Weights\nconst WEIGHTS = {\n  intent_accuracy: 0.40,\n  response_quality: 0.30,\n  language_score: 0.15,\n  reservation_score: 0.10,\n  error_handling: 0.05\n};\n\nfor (const item of items) {\n  const data = item.json;\n  \n  // Normalize helpfulness from 1-5 scale (Gemini AI) to 0-1\n  // Handle cases where AI evaluation failed or response was missing\n  let normalizedHelpfulness = null;\n  let helpfulnessRaw = null;\n  \n  if (data['Helpfulness'] !== undefined && data['Helpfulness'] !== null) {\n    helpfulnessRaw = data['Helpfulness'];\n    normalizedHelpfulness = (helpfulnessRaw - 1) / 4; // Convert 1-5 to 0-1\n  } else if (data.actual_response && data.actual_response.length > 0) {\n    // Response exists but AI evaluation failed - use neutral score\n    helpfulnessRaw = 3;\n    normalizedHelpfulness = 0.5;\n  } else {\n    // No response at all - treat as failed metric (excluded from scoring)\n    helpfulnessRaw = 'N/A';\n    normalizedHelpfulness = null;\n  }\n  \n  // Collect all scores (normalized to 0-1 scale)\n  const scores = {\n    intent_accuracy: data.intent_accuracy !== undefined ? data.intent_accuracy : 0,\n    response_quality: normalizedHelpfulness,\n    language_score: data.language_score !== null && data.language_score !== undefined ? data.language_score : 1,\n    reservation_score: data.reservation_score,\n    error_handling: data.error_handling\n  };\n  \n  // Calculate weighted score (only for applicable metrics)\n  let totalWeight = 0;\n  let weightedSum = 0;\n  \n  for (const [metric, weight] of Object.entries(WEIGHTS)) {\n    if (scores[metric] !== null && scores[metric] !== undefined) {\n      weightedSum += scores[metric] * weight;\n      totalWeight += weight;\n    }\n  }\n  \n  const finalScore = totalWeight > 0 ? weightedSum / totalWeight : 0;\n  \n  // Determine pass/fail (threshold: 0.7 = 70%)\n  const passed = finalScore >= 0.7;\n  \n  // Count checks\n  let checksPassed = 0;\n  let checksFailed = 0;\n  let checksWarnings = 0;\n  \n  if (scores.intent_accuracy === 1) checksPassed++; else checksFailed++;\n  if (scores.response_quality !== null) {\n    if (scores.response_quality >= 0.6) checksPassed++; else if (scores.response_quality >= 0.4) checksWarnings++; else checksFailed++;\n  }\n  if (scores.language_score === 1) checksPassed++; else if (scores.language_score >= 0.8) checksWarnings++; else if (scores.language_score !== null) checksFailed++;\n  if (scores.reservation_score === 1) checksPassed++; else if (scores.reservation_score === 0.5) checksWarnings++; else if (scores.reservation_score === 0) checksFailed++;\n  if (scores.error_handling === 1) checksPassed++; else if (scores.error_handling === 0) checksFailed++;\n  \n  // Build scoring notes\n  const helpfulnessDisplay = scores.response_quality !== null \n    ? `${(scores.response_quality * 100).toFixed(0)}% [Raw: ${helpfulnessRaw}${typeof helpfulnessRaw === 'number' ? '/5' : ''}]` \n    : 'N/A [AI evaluation failed]';\n  \n  const notes = [\n    `Intent Accuracy: ${(scores.intent_accuracy * 100).toFixed(0)}% (weight: ${(WEIGHTS.intent_accuracy * 100)}%)`,\n    `Helpfulness (AI): ${helpfulnessDisplay} (weight: ${(WEIGHTS.response_quality * 100)}%)`,\n    `Language Score: ${scores.language_score !== null ? (scores.language_score * 100).toFixed(0) + '%' : 'N/A'} (weight: ${(WEIGHTS.language_score * 100)}%)`,\n    `Reservation Score: ${scores.reservation_score !== null ? (scores.reservation_score * 100).toFixed(0) + '%' : 'N/A'} (weight: ${(WEIGHTS.reservation_score * 100)}%)`,\n    `Error Handling: ${scores.error_handling !== null ? (scores.error_handling * 100).toFixed(0) + '%' : 'N/A'} (weight: ${(WEIGHTS.error_handling * 100)}%)`,\n    `---`,\n    `Final Score: ${(finalScore * 100).toFixed(1)}%`,\n    `Status: ${passed ? 'PASSED' : 'FAILED'}`,\n    `Details: Intent: ${data.intent_match_details || 'N/A'}; Language: ${data.language_notes || 'N/A'}; Reservation: ${data.reservation_notes || 'N/A'}; Errors: ${data.error_notes || 'N/A'}`\n  ];\n  \n  results.push({\n    json: {\n      ...data,\n      response_quality: scores.response_quality,\n      score: parseFloat(finalScore.toFixed(3)),\n      passed: passed,\n      checks_passed: checksPassed,\n      checks_failed: checksFailed,\n      checks_warnings: checksWarnings,\n      scoring_notes: notes.join('\\n'),\n      evaluated_at: new Date().toISOString()\n    }\n  });\n}\n\nreturn results;"
+      },
+      "id": "d9eab23b-4496-4658-b740-306ed6b95b59",
+      "name": "Aggregate Metrics",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1200,
+        784
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "https://docs.google.com/spreadsheets/d/1n4xNqXGxLEPfs0R2Xl74JZAX1imG2HZW0r45Ez_YoZQ/edit?gid=0#gid=0"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gid=0"
+        },
+        "outputs": {
+          "values": [
+            {
+              "outputName": "agent_response",
+              "outputValue": "={{ $json.agent_response }}"
+            },
+            {
+              "outputName": "http_status",
+              "outputValue": "={{ $json.http_status }}"
+            },
+            {
+              "outputName": "detected_language",
+              "outputValue": "={{ $json.detected_language }}"
+            },
+            {
+              "outputName": "intent_accuracy",
+              "outputValue": "={{ $json.intent_accuracy }}"
+            },
+            {
+              "outputName": "language_score",
+              "outputValue": "={{ $json.language_score }}"
+            },
+            {
+              "outputName": "response_quality",
+              "outputValue": "={{ $json.response_quality }}"
+            },
+            {
+              "outputName": "reservation_score",
+              "outputValue": "={{ $json.reservation_score }}"
+            },
+            {
+              "outputName": "error_handling",
+              "outputValue": "={{ $json.error_handling }}"
+            },
+            {
+              "outputName": "score",
+              "outputValue": "={{ $json.score }}"
+            },
+            {
+              "outputName": "passed",
+              "outputValue": "={{ $json.passed }}"
+            },
+            {
+              "outputName": "checks_passed",
+              "outputValue": "={{ $json.checks_passed }}"
+            },
+            {
+              "outputName": "checks_failed",
+              "outputValue": "={{ $json.checks_failed }}"
+            },
+            {
+              "outputName": "checks_warnings",
+              "outputValue": "={{ $json.checks_warnings }}"
+            },
+            {
+              "outputName": "scoring_notes",
+              "outputValue": "={{ $json.scoring_notes }}"
+            },
+            {
+              "outputName": "evaluated_at",
+              "outputValue": "={{ $json.evaluated_at }}"
+            }
+          ]
+        }
+      },
+      "id": "edd1cb7f-9097-4642-98f7-d0a907110e03",
+      "name": "Set All Metrics",
+      "type": "n8n-nodes-base.evaluation",
+      "position": [
+        1424,
+        784
+      ],
+      "typeVersion": 4.7,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "DbhUm6aWuB9yVNAm",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Hotel Workflow Evaluator\n\nThis workflow systematically tests the Hotel Self-Service Support workflow.\n\n**Test Coverage:**\n- All 9 intent paths (room, service, policy, taxi, diner, local, books, general, reservation_status)\n- Multi-turn conversations (reservation flows with session state)\n- Edge cases (mixed language, malformed input, empty messages)\n- Error scenarios (timeouts, invalid data)\n\n**Evaluation Metrics (Weighted):**\n- Intent Accuracy: 40%\n- Response Quality: 30% (AI-scored)\n- Language Consistency: 15%\n- Reservation Completeness: 10%\n- Error Handling: 5%\n\n**Pass Threshold:** 70% overall score\n\n**Setup:**\n1. Configure Google Sheets credentials\n2. Ensure Hotel workflow is running at http://localhost:5678/webhook/hotel-support\n3. Import test dataset CSV to Google Sheet\n4. Run evaluation to test all cases",
+        "height": 420,
+        "width": 460
+      },
+      "id": "e15e1a75-07d5-47ff-b017-9e0da8e0b16c",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -32,
+        240
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When fetching test case row": {
+      "main": [
+        [
+          {
+            "node": "Get Test Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "Get Manual Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Test Input": {
+      "main": [
+        [
+          {
+            "node": "Call Hotel Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Manual Input": {
+      "main": [
+        [
+          {
+            "node": "Call Hotel Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Hotel Workflow": {
+      "main": [
+        [
+          {
+            "node": "Parse Hotel Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Hotel Response": {
+      "main": [
+        [
+          {
+            "node": "Evaluation?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluation?": {
+      "main": [
+        [
+          {
+            "node": "Calculate Intent Accuracy",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calculate Language Consistency",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calculate Response Quality",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calculate Reservation Completeness",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Calculate Error Handling",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return Manual Test Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Intent Accuracy": {
+      "main": [
+        [
+          {
+            "node": "Merge All Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Language Consistency": {
+      "main": [
+        [
+          {
+            "node": "Merge All Metrics",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge All Metrics": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Response Quality": {
+      "main": [
+        [
+          {
+            "node": "Merge All Metrics",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Gemini Evaluator": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Calculate Response Quality",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Metrics": {
+      "main": [
+        [
+          {
+            "node": "Set All Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Reservation Completeness": {
+      "main": [
+        [
+          {
+            "node": "Merge All Metrics",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Calculate Error Handling": {
+      "main": [
+        [
+          {
+            "node": "Merge All Metrics",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "077a4ad6-e55c-48ef-afc7-488f3f5ee82b",
+  "meta": {
+    "instanceId": "0ad473ca5f04731bc02a819377b7037140df61c07ce29e449d14e76e6e995ec1"
+  },
+  "id": "Eywi0kTNq0a6Bdq8KEpOg",
+  "tags": []
+}

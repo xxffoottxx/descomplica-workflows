@@ -1,0 +1,227 @@
+{
+  "name": "Vapi - Send SMS Confirmation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "send-sms-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "044c072d-e6a3-4f55-8807-c82aeba7f169",
+      "name": "Webhook - Receive from Vapi",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        96,
+        0
+      ],
+      "webhookId": "d838c01b-dd03-4d8d-9c0f-9f118a8337e6"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Auth check\nconst input = $input.item.json;\nconst headers = input.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\ntry {\n  const expected = process.env.VAPI_WEBHOOK_SECRET || '';\n  if (expected && vapiSecret !== expected) {\n    return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n  }\n} catch (e) {}\n\n// Extract toolCallId first\nlet toolCallId = '';\ntry {\n  toolCallId = input.body?.message?.toolCalls?.[0]?.id || '';\n} catch (e) {}\n\ntry {\n  // Extract body from Vapi format\n  let body;\n  if (input.body?.message?.toolCalls?.[0]?.function?.arguments) {\n    body = input.body.message.toolCalls[0].function.arguments;\n  } else if (input.body) {\n    body = input.body;\n  } else {\n    body = input;\n  }\n\n  // Validate phone\n  if (!body.phone_number) {\n    return { _error: true, errorMessage: 'O numero de telefone e obrigatorio para enviar SMS.', toolCallId };\n  }\n  if (!body.message) {\n    return { _error: true, errorMessage: 'A mensagem e obrigatoria para enviar SMS.', toolCallId };\n  }\n\n  // Format phone number\n  let phone = body.phone_number.toString().replace(/\\s+/g, '');\n  const digitsOnly = phone.replace(/[^0-9]/g, '');\n  if (digitsOnly.length < 9) {\n    return { _error: true, errorMessage: 'Numero de telefone invalido. Por favor, indique um numero valido.', toolCallId };\n  }\n\n  // Add Portugal country code if not present\n  if (!phone.startsWith('+')) {\n    if (phone.startsWith('00')) {\n      phone = '+' + phone.substring(2);\n    } else if (phone.startsWith('351')) {\n      phone = '+' + phone;\n    } else if (/^[29]/.test(phone)) {\n      phone = '+351' + phone;\n    } else {\n      phone = '+351' + phone;\n    }\n  }\n\n  // Prepare message\n  const templates = {\n    'confirmation': 'Ola' + (body.customer_name ? ' ' + body.customer_name : '') + '! ' + body.message,\n    'reminder': 'Lembrete: ' + body.message,\n    'cancellation': 'Cancelamento: ' + body.message,\n    'custom': body.message\n  };\n  const messageType = body.message_type || 'custom';\n  const finalMessage = templates[messageType] || body.message;\n\n  return {\n    _error: false,\n    to: phone,\n    message: finalMessage,\n    customer_name: body.customer_name || '',\n    toolCallId: toolCallId\n  };\n} catch (err) {\n  return { _error: true, errorMessage: 'Ocorreu um erro ao preparar o SMS. Por favor, tente novamente.', toolCallId };\n}"
+      },
+      "id": "b94e14be-0270-45b0-9557-042104521665",
+      "name": "Extract & Validate SMS",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": ""
+          },
+          "conditions": [
+            {
+              "id": "b1c2d3e4-0006-4000-8000-000000000001",
+              "leftValue": "={{ $json._error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "6047fda8-b29d-4c69-a60b-c55515acf331",
+      "name": "Check for Errors",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.errorMessage }] } }}",
+        "options": {}
+      },
+      "id": "0ea4b82a-2b3f-4a01-b612-38470403863a",
+      "name": "Respond Error to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        672,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.zadarma.com/v1/sms/send/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "number",
+              "value": "={{ $json.to }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9d95894c-e42d-46e5-b0e0-ade0fe1db237",
+      "name": "Send SMS (Zadarma)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        672,
+        64
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "KhqgAMIOVb6glj8J",
+          "name": "Header Auth account 2"
+        }
+      },
+      "continueOnFail": true,
+      "notes": "Zadarma SMS API. Ensure credentials are configured."
+    },
+    {
+      "parameters": {
+        "jsCode": "const smsResult = $input.item.json;\nconst extractData = $('Extract & Validate SMS').item.json;\n\n// Check if SMS send failed\nif (smsResult.error || (smsResult.status && smsResult.status !== 'success')) {\n  return {\n    message: 'Desculpe, nao foi possivel enviar o SMS neste momento. Pode tentar novamente mais tarde.',\n    toolCallId: extractData.toolCallId\n  };\n}\n\n// Success response without phone number (voice-friendly)\nreturn {\n  message: 'SMS enviado com sucesso.',\n  toolCallId: extractData.toolCallId\n};"
+      },
+      "id": "8f7cb8c8-ee8f-489e-ba77-bf4704d7f6fa",
+      "name": "Handle SMS Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        848,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { results: [{ toolCallId: $json.toolCallId || '', result: $json.message }] } }}",
+        "options": {}
+      },
+      "id": "29519603-7136-44ca-ad62-88f25feae40f",
+      "name": "Respond to Vapi",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        64
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook - Receive from Vapi": {
+      "main": [
+        [
+          {
+            "node": "Extract & Validate SMS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract & Validate SMS": {
+      "main": [
+        [
+          {
+            "node": "Check for Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check for Errors": {
+      "main": [
+        [
+          {
+            "node": "Respond Error to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send SMS (Zadarma)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send SMS (Zadarma)": {
+      "main": [
+        [
+          {
+            "node": "Handle SMS Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle SMS Result": {
+      "main": [
+        [
+          {
+            "node": "Respond to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "errorWorkflow": "TPPQG2kMx9dcdNfU",
+    "availableInMCP": false,
+    "executionOrder": "v1"
+  },
+  "versionId": "b94a1a83-3e6a-48e3-a7f5-955478e180c2",
+  "meta": {
+    "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
+  },
+  "id": "qdOyIserumyIhxbar_xmJ",
+  "tags": []
+}
