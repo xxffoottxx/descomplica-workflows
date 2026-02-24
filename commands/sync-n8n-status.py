@@ -389,13 +389,13 @@ def main():
     # Check each workflow
     results = []
     for wf_file in workflow_files:
-        if not quiet:
+        if not quiet and not output_json:
             print(f"{Colors.CYAN}Checking {wf_file.name}...{Colors.RESET}", end='\r')
         result = check_workflow_status(wf_file, workflow_map)
         results.append(result)
 
     # Clear progress line
-    if not quiet:
+    if not quiet and not output_json:
         print(" " * 80, end='\r')
 
     # Output results

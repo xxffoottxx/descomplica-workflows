@@ -150,21 +150,47 @@ python commands/sync-n8n-deploy.py --force --yes
 
 ---
 
-### 📋 sync-n8n-full.py (NOT YET IMPLEMENTED)
+### ✅ sync-n8n-full.py (IMPLEMENTED)
 
-Full 3-way sync orchestrator (local → GitHub → VM).
+**Full sync orchestrator** — Complete workflow synchronization in one command.
 
-**Planned usage:**
+Automatically:
+1. Checks drift status
+2. Exports from VM or deploys to VM (auto-detected)
+3. Commits changes to git
+4. Pushes to GitHub
+
+**Usage:**
 ```bash
-# Full sync with push to GitHub
-python commands/sync-n8n-full.py --push
+# Full auto sync (checks, syncs, commits, pushes)
+python commands/sync-n8n-full.py
 
-# Export only (VM → local)
-python commands/sync-n8n-full.py --export-only
+# Auto-confirm everything
+python commands/sync-n8n-full.py --yes
 
-# Skip GitHub push
-python commands/sync-n8n-full.py --skip-github
+# Preview what would happen
+python commands/sync-n8n-full.py --dry-run
+
+# Force export from VM
+python commands/sync-n8n-full.py --direction export
+
+# Force deploy to VM and activate workflows
+python commands/sync-n8n-full.py --direction deploy --activate
+
+# Sync without git commit/push
+python commands/sync-n8n-full.py --skip-git
 ```
+
+**Direction modes:**
+- `auto` (default) — Auto-detects based on local changes
+- `export` — Force pull from VM
+- `deploy` — Force push to VM
+
+**When to use:**
+- Daily workflow sync routine
+- After making changes in n8n UI
+- After editing workflows locally
+- When you want everything synced in one command
 
 ---
 
