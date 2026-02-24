@@ -270,8 +270,8 @@ def check_workflow_status(file_path: Path, workflow_map: Dict[str, str]) -> dict
 def print_status_report(results: List[dict], quiet: bool = False):
     """Print colored status report."""
     if quiet:
-        # Just exit with error code if drift detected
-        has_drift = any(r['status'] in ['drift', 'drift_uncommitted', 'not_deployed'] for r in results)
+        # Exit with error code only for actual drift (not for local-only workflows)
+        has_drift = any(r['status'] in ['drift', 'drift_uncommitted'] for r in results)
         sys.exit(1 if has_drift else 0)
 
     print()

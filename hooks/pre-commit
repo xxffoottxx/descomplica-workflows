@@ -1,0 +1,41 @@
+#!/bin/bash
+# Pre-commit hook: Check for n8n workflow drift before committing
+#
+# Installation:
+#   cp hooks/pre-commit .git/hooks/pre-commit
+#   chmod +x .git/hooks/pre-commit
+#
+# Or use the install script:
+#   bash hooks/install.sh
+
+echo "🔍 Checking for workflow drift..."
+
+# Run drift detection in quiet mode
+python commands/sync-n8n-status.py --quiet
+
+exit_code=$?
+
+if [ $exit_code -eq 1 ]; then
+    echo ""
+    echo "❌ Commit blocked: Workflow drift detected"
+    echo ""
+    echo "Your local workflows differ from production VM."
+    echo "Run one of these commands to sync:"
+    echo ""
+    echo "  1. Export from VM (if VM is newer):"
+    echo "     python commands/sync-n8n-export.py"
+    echo ""
+    echo "  2. Deploy to VM (if local is newer):"
+    echo "     python commands/sync-n8n-deploy.py"
+    echo ""
+    echo "  3. Check status for details:"
+    echo "     python commands/sync-n8n-status.py"
+    echo ""
+    echo "To bypass this check (not recommended):"
+    echo "  git commit --no-verify"
+    echo ""
+    exit 1
+fi
+
+echo "✅ No drift detected - proceeding with commit"
+exit 0
