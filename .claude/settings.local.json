@@ -52,6 +52,27 @@
       "Bash(node:*)",
       "Bash($env:VAPI_API_KEY=$env:VAPI_API_KEY node:*)"
     ],
+    "deny": [
+      "Bash(python scripts/batch-spoof-check.py:*)",
+      "Bash(python scripts/email-auth-check.py:*)",
+      "Bash(python scripts/wp-xmlrpc-brute.py:*)",
+      "Bash(python scripts/leakcheck-lookup.py:*)",
+      "Bash(python scripts/pt-passgen.py:*)",
+      "Bash(python scripts/company-passgen.py:*)",
+      "Bash(python scripts/report-generator.py:*)",
+      "Bash(python scripts/recon.sh:*)",
+      "Bash(nmap:*)",
+      "Bash(nuclei:*)",
+      "Bash(ffuf:*)",
+      "Bash(wpscan:*)",
+      "Bash(sqlmap:*)",
+      "Bash(metasploit:*)",
+      "Bash(msfconsole:*)",
+      "Bash(LEAKCHECK_API_KEY=*:*)",
+      "WebFetch(domain:leakcheck.io)",
+      "Bash(wg-quick:*)",
+      "Bash(wg show:*)"
+    ],
     "additionalDirectories": [
       "c:\\Users\\andre\\Desktop\\Descomplica demos\\descomplica-demos\\MVP"
     ]
