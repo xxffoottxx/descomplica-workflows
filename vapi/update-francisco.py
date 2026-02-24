@@ -101,6 +101,7 @@ keyterms = [
     "isolamento térmico", "isolamento acústico",
     "impermeabilização", "impermeabilizante",
     "estuque", "azulejo", "cerâmica", "gesso", "telha",
+    "manta",
 
     # 2. Wood & derivatives
     "madeira", "tábua",
@@ -125,6 +126,7 @@ keyterms = [
     "abraçadeira",
     "dobradiça", "charneira",
     "fechadura", "trinco",
+    "arame", "corda", "corrente", "fita",
 
     # 5. Plumbing (Portuguese-specific)
     "tubo", "tubo PVC", "tubo PEX",
@@ -133,6 +135,7 @@ keyterms = [
     "sanita", "lavatório",
     "chuveiro", "base de duche", "poliban",
     "fita veda-roscas", "vedante",
+    "cotovelo", "joelho", "redução",
 
     # 6. Electrical
     "cabo elétrico", "fio",
@@ -165,8 +168,8 @@ keyterms = [
     # 9. Doors, windows & furniture
     "porta", "janela", "vidro",
     "caixilho", "persiana", "estore",
-    "alizares", "batente",
-    "bancada",
+    "alizares", "batente", "puxador",
+    "bancada", "prateleira",
 
     # 10. Roofing & bathroom
     "ripado", "fasquiado",
