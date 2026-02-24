@@ -257,23 +257,22 @@ payload = {
     }
 }
 
-# Write payload to temp file
-payload_file = "francisco-update-payload.json"
-with open(payload_file, "w", encoding="utf-8") as f:
-    json.dump(payload, f, ensure_ascii=False)
+# Encode payload with proper Unicode escaping (ensure_ascii=True)
+# This prevents double-encoding issues with Portuguese accents
+payload_json = json.dumps(payload, ensure_ascii=True)
 
-print("Payload written. Sending PATCH via curl...")
-print(f"Payload size: {len(json.dumps(payload, ensure_ascii=False))} bytes")
+print("Payload prepared. Sending PATCH via curl...")
+print(f"Payload size: {len(payload_json)} bytes")
 
-# Use curl for the API call (avoids Cloudflare issues)
+# Use curl with inline JSON to avoid file encoding issues
 result = subprocess.run(
     [
         "curl", "-s", "-w", "\n%{http_code}",
         "-X", "PATCH",
         f"https://api.vapi.ai/assistant/{ASSISTANT_ID}",
         "-H", f"Authorization: Bearer {VAPI_API_KEY}",
-        "-H", "Content-Type: application/json",
-        "-d", f"@{payload_file}"
+        "-H", "Content-Type: application/json; charset=utf-8",
+        "-d", payload_json
     ],
     capture_output=True,
     text=True,
