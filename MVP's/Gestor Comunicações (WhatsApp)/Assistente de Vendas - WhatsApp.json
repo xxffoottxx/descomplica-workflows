@@ -1,8 +1,8 @@
 {
-  "updatedAt": "2026-02-21T01:53:38.762Z",
+  "updatedAt": "2026-02-27T02:20:58.227Z",
   "createdAt": "2026-02-08T00:17:18.583Z",
   "id": "egu23cPoHpVByWwk",
-  "name": "Assistente de Vendas - WhatsApp",
+  "name": "Assistente de reservas - WhatsApp",
   "description": null,
   "active": true,
   "isArchived": false,
@@ -143,7 +143,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// RAG Retrieval: Generate embedding + Query Pinecone + Build context\nconst userMessage = $('Validate Input').first().json.message;\nconst sessionId = $('Validate Input').first().json.session_id;\n\nlet contextText = '';\ntry {\n  // Step 1: Generate embedding via Google API\n  const embeddingResponse = await fetch(\n    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${$env.GOOGLE_API_KEY}`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        model: 'models/gemini-embedding-001',\n        content: { parts: [{ text: userMessage }] },\n        taskType: 'RETRIEVAL_QUERY'\n      })\n    }\n  );\n  const embeddingData = await embeddingResponse.json();\n  const vector = embeddingData?.embedding?.values;\n\n  if (vector && vector.length > 0) {\n    // Step 2: Query Pinecone (index: borjareis, all namespaces)\n    const pineconeResponse = await fetch(\n      `${$env.PINECONE_HOST_BORJAREIS}/query`,\n      {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Api-Key': $env.PINECONE_API_KEY\n        },\n        body: JSON.stringify({\n          vector: vector,\n          topK: 5,\n          includeMetadata: true\n        })\n      }\n    );\n    const pineconeData = await pineconeResponse.json();\n    const matches = pineconeData?.matches || [];\n\n    // Step 3: Build context from matches\n    const contextParts = matches\n      .filter(m => m.score >= 0.7)\n      .map(m => m.metadata?.text || m.metadata?.content || m.metadata?.chunk || '')\n      .filter(t => t.length > 0);\n\n    if (contextParts.length > 0) {\n      contextText = '[CONTEXT]\\n' + contextParts.join('\\n---\\n') + '\\n[/CONTEXT]\\n\\n';\n    }\n  }\n} catch (err) {\n  // RAG failure is non-blocking — continue without context\n}\n\n// Add current date/time in Lisbon timezone\nconst lisbonTime = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'long', hour12: false }).format(new Date());\nconst enrichedMessage = `[Data atual: ${lisbonTime}] ` + contextText + userMessage;\n\nreturn {\n  json: {\n    message: enrichedMessage,\n    original_message: userMessage,\n    session_id: sessionId,\n    has_context: contextText.length > 0\n  }\n};"
+        "jsCode": "// RAG Retrieval: Generate embedding + Query Pinecone + Build context\nconst userMessage = $('Validate Input').first().json.message;\nconst sessionId = $('Validate Input').first().json.session_id;\n\nlet contextText = '';\ntry {\n  // Step 1: Generate embedding via Google API\n  const embeddingResponse = await fetch(\n    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${$env.GOOGLE_API_KEY}`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        model: 'models/gemini-embedding-001',\n        content: { parts: [{ text: userMessage }] },\n        taskType: 'RETRIEVAL_QUERY'\n      })\n    }\n  );\n  const embeddingData = await embeddingResponse.json();\n  const vector = embeddingData?.embedding?.values;\n\n  if (vector && vector.length > 0) {\n    // Step 2: Query Pinecone (index: borjareis, all namespaces)\n    const pineconeResponse = await fetch(\n      `${$env.PINECONE_HOST_DESCOMPLICADOR}/query`,\n      {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Api-Key': $env.PINECONE_API_KEY\n        },\n        body: JSON.stringify({\n          vector: vector,\n          topK: 5,\n          includeMetadata: true\n        })\n      }\n    );\n    const pineconeData = await pineconeResponse.json();\n    const matches = pineconeData?.matches || [];\n\n    // Step 3: Build context from matches\n    const contextParts = matches\n      .filter(m => m.score >= 0.7)\n      .map(m => m.metadata?.text || m.metadata?.content || m.metadata?.chunk || '')\n      .filter(t => t.length > 0);\n\n    if (contextParts.length > 0) {\n      contextText = '[CONTEXT]\\n' + contextParts.join('\\n---\\n') + '\\n[/CONTEXT]\\n\\n';\n    }\n  }\n} catch (err) {\n  // RAG failure is non-blocking — continue without context\n}\n\n// Add current date/time in Lisbon timezone\nconst lisbonTime = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'long', hour12: false }).format(new Date());\nconst enrichedMessage = `[Data atual: ${lisbonTime}] ` + contextText + userMessage;\n\nreturn {\n  json: {\n    message: enrichedMessage,\n    original_message: userMessage,\n    session_id: sessionId,\n    has_context: contextText.length > 0\n  }\n};"
       },
       "id": "wa-sales-0001-0001-0001-000000000004",
       "name": "RAG Retrieval",
@@ -151,7 +151,7 @@
       "typeVersion": 2,
       "position": [
         -400,
-        256
+        272
       ]
     },
     {
@@ -179,8 +179,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        -240,
-        256
+        -256,
+        272
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -196,8 +196,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -64,
-        256
+        -112,
+        272
       ]
     },
     {
@@ -259,18 +259,17 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        144,
-        64
+        32,
+        256
       ],
       "continueOnFail": true
     },
     {
       "parameters": {
+        "fromEmail": "andrefloresbrasil@gmail.com",
         "toEmail": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
         "subject": "=Novo Pedido de Orcamento (WhatsApp) - {{ $json.quoteData.reference_id }}",
         "html": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.products{background-color:#f9fafb;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Orcamento<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.quoteData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.quoteData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.quoteData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Telefone:</span> <span class=\"value\">{{ $json.quoteData.customer_phone || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"products\"><div class=\"info-row\"><span class=\"label\">Produtos:</span> <span class=\"value\">{{ $json.quoteData.products_description }}</span></div><div class=\"info-row\"><span class=\"label\">Quantidades:</span> <span class=\"value\">{{ $json.quoteData.quantities || 'Nao especificado' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Informacoes do Projeto</div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.quoteData.project_description || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo:</span> <span class=\"value\">{{ $json.quoteData.timeline || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Requisitos Especiais:</span> <span class=\"value\">{{ $json.quoteData.special_requirements || 'Nenhum' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.quoteData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
-        "fromEmail": "andrefloresbrasil@gmail.com",
-        "emailType": "html",
         "options": {
           "appendAttribution": false
         }
@@ -280,8 +279,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        320,
-        -64
+        224,
+        80
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -297,11 +296,10 @@
     },
     {
       "parameters": {
+        "fromEmail": "andrefloresbrasil@gmail.com",
         "toEmail": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
         "subject": "=Novo Pedido de Suporte (WhatsApp) - {{ $json.orderData.reference_id }}",
         "html": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.issue-box{background-color:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #dc2626}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Suporte<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.orderData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.orderData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.orderData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Referencia:</span> <span class=\"value\">{{ $json.orderData.order_id || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Problema</div><div class=\"issue-box\"><div class=\"info-row\"><span class=\"label\">Tipo de Problema:</span> <span class=\"value\">{{ $json.orderData.issue_type || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.orderData.issue_description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.orderData.created_at }}</span></div><div class=\"info-row\"><span class=\"label\">Estado:</span> <span class=\"value\">{{ $json.orderData.status }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
-        "fromEmail": "andrefloresbrasil@gmail.com",
-        "emailType": "html",
         "options": {
           "appendAttribution": false
         }
@@ -311,8 +309,8 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        320,
-        224
+        224,
+        272
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -351,8 +349,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        544,
-        112
+        400,
+        176
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -390,7 +388,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        -608,
+        -624,
         256
       ],
       "credentials": {
@@ -432,8 +430,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.5,
       "position": [
-        704,
-        112
+        544,
+        176
       ],
       "credentials": {
         "postgres": {
@@ -747,9 +745,9 @@
     "instanceId": "dca77fc72a32c4060c488743966c023ff2c7991e176c0cf1c3ff3e34972b5da5"
   },
   "pinData": {},
-  "versionId": "886fcaeb-3963-418e-a1b3-bb71c6e0ebc3",
-  "activeVersionId": "886fcaeb-3963-418e-a1b3-bb71c6e0ebc3",
-  "versionCounter": 156,
+  "versionId": "e09a65e6-ca24-4eb0-9bb2-10796c1f5336",
+  "activeVersionId": "e09a65e6-ca24-4eb0-9bb2-10796c1f5336",
+  "versionCounter": 180,
   "triggerCount": 1,
   "shared": [
     {
@@ -774,7 +772,7 @@
             "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
             "projectId": "Ngf6hTAwSZXVFW0A",
             "user": {
-              "updatedAt": "2026-02-24T02:17:08.698Z",
+              "updatedAt": "2026-02-28T01:15:53.282Z",
               "createdAt": "2026-01-22T23:41:51.823Z",
               "id": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
               "email": "andrefloresbrasil@gmail.com",
@@ -801,7 +799,7 @@
               },
               "disabled": false,
               "mfaEnabled": false,
-              "lastActiveAt": "2026-02-24",
+              "lastActiveAt": "2026-02-28",
               "isPending": false
             }
           }
@@ -811,9 +809,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-02-21T01:53:38.765Z",
-    "createdAt": "2026-02-21T01:53:38.765Z",
-    "versionId": "886fcaeb-3963-418e-a1b3-bb71c6e0ebc3",
+    "updatedAt": "2026-02-27T02:20:46.039Z",
+    "createdAt": "2026-02-27T02:20:46.039Z",
+    "versionId": "e09a65e6-ca24-4eb0-9bb2-10796c1f5336",
     "workflowId": "egu23cPoHpVByWwk",
     "nodes": [
       {
@@ -952,7 +950,7 @@
       },
       {
         "parameters": {
-          "jsCode": "// RAG Retrieval: Generate embedding + Query Pinecone + Build context\nconst userMessage = $('Validate Input').first().json.message;\nconst sessionId = $('Validate Input').first().json.session_id;\n\nlet contextText = '';\ntry {\n  // Step 1: Generate embedding via Google API\n  const embeddingResponse = await fetch(\n    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${$env.GOOGLE_API_KEY}`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        model: 'models/gemini-embedding-001',\n        content: { parts: [{ text: userMessage }] },\n        taskType: 'RETRIEVAL_QUERY'\n      })\n    }\n  );\n  const embeddingData = await embeddingResponse.json();\n  const vector = embeddingData?.embedding?.values;\n\n  if (vector && vector.length > 0) {\n    // Step 2: Query Pinecone (index: borjareis, all namespaces)\n    const pineconeResponse = await fetch(\n      `${$env.PINECONE_HOST_BORJAREIS}/query`,\n      {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Api-Key': $env.PINECONE_API_KEY\n        },\n        body: JSON.stringify({\n          vector: vector,\n          topK: 5,\n          includeMetadata: true\n        })\n      }\n    );\n    const pineconeData = await pineconeResponse.json();\n    const matches = pineconeData?.matches || [];\n\n    // Step 3: Build context from matches\n    const contextParts = matches\n      .filter(m => m.score >= 0.7)\n      .map(m => m.metadata?.text || m.metadata?.content || m.metadata?.chunk || '')\n      .filter(t => t.length > 0);\n\n    if (contextParts.length > 0) {\n      contextText = '[CONTEXT]\\n' + contextParts.join('\\n---\\n') + '\\n[/CONTEXT]\\n\\n';\n    }\n  }\n} catch (err) {\n  // RAG failure is non-blocking — continue without context\n}\n\n// Add current date/time in Lisbon timezone\nconst lisbonTime = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'long', hour12: false }).format(new Date());\nconst enrichedMessage = `[Data atual: ${lisbonTime}] ` + contextText + userMessage;\n\nreturn {\n  json: {\n    message: enrichedMessage,\n    original_message: userMessage,\n    session_id: sessionId,\n    has_context: contextText.length > 0\n  }\n};"
+          "jsCode": "// RAG Retrieval: Generate embedding + Query Pinecone + Build context\nconst userMessage = $('Validate Input').first().json.message;\nconst sessionId = $('Validate Input').first().json.session_id;\n\nlet contextText = '';\ntry {\n  // Step 1: Generate embedding via Google API\n  const embeddingResponse = await fetch(\n    `https://generativelanguage.googleapis.com/v1beta/models/gemini-embedding-001:embedContent?key=${$env.GOOGLE_API_KEY}`,\n    {\n      method: 'POST',\n      headers: { 'Content-Type': 'application/json' },\n      body: JSON.stringify({\n        model: 'models/gemini-embedding-001',\n        content: { parts: [{ text: userMessage }] },\n        taskType: 'RETRIEVAL_QUERY'\n      })\n    }\n  );\n  const embeddingData = await embeddingResponse.json();\n  const vector = embeddingData?.embedding?.values;\n\n  if (vector && vector.length > 0) {\n    // Step 2: Query Pinecone (index: borjareis, all namespaces)\n    const pineconeResponse = await fetch(\n      `${$env.PINECONE_HOST_DESCOMPLICADOR}/query`,\n      {\n        method: 'POST',\n        headers: {\n          'Content-Type': 'application/json',\n          'Api-Key': $env.PINECONE_API_KEY\n        },\n        body: JSON.stringify({\n          vector: vector,\n          topK: 5,\n          includeMetadata: true\n        })\n      }\n    );\n    const pineconeData = await pineconeResponse.json();\n    const matches = pineconeData?.matches || [];\n\n    // Step 3: Build context from matches\n    const contextParts = matches\n      .filter(m => m.score >= 0.7)\n      .map(m => m.metadata?.text || m.metadata?.content || m.metadata?.chunk || '')\n      .filter(t => t.length > 0);\n\n    if (contextParts.length > 0) {\n      contextText = '[CONTEXT]\\n' + contextParts.join('\\n---\\n') + '\\n[/CONTEXT]\\n\\n';\n    }\n  }\n} catch (err) {\n  // RAG failure is non-blocking — continue without context\n}\n\n// Add current date/time in Lisbon timezone\nconst lisbonTime = new Intl.DateTimeFormat('pt-PT', { timeZone: 'Atlantic/Azores', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'long', hour12: false }).format(new Date());\nconst enrichedMessage = `[Data atual: ${lisbonTime}] ` + contextText + userMessage;\n\nreturn {\n  json: {\n    message: enrichedMessage,\n    original_message: userMessage,\n    session_id: sessionId,\n    has_context: contextText.length > 0\n  }\n};"
         },
         "id": "wa-sales-0001-0001-0001-000000000004",
         "name": "RAG Retrieval",
@@ -960,7 +958,7 @@
         "typeVersion": 2,
         "position": [
           -400,
-          256
+          272
         ]
       },
       {
@@ -988,8 +986,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          -240,
-          256
+          -256,
+          272
         ],
         "retryOnFail": true,
         "maxTries": 3,
@@ -1005,8 +1003,8 @@
         "type": "n8n-nodes-base.code",
         "typeVersion": 2,
         "position": [
-          -64,
-          256
+          -112,
+          272
         ]
       },
       {
@@ -1068,18 +1066,17 @@
         "type": "n8n-nodes-base.switch",
         "typeVersion": 3.2,
         "position": [
-          144,
-          64
+          32,
+          256
         ],
         "continueOnFail": true
       },
       {
         "parameters": {
+          "fromEmail": "andrefloresbrasil@gmail.com",
           "toEmail": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
           "subject": "=Novo Pedido de Orcamento (WhatsApp) - {{ $json.quoteData.reference_id }}",
           "html": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.products{background-color:#f9fafb;padding:15px;border-radius:6px;border-left:4px solid #3b82f6}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#dbeafe;color:#1e40af;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Orcamento<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.quoteData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.quoteData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.quoteData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Telefone:</span> <span class=\"value\">{{ $json.quoteData.customer_phone || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Pedido</div><div class=\"products\"><div class=\"info-row\"><span class=\"label\">Produtos:</span> <span class=\"value\">{{ $json.quoteData.products_description }}</span></div><div class=\"info-row\"><span class=\"label\">Quantidades:</span> <span class=\"value\">{{ $json.quoteData.quantities || 'Nao especificado' }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Informacoes do Projeto</div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.quoteData.project_description || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">Prazo:</span> <span class=\"value\">{{ $json.quoteData.timeline || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Requisitos Especiais:</span> <span class=\"value\">{{ $json.quoteData.special_requirements || 'Nenhum' }}</span></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.quoteData.created_at }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
-          "fromEmail": "andrefloresbrasil@gmail.com",
-          "emailType": "html",
           "options": {
             "appendAttribution": false
           }
@@ -1089,8 +1086,8 @@
         "type": "n8n-nodes-base.emailSend",
         "typeVersion": 2.1,
         "position": [
-          320,
-          -64
+          224,
+          80
         ],
         "retryOnFail": true,
         "maxTries": 3,
@@ -1106,11 +1103,10 @@
       },
       {
         "parameters": {
+          "fromEmail": "andrefloresbrasil@gmail.com",
           "toEmail": "={{ $env.NOTIFICATION_EMAIL || 'andrefloresbrasil@gmail.com' }}",
           "subject": "=Novo Pedido de Suporte (WhatsApp) - {{ $json.orderData.reference_id }}",
           "html": "=<!DOCTYPE html><html><head><meta charset=\"UTF-8\"><style>body{font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;background-color:#f4f4f4;margin:0;padding:0}.container{max-width:650px;margin:30px auto;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.1)}.header{background:linear-gradient(135deg,#991b1b 0%,#dc2626 100%);color:#ffffff;padding:30px;text-align:center}.header h1{margin:0;font-size:24px;font-weight:600}.content{padding:30px}.section{margin-bottom:25px}.section-title{font-size:16px;font-weight:600;color:#991b1b;margin-bottom:12px;border-bottom:2px solid #e5e7eb;padding-bottom:6px}.info-row{margin:8px 0;line-height:1.6}.label{font-weight:600;color:#4b5563;display:inline-block;min-width:140px}.value{color:#1f2937}.issue-box{background-color:#fef2f2;padding:15px;border-radius:6px;border-left:4px solid #dc2626}.wa-badge{background-color:#25D366;color:#ffffff;padding:4px 10px;border-radius:12px;font-size:12px;font-weight:600;display:inline-block;margin-left:8px}.footer{background-color:#f9fafb;padding:20px;text-align:center;font-size:12px;color:#6b7280;border-top:1px solid #e5e7eb}.reference-badge{background-color:#fee2e2;color:#991b1b;padding:8px 16px;border-radius:20px;font-weight:600;display:inline-block;margin-top:10px}</style></head><body><div class=\"container\"><div class=\"header\"><h1>Novo Pedido de Suporte<span class=\"wa-badge\">WhatsApp</span></h1><div class=\"reference-badge\">{{ $json.orderData.reference_id }}</div></div><div class=\"content\"><div class=\"section\"><div class=\"section-title\">Informacoes do Cliente</div><div class=\"info-row\"><span class=\"label\">Nome:</span> <span class=\"value\">{{ $json.orderData.customer_name }}</span></div><div class=\"info-row\"><span class=\"label\">Email:</span> <span class=\"value\">{{ $json.orderData.customer_email }}</span></div><div class=\"info-row\"><span class=\"label\">Referencia:</span> <span class=\"value\">{{ $json.orderData.order_id || 'Nao fornecido' }}</span></div><div class=\"info-row\"><span class=\"label\">WhatsApp:</span> <span class=\"value\">+{{ $('Validate Input').first().json.from }}</span></div></div><div class=\"section\"><div class=\"section-title\">Detalhes do Problema</div><div class=\"issue-box\"><div class=\"info-row\"><span class=\"label\">Tipo de Problema:</span> <span class=\"value\">{{ $json.orderData.issue_type || 'Nao especificado' }}</span></div><div class=\"info-row\"><span class=\"label\">Descricao:</span> <span class=\"value\">{{ $json.orderData.issue_description }}</span></div></div></div><div class=\"section\"><div class=\"section-title\">Metadados</div><div class=\"info-row\"><span class=\"label\">Canal:</span> <span class=\"value\">WhatsApp</span></div><div class=\"info-row\"><span class=\"label\">Session ID:</span> <span class=\"value\">{{ $json.sessionId }}</span></div><div class=\"info-row\"><span class=\"label\">Data:</span> <span class=\"value\">{{ $json.orderData.created_at }}</span></div><div class=\"info-row\"><span class=\"label\">Estado:</span> <span class=\"value\">{{ $json.orderData.status }}</span></div></div></div><div class=\"footer\"><p><strong>Mega Loja Borja Reis</strong> - Materiais de Construção, Mobiliário e Decoração</p><p>Este email foi gerado automaticamente pelo assistente de vendas (WhatsApp).</p></div></div></body></html>",
-          "fromEmail": "andrefloresbrasil@gmail.com",
-          "emailType": "html",
           "options": {
             "appendAttribution": false
           }
@@ -1120,8 +1116,8 @@
         "type": "n8n-nodes-base.emailSend",
         "typeVersion": 2.1,
         "position": [
-          320,
-          224
+          224,
+          272
         ],
         "retryOnFail": true,
         "maxTries": 3,
@@ -1160,8 +1156,8 @@
         "type": "n8n-nodes-base.httpRequest",
         "typeVersion": 4.2,
         "position": [
-          544,
-          112
+          400,
+          176
         ],
         "retryOnFail": true,
         "maxTries": 3,
@@ -1199,7 +1195,7 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.5,
         "position": [
-          -608,
+          -624,
           256
         ],
         "credentials": {
@@ -1241,8 +1237,8 @@
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.5,
         "position": [
-          704,
-          112
+          544,
+          176
         ],
         "credentials": {
           "postgres": {
@@ -1549,10 +1545,26 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-02-21T01:53:38.909Z",
-        "id": 613,
+        "createdAt": "2026-02-27T02:20:46.154Z",
+        "id": 629,
         "workflowId": "egu23cPoHpVByWwk",
-        "versionId": "886fcaeb-3963-418e-a1b3-bb71c6e0ebc3",
+        "versionId": "e09a65e6-ca24-4eb0-9bb2-10796c1f5336",
+        "event": "activated",
+        "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
+      },
+      {
+        "createdAt": "2026-02-27T02:20:58.324Z",
+        "id": 630,
+        "workflowId": "egu23cPoHpVByWwk",
+        "versionId": "e09a65e6-ca24-4eb0-9bb2-10796c1f5336",
+        "event": "activated",
+        "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
+      },
+      {
+        "createdAt": "2026-02-27T02:20:58.459Z",
+        "id": 631,
+        "workflowId": "egu23cPoHpVByWwk",
+        "versionId": "e09a65e6-ca24-4eb0-9bb2-10796c1f5336",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       }

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-21T01:53:39.369Z",
+  "updatedAt": "2026-02-28T05:05:49.331Z",
   "createdAt": "2026-02-06T12:52:22.184Z",
   "id": "i4wTS1JXtSrfmEYIb9WrY",
   "name": "Vapi - Book Appointment",
@@ -108,9 +108,9 @@
       "maxTries": 3,
       "waitBetweenTries": 1000,
       "credentials": {
-        "googleCalendarOAuth2Api": {
-          "id": "9Hmuua4o9ISXVo6x",
-          "name": "Google Calendar account"
+        "googleApi": {
+          "id": "lewQwTwh6eQu3uJH",
+          "name": "Google Calendar SA"
         }
       },
       "continueOnFail": true
@@ -296,9 +296,9 @@
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "8d627974-ccfd-4dcf-8f8b-713a8729266e",
-  "activeVersionId": "8d627974-ccfd-4dcf-8f8b-713a8729266e",
-  "versionCounter": 77,
+  "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
+  "activeVersionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
+  "versionCounter": 82,
   "triggerCount": 1,
   "shared": [
     {
@@ -323,7 +323,7 @@
             "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
             "projectId": "Ngf6hTAwSZXVFW0A",
             "user": {
-              "updatedAt": "2026-02-24T02:17:08.698Z",
+              "updatedAt": "2026-02-28T01:15:53.282Z",
               "createdAt": "2026-01-22T23:41:51.823Z",
               "id": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
               "email": "andrefloresbrasil@gmail.com",
@@ -350,7 +350,7 @@
               },
               "disabled": false,
               "mfaEnabled": false,
-              "lastActiveAt": "2026-02-24",
+              "lastActiveAt": "2026-02-28",
               "isPending": false
             }
           }
@@ -360,9 +360,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-02-21T01:53:39.372Z",
-    "createdAt": "2026-02-21T01:53:39.372Z",
-    "versionId": "8d627974-ccfd-4dcf-8f8b-713a8729266e",
+    "updatedAt": "2026-02-28T05:05:49.332Z",
+    "createdAt": "2026-02-28T05:05:49.332Z",
+    "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
     "workflowId": "i4wTS1JXtSrfmEYIb9WrY",
     "nodes": [
       {
@@ -466,9 +466,9 @@
         "maxTries": 3,
         "waitBetweenTries": 1000,
         "credentials": {
-          "googleCalendarOAuth2Api": {
-            "id": "9Hmuua4o9ISXVo6x",
-            "name": "Google Calendar account"
+          "googleApi": {
+            "id": "lewQwTwh6eQu3uJH",
+            "name": "Google Calendar SA"
           }
         },
         "continueOnFail": true
@@ -650,10 +650,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-02-21T01:53:39.469Z",
-        "id": 617,
+        "createdAt": "2026-02-28T05:05:49.407Z",
+        "id": 633,
         "workflowId": "i4wTS1JXtSrfmEYIb9WrY",
-        "versionId": "8d627974-ccfd-4dcf-8f8b-713a8729266e",
+        "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
+        "event": "activated",
+        "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
+      },
+      {
+        "createdAt": "2026-02-28T05:05:58.602Z",
+        "id": 635,
+        "workflowId": "i4wTS1JXtSrfmEYIb9WrY",
+        "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       }
