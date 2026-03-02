@@ -73,7 +73,9 @@ const elements = {
     archiveBar: document.getElementById('archive-bar'),
     archiveToggle: document.getElementById('archive-toggle'),
     archiveToggleText: document.getElementById('archive-toggle-text'),
-    botTabs: document.getElementById('bot-tabs'),
+    botSidebar: document.getElementById('bot-sidebar'),
+    botList: document.getElementById('bot-list'),
+    sidebarToggle: document.getElementById('sidebar-toggle'),
     botControlBar: document.getElementById('bot-control-bar'),
     replyBar: document.getElementById('reply-bar')
 };
@@ -84,7 +86,8 @@ document.addEventListener('DOMContentLoaded', init);
 function init() {
     state.apiKey = localStorage.getItem('wa_dashboard_key');
 
-    renderBotTabs();
+    renderBotSidebar();
+    initSidebarCollapse();
 
     if (!state.apiKey) {
         showApiKeyPrompt();
@@ -95,6 +98,13 @@ function init() {
     }
 
     // Event listeners
+    elements.sidebarToggle.addEventListener('click', toggleSidebar);
+    // Close expanded sidebar when clicking main content on mobile
+    document.getElementById('main-container').addEventListener('click', () => {
+        if (window.innerWidth < 768 && !elements.botSidebar.classList.contains('collapsed')) {
+            elements.botSidebar.classList.add('collapsed');
+        }
+    });
     elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
     elements.apiKeyInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') saveApiKey();
@@ -175,16 +185,50 @@ function botType() {
     return BOTS[state.currentBot]?.type || 'whatsapp';
 }
 
-function renderBotTabs() {
-    if (!elements.botTabs) return;
-    elements.botTabs.innerHTML = Object.entries(BOTS).map(([id, bot]) => {
+function renderBotSidebar() {
+    if (!elements.botList) return;
+
+    elements.botList.innerHTML = Object.entries(BOTS).map(([id, bot]) => {
         const active = id === state.currentBot;
-        return `<button class="bot-tab${active ? ' active' : ''}" data-bot="${id}" style="${active ? '--tab-color:' + bot.color : ''}">${bot.name}</button>`;
+        const avatar = bot.type === 'whatsapp'
+            ? `<img src="https://descomplicador.pt/images/Miguel.jpg" alt="${bot.name}" class="bot-sidebar-avatar-img">`
+            : `<div class="bot-sidebar-avatar-circle" style="background: ${bot.color}">${bot.name[0]}</div>`;
+
+        const statusDot = bot.type === 'whatsapp'
+            ? `<span class="bot-sidebar-status ${state.botConfig.enabled ? 'on' : 'off'}"></span>`
+            : '';
+
+        return `
+            <button class="bot-sidebar-item${active ? ' active' : ''}" data-bot="${id}">
+                <div class="bot-sidebar-avatar">
+                    ${avatar}
+                    ${statusDot}
+                </div>
+                <div class="bot-sidebar-info">
+                    <span class="bot-sidebar-name">${bot.name}</span>
+                    <span class="bot-sidebar-label">${bot.label}</span>
+                </div>
+            </button>
+        `;
     }).join('');
 
-    elements.botTabs.querySelectorAll('.bot-tab').forEach(btn => {
+    elements.botList.querySelectorAll('.bot-sidebar-item').forEach(btn => {
         btn.addEventListener('click', () => switchBot(btn.dataset.bot));
     });
+}
+
+function initSidebarCollapse() {
+    // Set initial state based on viewport width
+    const isDesktop = window.innerWidth >= 768;
+    if (isDesktop) {
+        elements.botSidebar.classList.remove('collapsed');
+    } else {
+        elements.botSidebar.classList.add('collapsed');
+    }
+}
+
+function toggleSidebar() {
+    elements.botSidebar.classList.toggle('collapsed');
 }
 
 function switchBot(botId) {
@@ -196,9 +240,14 @@ function switchBot(botId) {
     state.currentName = null;
     state.showArchived = false;
 
-    renderBotTabs();
+    renderBotSidebar();
     updateBotUI();
     showList();
+
+    // Auto-collapse sidebar on mobile after bot switch
+    if (window.innerWidth < 768) {
+        elements.botSidebar.classList.add('collapsed');
+    }
 }
 
 function updateBotUI() {
@@ -281,6 +330,7 @@ async function loadMessages(phone) {
         const msgs = Array.isArray(data) ? data : (data.messages || []);
         state.messages = normalizeMessages(msgs);
         renderMessages();
+        if (botType() !== 'whatsapp') renderVisitorInfo();
         scrollToBottom();
         checkWindowExpiry();
     } catch (error) {
@@ -298,7 +348,11 @@ function normalizeMessages(msgs) {
         type: m.is_human_reply ? 'human' : 'bot',
         message: m.message_text || m.message || '',
         timestamp: m.created_at || m.timestamp,
-        intent: m.intent
+        intent: m.intent,
+        visitor_ip: m.visitor_ip || '',
+        visitor_ua: m.visitor_ua || '',
+        visitor_referrer: m.visitor_referrer || '',
+        visitor_lang: m.visitor_lang || ''
     }));
 }
 
@@ -373,6 +427,10 @@ function showChat(phone, name, isPaused, pausedUntil, isArchived) {
     if (elements.replyBar) elements.replyBar.style.display = isWA ? 'flex' : 'none';
     elements.takeoverBtn.style.display = isWA ? 'flex' : 'none';
     elements.windowWarning.style.display = 'none';
+
+    // Clear visitor info bar
+    const existingInfo = document.getElementById('visitor-info');
+    if (existingInfo) existingInfo.remove();
 
     if (isWA) updateTakeoverButton();
     updateArchiveButton();
@@ -876,6 +934,9 @@ function updateBotControlBar() {
     } else {
         elements.scheduleLabel.textContent = 'Sempre';
     }
+
+    // Update sidebar status indicator for WhatsApp bot
+    renderBotSidebar();
 }
 
 // Archive Management
@@ -915,6 +976,51 @@ function updateArchiveButton() {
 function toggleArchiveView() {
     state.showArchived = !state.showArchived;
     renderConversations();
+}
+
+// Visitor Info
+function renderVisitorInfo() {
+    const existing = document.getElementById('visitor-info');
+    if (existing) existing.remove();
+
+    const firstIn = state.messages.find(m => m.direction === 'incoming' && m.visitor_ip);
+    if (!firstIn) return;
+
+    const ip = firstIn.visitor_ip;
+    const ua = firstIn.visitor_ua;
+    const referrer = firstIn.visitor_referrer;
+    const lang = firstIn.visitor_lang;
+
+    if (!ip && !ua && !referrer && !lang) return;
+
+    const parts = [];
+    if (ip) parts.push(`<span class="vi-item" title="IP">${escapeHtml(ip)}</span>`);
+    if (ua) parts.push(`<span class="vi-item" title="Browser">${escapeHtml(parseUserAgent(ua))}</span>`);
+    if (referrer) parts.push(`<span class="vi-item" title="Referrer">${escapeHtml(referrer)}</span>`);
+    if (lang) parts.push(`<span class="vi-item" title="Idioma">${escapeHtml(lang)}</span>`);
+
+    const bar = document.createElement('div');
+    bar.id = 'visitor-info';
+    bar.className = 'visitor-info';
+    bar.innerHTML = parts.join('<span class="vi-sep">|</span>');
+
+    const chatHeader = document.querySelector('.chat-header');
+    if (chatHeader) chatHeader.parentNode.insertBefore(bar, chatHeader.nextSibling);
+}
+
+function parseUserAgent(ua) {
+    if (!ua) return '';
+    let browser = 'Browser';
+    let device = '';
+    if (/Edg\//i.test(ua)) browser = 'Edge';
+    else if (/Chrome\//i.test(ua) && !/Chromium/i.test(ua)) browser = 'Chrome';
+    else if (/Safari\//i.test(ua) && !/Chrome/i.test(ua)) browser = 'Safari';
+    else if (/Firefox\//i.test(ua)) browser = 'Firefox';
+    else if (/Opera|OPR\//i.test(ua)) browser = 'Opera';
+    if (/Mobile|Android/i.test(ua)) device = 'Mobile';
+    else if (/Tablet|iPad/i.test(ua)) device = 'Tablet';
+    else device = 'Desktop';
+    return device + ' / ' + browser;
 }
 
 // SVG Icons

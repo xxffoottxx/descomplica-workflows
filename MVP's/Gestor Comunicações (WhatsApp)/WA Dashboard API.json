@@ -323,7 +323,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, phone_number, contact_name, direction, message_text, intent, is_human_reply, created_at FROM wa_messages WHERE phone_number = $1 AND bot_id = $2 ORDER BY created_at ASC, id ASC LIMIT 500",
+        "query": "SELECT id, phone_number, contact_name, direction, message_text, intent, is_human_reply, created_at, visitor_ip, visitor_ua, visitor_referrer, visitor_lang FROM wa_messages WHERE phone_number = $1 AND bot_id = $2 ORDER BY created_at ASC, id ASC LIMIT 500",
         "options": {
           "queryReplacement": "={{ $json.phone }},={{ $json.botId }}"
         }

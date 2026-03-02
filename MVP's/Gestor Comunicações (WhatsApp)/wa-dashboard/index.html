@@ -13,6 +13,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+    <!-- Bot Sidebar -->
+    <aside id="bot-sidebar" class="bot-sidebar collapsed">
+        <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Alternar barra lateral">
+            <svg viewBox="0 0 24 24" width="20" height="20">
+                <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+            </svg>
+        </button>
+        <div id="bot-list" class="bot-list"></div>
+    </aside>
+
+    <!-- Main Container -->
+    <div id="main-container" class="main-container">
     <!-- API Key Prompt -->
     <div id="api-key-prompt" class="modal" style="display: none;">
         <div class="modal-content">
@@ -50,7 +63,6 @@
                 </svg>
             </button>
         </header>
-        <div id="bot-tabs" class="bot-tabs"></div>
         <div id="bot-control-bar" class="bot-control-bar">
             <div class="bot-control-left">
                 <span id="bot-status-indicator" class="bot-status-indicator on"></span>
@@ -155,6 +167,8 @@
             </button>
         </div>
     </div>
+
+    </div> <!-- Close main-container -->
 
     <script src="app.js"></script>
 </body>

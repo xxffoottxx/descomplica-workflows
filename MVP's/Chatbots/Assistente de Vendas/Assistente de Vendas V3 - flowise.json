@@ -311,7 +311,11 @@
             "direction": "in",
             "message_text": "={{ $('Validate Input').first().json.message }}",
             "session_id": "={{ $('Validate Input').first().json.session_id }}",
-            "bot_id": "rafael"
+            "bot_id": "rafael",
+            "visitor_ip": "={{ $('Validate Input').first().json.headers['x-forwarded-for'] || '' }}",
+            "visitor_ua": "={{ $('Validate Input').first().json.headers['user-agent'] || '' }}",
+            "visitor_referrer": "={{ $('Validate Input').first().json.headers['referer'] || '' }}",
+            "visitor_lang": "={{ ($('Validate Input').first().json.headers['accept-language'] || '').substring(0, 20) }}"
           }
         },
         "options": {}
