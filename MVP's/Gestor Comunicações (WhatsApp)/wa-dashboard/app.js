@@ -76,7 +76,7 @@ const elements = {
     archiveToggleText: document.getElementById('archive-toggle-text'),
     botSidebar: document.getElementById('bot-sidebar'),
     botList: document.getElementById('bot-list'),
-    sidebarToggle: document.getElementById('sidebar-toggle'),
+    activeBotName: document.getElementById('active-bot-name'),
     botControlBar: document.getElementById('bot-control-bar'),
     replyBar: document.getElementById('reply-bar')
 };
@@ -88,7 +88,6 @@ function init() {
     state.apiKey = localStorage.getItem('wa_dashboard_key');
 
     renderBotSidebar();
-    initSidebarCollapse();
 
     if (!state.apiKey) {
         showApiKeyPrompt();
@@ -99,13 +98,6 @@ function init() {
     }
 
     // Event listeners
-    elements.sidebarToggle.addEventListener('click', toggleSidebar);
-    // Close expanded sidebar when clicking main content on mobile
-    document.getElementById('main-container').addEventListener('click', () => {
-        if (window.innerWidth < 768 && !elements.botSidebar.classList.contains('collapsed')) {
-            elements.botSidebar.classList.add('collapsed');
-        }
-    });
     elements.saveApiKeyBtn.addEventListener('click', saveApiKey);
     elements.apiKeyInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') saveApiKey();
@@ -200,14 +192,10 @@ function renderBotSidebar() {
             : '';
 
         return `
-            <button class="bot-sidebar-item${active ? ' active' : ''}" data-bot="${id}">
+            <button class="bot-sidebar-item${active ? ' active' : ''}" data-bot="${id}" title="${bot.name} — ${bot.label}">
                 <div class="bot-sidebar-avatar">
                     ${avatar}
                     ${statusDot}
-                </div>
-                <div class="bot-sidebar-info">
-                    <span class="bot-sidebar-name">${bot.name}</span>
-                    <span class="bot-sidebar-label">${bot.label}</span>
                 </div>
             </button>
         `;
@@ -216,20 +204,18 @@ function renderBotSidebar() {
     elements.botList.querySelectorAll('.bot-sidebar-item').forEach(btn => {
         btn.addEventListener('click', () => switchBot(btn.dataset.bot));
     });
+
+    // Update active bot name in header
+    updateActiveBotName();
 }
 
-function initSidebarCollapse() {
-    // Set initial state based on viewport width
-    const isDesktop = window.innerWidth >= 768;
-    if (isDesktop) {
-        elements.botSidebar.classList.remove('collapsed');
-    } else {
-        elements.botSidebar.classList.add('collapsed');
+function updateActiveBotName() {
+    if (!elements.activeBotName) return;
+    const bot = BOTS[state.currentBot];
+    if (bot) {
+        elements.activeBotName.textContent = bot.name + ' — ' + bot.label;
+        elements.activeBotName.style.color = bot.color;
     }
-}
-
-function toggleSidebar() {
-    elements.botSidebar.classList.toggle('collapsed');
 }
 
 function switchBot(botId) {
@@ -244,11 +230,6 @@ function switchBot(botId) {
     renderBotSidebar();
     updateBotUI();
     showList();
-
-    // Auto-collapse sidebar on mobile after bot switch
-    if (window.innerWidth < 768) {
-        elements.botSidebar.classList.add('collapsed');
-    }
 }
 
 function updateBotUI() {
