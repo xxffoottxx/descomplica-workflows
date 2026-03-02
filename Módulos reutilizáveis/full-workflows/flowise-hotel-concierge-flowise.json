@@ -26,7 +26,7 @@
       ],
       "webhookId": "c3d4e5f6-2222-4bbb-d222-222222222222",
       "parameters": {
-        "path": "hotel-concierge-flowise",
+        "path": "hotel-concierge",
         "options": {
           "allowedOrigins": "https://your-domain.com",
           "responseHeaders": {

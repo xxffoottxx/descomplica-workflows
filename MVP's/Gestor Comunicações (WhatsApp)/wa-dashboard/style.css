@@ -746,6 +746,62 @@ body {
     background: var(--accent-green-dark);
 }
 
+/* Bot Tabs */
+.bot-tabs {
+    display: flex;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-subtle);
+    flex-shrink: 0;
+    gap: 0;
+    scrollbar-width: none;
+}
+
+.bot-tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.bot-tab {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 8px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    color: var(--text-tertiary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.bot-tab:hover {
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+}
+
+.bot-tab.active {
+    color: var(--text-primary);
+    border-bottom-color: var(--tab-color, var(--accent-green));
+}
+
+/* Bot Icon Circle (for website bot messages) */
+.bot-icon-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+}
+
 /* Bot Control Bar */
 .bot-control-bar {
     display: flex;

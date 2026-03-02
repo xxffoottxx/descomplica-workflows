@@ -5,8 +5,8 @@
 
 // Configuration
 const CONFIG = {
-  dataWebhookUrl: 'https://n8n.descomplicador.pt/webhook/dashboard-refresh',
-  reportWebhookUrl: 'https://n8n.descomplicador.pt/webhook/generate-report',
+  dataWebhookUrl: 'https://hub.descomplicador.pt/webhook/dashboard-refresh',
+  reportWebhookUrl: 'https://hub.descomplicador.pt/webhook/generate-report',
   webhookAuthHeader: 'Api-Key',
   webhookAuthToken: 'pcsk_3exga9_NVmGqhfn3fSukBvAHhBQ1SfoCCNoQFGMB4Q1MhxzLuMQn7GJy9ghAFjREqDLKZH',
   refreshInterval: 30 * 60 * 1000, // 30 minutes

@@ -17,7 +17,7 @@ cp .env.example .env
 
 The `.env` file should contain:
 ```
-N8N_API_URL=https://n8n.descomplicador.pt/api/v1
+N8N_API_URL=https://hub.descomplicador.pt/api/v1
 N8N_API_KEY=your_actual_api_key_here
 ```
 
@@ -214,7 +214,7 @@ This file is auto-generated on first run by fetching all workflows from the n8n 
 
 Hardcoded in `sync-n8n-status.py` (lines 34-36):
 ```python
-N8N_API_URL = "https://n8n.descomplicador.pt/api/v1"
+N8N_API_URL = "https://hub.descomplicador.pt/api/v1"
 N8N_API_KEY = "eyJhbGc..."  # JWT token
 ```
 
@@ -288,7 +288,7 @@ fi
 **Symptom:** "Connection error: ..."
 
 **Solution:**
-- Check VM is accessible: `ping n8n.descomplicador.pt`
+- Check VM is accessible: `ping hub.descomplicador.pt`
 - Verify API key is valid (check VM `~/.bashrc`)
 - Check firewall isn't blocking HTTPS requests
 
@@ -348,8 +348,8 @@ Uses `git` commands to check:
 
 Fetches workflows via:
 ```
-GET https://n8n.descomplicador.pt/api/v1/workflows
-GET https://n8n.descomplicador.pt/api/v1/workflows/{id}
+GET https://hub.descomplicador.pt/api/v1/workflows
+GET https://hub.descomplicador.pt/api/v1/workflows/{id}
 ```
 
 With header: `X-N8N-API-KEY: {jwt_token}`

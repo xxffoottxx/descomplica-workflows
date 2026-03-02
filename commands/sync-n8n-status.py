@@ -57,7 +57,7 @@ def load_env():
 load_env()
 
 # Configuration
-N8N_API_URL = os.getenv('N8N_API_URL', 'https://n8n.descomplicador.pt/api/v1')
+N8N_API_URL = os.getenv('N8N_API_URL', 'https://hub.descomplicador.pt/api/v1')
 N8N_API_KEY = os.getenv('N8N_API_KEY')
 
 if not N8N_API_KEY:

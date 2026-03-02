@@ -263,7 +263,7 @@
       {
         "workflow": "Vapi - Post Call Summary",
         "node": "Webhook - Call Completed",
-        "path": "vapi/call-completed-v3"
+        "path": "voice/call-completed-v3"
       },
       {
         "workflow": "Vapi - Send Email",
@@ -273,7 +273,7 @@
       {
         "workflow": "Hotel Concierge - flowise",
         "node": "Webhook",
-        "path": "hotel-concierge-flowise"
+        "path": "hotel-concierge"
       },
       {
         "workflow": "Assistente de Vendas - WhatsApp",
@@ -283,7 +283,7 @@
       {
         "workflow": "Assistente de Conversão - flowise",
         "node": "Webhook",
-        "path": "conversion-assistant-flowise"
+        "path": "conversion-assistant"
       },
       {
         "workflow": "Vapi - Book Appointment",
@@ -293,7 +293,7 @@
       {
         "workflow": "Assistente de RH - flowise",
         "node": "Webhook",
-        "path": "rh-assistant-flowise"
+        "path": "rh-assistant"
       },
       {
         "workflow": "Vapi - Transfer Call to Human",

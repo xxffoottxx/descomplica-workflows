@@ -7,7 +7,7 @@ Automates the critical **3-way sync workflow** identified in CLAUDE.md:
 local files → GitHub → production VM
 ```
 
-Prevents drift between your local n8n workflow JSON files, the GitHub repository, and the deployed workflows on the production VM (`n8n.descomplicador.pt`).
+Prevents drift between your local n8n workflow JSON files, the GitHub repository, and the deployed workflows on the production VM (`hub.descomplicador.pt`).
 
 ---
 
@@ -152,13 +152,13 @@ fi
 
 ### Get Workflow by ID
 ```bash
-curl -X GET https://n8n.descomplicador.pt/api/v1/workflows/42 \
+curl -X GET https://hub.descomplicador.pt/api/v1/workflows/42 \
   -H "X-N8N-API-KEY: $N8N_API_KEY"
 ```
 
 ### Update Workflow
 ```bash
-curl -X PUT https://n8n.descomplicador.pt/api/v1/workflows/42 \
+curl -X PUT https://hub.descomplicador.pt/api/v1/workflows/42 \
   -H "X-N8N-API-KEY: $N8N_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -173,13 +173,13 @@ curl -X PUT https://n8n.descomplicador.pt/api/v1/workflows/42 \
 
 ### Activate Workflow
 ```bash
-curl -X POST https://n8n.descomplicador.pt/api/v1/workflows/42/activate \
+curl -X POST https://hub.descomplicador.pt/api/v1/workflows/42/activate \
   -H "X-N8N-API-KEY: $N8N_API_KEY"
 ```
 
 ### List All Workflows
 ```bash
-curl -X GET https://n8n.descomplicador.pt/api/v1/workflows \
+curl -X GET https://hub.descomplicador.pt/api/v1/workflows \
   -H "X-N8N-API-KEY: $N8N_API_KEY"
 ```
 

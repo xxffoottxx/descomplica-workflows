@@ -20,7 +20,7 @@ There is an inspiration workflow at `reference/jarvis-inspiration.json` — stud
 - Phone: `+351 923 124 800`
 - Phone Number ID: `1005307842661678`
 - WABA ID: `1455185509564906`
-- Webhook base: `https://n8n.descomplicador.pt/webhook/`
+- Webhook base: `https://hub.descomplicador.pt/webhook/`
 - Filter: only allow messages from Andre's number (configure as placeholder `YOUR_PHONE_NUMBER`)
 
 ## Architecture

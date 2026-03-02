@@ -37,7 +37,7 @@
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "https://n8n.descomplicador.pt"
+                "value": "https://hub.descomplicador.pt"
               }
             ]
           }
@@ -245,7 +245,7 @@
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "https://n8n.descomplicador.pt"
+                "value": "https://hub.descomplicador.pt"
               },
               {
                 "name": "Cache-Control",
@@ -497,7 +497,7 @@
               "entries": [
                 {
                   "name": "Access-Control-Allow-Origin",
-                  "value": "https://n8n.descomplicador.pt"
+                  "value": "https://hub.descomplicador.pt"
                 }
               ]
             }
@@ -705,7 +705,7 @@
               "entries": [
                 {
                   "name": "Access-Control-Allow-Origin",
-                  "value": "https://n8n.descomplicador.pt"
+                  "value": "https://hub.descomplicador.pt"
                 },
                 {
                   "name": "Cache-Control",

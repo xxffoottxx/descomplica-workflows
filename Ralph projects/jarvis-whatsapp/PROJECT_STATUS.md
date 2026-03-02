@@ -216,7 +216,7 @@
    ```
 
 5. **Configure Meta Business:**
-   - Add webhook URL: `https://n8n.descomplicador.pt/webhook/{YOUR_WEBHOOK_ID}`
+   - Add webhook URL: `https://hub.descomplicador.pt/webhook/{YOUR_WEBHOOK_ID}`
    - Set verify token
    - Subscribe to "messages" field
 

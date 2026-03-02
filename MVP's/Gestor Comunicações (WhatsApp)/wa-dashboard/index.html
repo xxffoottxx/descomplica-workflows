@@ -2,13 +2,13 @@
 <html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://descomplicador.pt; connect-src 'self' https://n8n.descomplicador.pt">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://descomplicador.pt; connect-src 'self' https://hub.descomplicador.pt">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="WA Dash">
-    <title>WhatsApp Dashboard - Descomplicador</title>
+    <title>Dashboard - Descomplicador</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
 </head>
@@ -50,6 +50,7 @@
                 </svg>
             </button>
         </header>
+        <div id="bot-tabs" class="bot-tabs"></div>
         <div id="bot-control-bar" class="bot-control-bar">
             <div class="bot-control-left">
                 <span id="bot-status-indicator" class="bot-status-indicator on"></span>
@@ -138,7 +139,7 @@
         </div>
         <div id="messages-container" class="messages-container" aria-live="polite" aria-label="Mensagens">
         </div>
-        <div class="reply-bar">
+        <div id="reply-bar" class="reply-bar">
             <input
                 type="text"
                 id="reply-input"

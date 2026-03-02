@@ -4,7 +4,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "sales-assistant-v3-flowise",
+        "path": "sales-assistant-v3",
         "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "https://descomplicador.pt",
@@ -153,7 +153,7 @@
       "name": "Route Response",
       "type": "n8n-nodes-base.switch",
       "position": [
-        -272,
+        -96,
         80
       ],
       "typeVersion": 3.2
@@ -170,7 +170,7 @@
       "type": "n8n-nodes-base.gmail",
       "maxTries": 3,
       "position": [
-        -32,
+        144,
         -48
       ],
       "webhookId": "fa4875b5-446a-48f8-acb6-dd4d6a3daa1a",
@@ -197,7 +197,7 @@
       "type": "n8n-nodes-base.gmail",
       "maxTries": 3,
       "position": [
-        -32,
+        144,
         96
       ],
       "webhookId": "1f391aff-ac2a-4cd1-80c0-cd941a24b2d7",
@@ -220,7 +220,7 @@
       "name": "Format Quote Response",
       "type": "n8n-nodes-base.code",
       "position": [
-        144,
+        320,
         -48
       ],
       "typeVersion": 2
@@ -233,7 +233,7 @@
       "name": "Format Order Response",
       "type": "n8n-nodes-base.code",
       "position": [
-        144,
+        320,
         96
       ],
       "typeVersion": 2
@@ -246,7 +246,7 @@
       "name": "Format Normal Response",
       "type": "n8n-nodes-base.code",
       "position": [
-        -32,
+        144,
         240
       ],
       "typeVersion": 2
@@ -259,7 +259,7 @@
       "name": "Respond Quote",
       "type": "n8n-nodes-base.respondToWebhook",
       "position": [
-        320,
+        496,
         -48
       ],
       "typeVersion": 1.1
@@ -272,7 +272,7 @@
       "name": "Respond Order",
       "type": "n8n-nodes-base.respondToWebhook",
       "position": [
-        320,
+        496,
         96
       ],
       "typeVersion": 1.1
@@ -285,10 +285,94 @@
       "name": "Respond Normal",
       "type": "n8n-nodes-base.respondToWebhook",
       "position": [
-        144,
+        320,
         240
       ],
       "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wa_messages",
+          "cachedResultName": "wa_messages"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "phone_number": "={{ $('Validate Input').first().json.session_id }}",
+            "contact_name": "Visitante",
+            "direction": "in",
+            "message_text": "={{ $('Validate Input').first().json.message }}",
+            "session_id": "={{ $('Validate Input').first().json.session_id }}",
+            "bot_id": "rafael"
+          }
+        },
+        "options": {}
+      },
+      "id": "45d052e4-3a58-4746-94be-6b9a0ae0eea0",
+      "name": "Log Incoming",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -800,
+        296
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      },
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "wa_messages",
+          "cachedResultName": "wa_messages"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "phone_number": "={{ $('Validate Input').first().json.session_id }}",
+            "direction": "out",
+            "message_text": "={{ $json.output || '' }}",
+            "intent": "={{ $json.classifiedIntent || 'general' }}",
+            "session_id": "={{ $('Validate Input').first().json.session_id }}",
+            "bot_id": "rafael"
+          }
+        },
+        "options": {}
+      },
+      "id": "151a168c-5cbf-4680-8db7-6836c4e675fe",
+      "name": "Log Outgoing",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -272,
+        96
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "MgTypMJu0jyDu7Zb",
+          "name": "n8n PostgreSQL"
+        }
+      },
+      "continueOnFail": true
     }
   ],
   "pinData": {},
@@ -311,6 +395,11 @@
             "node": "Flowise API",
             "type": "main",
             "index": 0
+          },
+          {
+            "node": "Log Incoming",
+            "type": "main",
+            "index": 0
           }
         ]
       ]
@@ -330,7 +419,7 @@
       "main": [
         [
           {
-            "node": "Route Response",
+            "node": "Log Outgoing",
             "type": "main",
             "index": 0
           }
@@ -416,13 +505,23 @@
           }
         ]
       ]
+    },
+    "Log Outgoing": {
+      "main": [
+        [
+          {
+            "node": "Route Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "TPPQG2kMx9dcdNfU",
-    "availableInMCP": false,
     "executionOrder": "v1"
   },
   "versionId": "df9b93dc-aba7-48a6-bb1b-633b75e61ee2",

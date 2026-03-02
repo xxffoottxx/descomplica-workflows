@@ -25,7 +25,7 @@ Safety Features:
 
 Requirements:
     - .n8n-workflow-map.json must exist (run sync-n8n-status.py first)
-    - n8n API must be accessible at https://n8n.descomplicador.pt
+    - n8n API must be accessible at https://hub.descomplicador.pt
 
 Examples:
     # Preview what would be deployed
@@ -81,7 +81,7 @@ def load_env():
 load_env()
 
 # n8n API configuration
-N8N_BASE_URL = os.getenv('N8N_API_URL', 'https://n8n.descomplicador.pt/api/v1')
+N8N_BASE_URL = os.getenv('N8N_API_URL', 'https://hub.descomplicador.pt/api/v1')
 N8N_API_KEY = os.getenv('N8N_API_KEY')
 
 if not N8N_API_KEY:

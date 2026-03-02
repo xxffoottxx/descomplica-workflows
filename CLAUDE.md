@@ -5,7 +5,7 @@
 This repository contains n8n workflow definitions for Descomplicador.pt client projects. All workflows sync between:
 - **Local files** (this repo)
 - **GitHub** (version control)
-- **Production VM** (n8n instance at n8n.descomplicador.pt)
+- **Production VM** (n8n instance at hub.descomplicador.pt)
 
 ---
 
@@ -87,7 +87,7 @@ descomplica-workflows/
 
 Located in `.env` (gitignored):
 ```
-N8N_API_URL=https://n8n.descomplicador.pt/api/v1
+N8N_API_URL=https://hub.descomplicador.pt/api/v1
 N8N_API_KEY=<your-api-key>
 ```
 
@@ -97,7 +97,7 @@ Get API key: n8n Settings → API → Create API Key
 
 - **Host:** 34.175.249.49
 - **SSH:** `ssh -i ~/.ssh/gcloud-key andrefloresbrasil@34.175.249.49`
-- **n8n URL:** https://n8n.descomplicador.pt
+- **n8n URL:** https://hub.descomplicador.pt
 - **User:** andrefloresbrasil@gmail.com
 
 ---

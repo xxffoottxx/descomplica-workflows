@@ -907,7 +907,7 @@
                                 <span class="price-tag" onclick="editCatPrice(event, 'int-widget')"><span id="p-int-widget">100</span>€</span>
                             </div>
                             <div class="check-opt" onclick="toggleCatCheck(this, 'chatbot-pipeline')">
-                                <span class="option-label-text">Pipeline (Crawl4AI + Pinecone)</span>
+                                <span class="option-label-text">Pipeline de dados</span>
                                 <span class="price-tag" onclick="editCatPrice(event, 'int-pipeline')"><span id="p-int-pipeline">275</span>€</span>
                             </div>
                         </div>
@@ -1568,7 +1568,7 @@
                     'chatbot-whatsapp': { label: 'WhatsApp', key: 'whatsapp' },
                     'chatbot-messenger': { label: 'Messenger', key: 'messenger' },
                     'chatbot-widget': { label: 'Widget no site', key: 'widget' },
-                    'chatbot-pipeline': { label: 'Pipeline de dados (Crawl4AI + Pinecone)', key: 'pipeline' }
+                    'chatbot-pipeline': { label: 'Pipeline de dados', key: 'pipeline' }
                 };
                 Object.keys(intMap).forEach(function(id) {
                     if (selections.checks[id]) {

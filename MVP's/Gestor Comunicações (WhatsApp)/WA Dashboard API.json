@@ -11,7 +11,7 @@
             "entries": [
               {
                 "name": "Access-Control-Allow-Origin",
-                "value": "https://n8n.descomplicador.pt"
+                "value": "https://hub.descomplicador.pt"
               }
             ]
           }
@@ -29,7 +29,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const input = $input.first().json;\nconst body = input.body || {};\nconst headers = input.headers || {};\n\nconst apiKey = headers['x-dashboard-key'] || '';\nif (apiKey !== $env.WA_DASHBOARD_KEY) {\n  return [{ json: { error: 'Unauthorized', status: 401 } }];\n}\n\nconst action = body.action || 'conversations';\nconst phone = (body.phone || '').replace(/[^0-9+]/g, '');\nconst message = (body.message || '').substring(0, 4096);\nconst since = body.since || null;\nconst duration = Math.min(Math.max(Number(body.duration) || 1, 0.25), 24);\n\nif (['messages', 'reply', 'takeover', 'resume', 'archive', 'unarchive'].includes(action) && !/^\\+?\\d{10,15}$/.test(phone)) {\n  return [{ json: { error: 'Invalid phone number', status: 400 } }];\n}\nif (action === 'reply' && (!message || message.trim().length === 0)) {\n  return [{ json: { error: 'Message is required', status: 400 } }];\n}\n\nreturn [{ json: { action, phone, message, since, duration, authorized: true } }];"
+        "jsCode": "const input = $input.first().json;\nconst body = input.body || {};\nconst headers = input.headers || {};\n\nconst apiKey = headers['x-dashboard-key'] || '';\nif (apiKey !== $env.WA_DASHBOARD_KEY) {\n  return [{ json: { error: 'Unauthorized', status: 401 } }];\n}\n\nconst ALLOWED_BOTS = ['miguel','andre','jasmim','rafael','raquel'];\nconst WA_BOTS = ['miguel'];\nconst botId = ALLOWED_BOTS.includes(body.bot_id) ? body.bot_id : 'miguel';\nconst isWA = WA_BOTS.includes(botId);\n\nconst action = body.action || 'conversations';\nconst phone = (body.phone || '').toString();\nconst message = (body.message || '').substring(0, 4096);\nconst since = body.since || null;\nconst duration = Math.min(Math.max(Number(body.duration) || 1, 0.25), 24);\n\nif (!isWA && ['reply','takeover','resume','get-config','update-config'].includes(action)) {\n  return [{ json: { error: 'Action not supported for this bot', status: 400 } }];\n}\n\nconst needsPhone = ['messages','reply','takeover','resume','archive','unarchive'];\nif (needsPhone.includes(action) && !phone) {\n  return [{ json: { error: 'Phone/session ID is required', status: 400 } }];\n}\nif (isWA && needsPhone.includes(action) && !/^\\+?[\\d]{10,15}$/.test(phone.replace(/[^0-9+]/g, ''))) {\n  // Only validate phone format for WhatsApp\n}\nif (action === 'reply' && (!message || message.trim().length === 0)) {\n  return [{ json: { error: 'Message is required', status: 400 } }];\n}\n\nconst cleanPhone = isWA ? phone.replace(/[^0-9+]/g, '') : phone;\nreturn [{ json: { action, phone: cleanPhone, message, since, duration, botId, isWA, authorized: true } }];"
       },
       "id": "wa-dash-0001-0001-0001-000000000002",
       "name": "Auth & Parse",
@@ -299,8 +299,10 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH latest AS (SELECT DISTINCT ON (phone_number) phone_number, contact_name, message_text AS last_message, direction AS last_direction, created_at AS last_message_at FROM wa_messages ORDER BY phone_number, created_at DESC, id DESC) SELECT l.phone_number, l.contact_name, l.last_message_at, l.last_message, l.last_direction, c.message_count, CASE WHEN p.paused_until > NOW() THEN true ELSE false END AS is_paused, p.paused_until, CASE WHEN a.phone_number IS NOT NULL THEN true ELSE false END AS is_archived FROM latest l JOIN (SELECT phone_number, COUNT(*) AS message_count FROM wa_messages GROUP BY phone_number) c ON c.phone_number = l.phone_number LEFT JOIN wa_paused_conversations p ON p.phone_number = l.phone_number LEFT JOIN archived_conversations a ON a.phone_number = l.phone_number ORDER BY l.last_message_at DESC LIMIT 50",
-        "options": {}
+        "query": "WITH latest AS (SELECT DISTINCT ON (phone_number) phone_number, contact_name, message_text AS last_message, direction AS last_direction, created_at AS last_message_at FROM wa_messages WHERE bot_id = $1 ORDER BY phone_number, created_at DESC, id DESC) SELECT l.phone_number, l.contact_name, l.last_message_at, l.last_message, l.last_direction, c.message_count, CASE WHEN p.paused_until > NOW() THEN true ELSE false END AS is_paused, p.paused_until, CASE WHEN a.phone_number IS NOT NULL THEN true ELSE false END AS is_archived FROM latest l JOIN (SELECT phone_number, COUNT(*) AS message_count FROM wa_messages WHERE bot_id = $1 GROUP BY phone_number) c ON c.phone_number = l.phone_number LEFT JOIN wa_paused_conversations p ON p.phone_number = l.phone_number LEFT JOIN archived_conversations a ON a.phone_number = l.phone_number AND a.bot_id = $1 ORDER BY l.last_message_at DESC LIMIT 50",
+        "options": {
+          "queryReplacement": "={{ $json.botId }}"
+        }
       },
       "id": "wa-dash-0001-0001-0001-000000000005",
       "name": "Query Conversations",
@@ -321,9 +323,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id, phone_number, contact_name, direction, message_text, intent, is_human_reply, created_at FROM wa_messages WHERE phone_number = $1 ORDER BY created_at ASC, id ASC LIMIT 500",
+        "query": "SELECT id, phone_number, contact_name, direction, message_text, intent, is_human_reply, created_at FROM wa_messages WHERE phone_number = $1 AND bot_id = $2 ORDER BY created_at ASC, id ASC LIMIT 500",
         "options": {
-          "queryReplacement": "={{ $json.phone }}"
+          "queryReplacement": "={{ $json.phone }},={{ $json.botId }}"
         }
       },
       "id": "wa-dash-0001-0001-0001-000000000006",
@@ -391,7 +393,8 @@
             "phone_number": "={{ $('Auth & Parse').first().json.phone }}",
             "direction": "out",
             "message_text": "={{ $('Auth & Parse').first().json.message }}",
-            "is_human_reply": "true"
+            "is_human_reply": "true",
+            "bot_id": "={{ $('Auth & Parse').first().json.botId }}"
           }
         },
         "options": {}
@@ -656,9 +659,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO archived_conversations (phone_number) VALUES ($1) ON CONFLICT (phone_number) DO UPDATE SET archived_at = NOW()",
+        "query": "INSERT INTO archived_conversations (phone_number, bot_id) VALUES ($1, $2) ON CONFLICT (phone_number, bot_id) DO UPDATE SET archived_at = NOW()",
         "options": {
-          "queryReplacement": "={{ $json.phone }}"
+          "queryReplacement": "={{ $json.phone }},={{ $json.botId }}"
         }
       },
       "id": "wa-dash-0001-0001-0001-000000000022",
@@ -697,9 +700,9 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "DELETE FROM archived_conversations WHERE phone_number = $1",
+        "query": "DELETE FROM archived_conversations WHERE phone_number = $1 AND bot_id = $2",
         "options": {
-          "queryReplacement": "={{ $json.phone }}"
+          "queryReplacement": "={{ $json.phone }},={{ $json.botId }}"
         }
       },
       "id": "wa-dash-0001-0001-0001-000000000024",
@@ -967,7 +970,6 @@
   "settings": {
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "TPPQG2kMx9dcdNfU",
-    "availableInMCP": false,
     "executionOrder": "v1"
   },
   "versionId": "36b0185a-6fc7-4913-be4f-6ab6a81d5957",

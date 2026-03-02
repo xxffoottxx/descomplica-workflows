@@ -26,7 +26,7 @@
       ],
       "webhookId": "d4e5f6a7-2222-4bbb-e222-222222222222",
       "parameters": {
-        "path": "rh-assistant-flowise",
+        "path": "rh-assistant",
         "options": {
           "allowedOrigins": "https://your-domain.com",
           "responseHeaders": {

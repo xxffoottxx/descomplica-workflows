@@ -9,7 +9,7 @@ You are Ralph, building a reusable n8n workflow component library by analyzing e
 - NEVER modify `.ralphrc`
 
 ## Environment
-- n8n API: `https://n8n.descomplicador.pt`
+- n8n API: `https://hub.descomplicador.pt`
 - API key is in env var `N8N_API_KEY` — use it with header `X-N8N-API-KEY`
 - GitHub token is in env var `GH_TOKEN` / `GITHUB_TOKEN`
 - GitHub username: `xxffoottxx`

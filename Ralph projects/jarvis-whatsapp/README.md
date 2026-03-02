@@ -83,7 +83,7 @@ jarvis-whatsapp/
 - WABA ID: `1455185509564906`
 
 **Webhook:**
-- Base URL: `https://n8n.descomplicador.pt/webhook/`
+- Base URL: `https://hub.descomplicador.pt/webhook/`
 
 **Idioma:** Português Europeu (pt-PT)
 **Fuso Horário:** Europe/Lisbon

@@ -10,7 +10,7 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "vapi/call-completed-v3",
+        "path": "voice/call-completed-v3",
         "responseMode": "responseNode",
         "options": {}
       },
@@ -197,7 +197,7 @@
       {
         "parameters": {
           "httpMethod": "POST",
-          "path": "vapi/call-completed-v3",
+          "path": "voice/call-completed-v3",
           "responseMode": "responseNode",
           "options": {}
         },

@@ -1,10 +1,19 @@
 // Configuration
 const CONFIG = {
-    API_URL: 'https://n8n.descomplicador.pt/webhook/wa-dashboard-api',
+    API_URL: 'https://hub.descomplicador.pt/webhook/wa-dashboard-api',
     POLL_INTERVAL: 5000,
     FETCH_TIMEOUT: 15000,
     MAX_MESSAGE_LENGTH: 4096,
     MAX_POLL_FAILURES: 3
+};
+
+// Bot Registry
+const BOTS = {
+    miguel:  { name: 'Miguel',  type: 'whatsapp', label: 'WhatsApp', color: '#25D366' },
+    andre:   { name: 'André',   type: 'website',  label: 'Conversão', color: '#7c3aed' },
+    jasmim:  { name: 'Jasmim',  type: 'website',  label: 'Hotel', color: '#3b82f6' },
+    rafael:  { name: 'Rafael',  type: 'website',  label: 'Vendas', color: '#f59e0b' },
+    raquel:  { name: 'Raquel',  type: 'website',  label: 'RH', color: '#ec4899' },
 };
 
 // State
@@ -23,7 +32,8 @@ let state = {
     pausedUntil: null,
     isArchived: false,
     showArchived: false,
-    botConfig: { enabled: true, schedule: [] }
+    botConfig: { enabled: true, schedule: [] },
+    currentBot: 'miguel'
 };
 
 // DOM Elements
@@ -62,7 +72,10 @@ const elements = {
     archiveLabel: document.getElementById('archive-label'),
     archiveBar: document.getElementById('archive-bar'),
     archiveToggle: document.getElementById('archive-toggle'),
-    archiveToggleText: document.getElementById('archive-toggle-text')
+    archiveToggleText: document.getElementById('archive-toggle-text'),
+    botTabs: document.getElementById('bot-tabs'),
+    botControlBar: document.getElementById('bot-control-bar'),
+    replyBar: document.getElementById('reply-bar')
 };
 
 // Initialize
@@ -71,12 +84,14 @@ document.addEventListener('DOMContentLoaded', init);
 function init() {
     state.apiKey = localStorage.getItem('wa_dashboard_key');
 
+    renderBotTabs();
+
     if (!state.apiKey) {
         showApiKeyPrompt();
     } else {
         loadConversations();
         startPolling();
-        loadBotConfig();
+        if (botType() === 'whatsapp') loadBotConfig();
     }
 
     // Event listeners
@@ -155,6 +170,44 @@ function clearApiKey() {
     showApiKeyPrompt();
 }
 
+// Bot helpers
+function botType() {
+    return BOTS[state.currentBot]?.type || 'whatsapp';
+}
+
+function renderBotTabs() {
+    if (!elements.botTabs) return;
+    elements.botTabs.innerHTML = Object.entries(BOTS).map(([id, bot]) => {
+        const active = id === state.currentBot;
+        return `<button class="bot-tab${active ? ' active' : ''}" data-bot="${id}" style="${active ? '--tab-color:' + bot.color : ''}">${bot.name}</button>`;
+    }).join('');
+
+    elements.botTabs.querySelectorAll('.bot-tab').forEach(btn => {
+        btn.addEventListener('click', () => switchBot(btn.dataset.bot));
+    });
+}
+
+function switchBot(botId) {
+    if (!BOTS[botId] || botId === state.currentBot) return;
+    state.currentBot = botId;
+    state.conversations = [];
+    state.messages = [];
+    state.currentPhone = null;
+    state.currentName = null;
+    state.showArchived = false;
+
+    renderBotTabs();
+    updateBotUI();
+    showList();
+}
+
+function updateBotUI() {
+    const isWA = botType() === 'whatsapp';
+    // Bot control bar: only for WhatsApp
+    if (elements.botControlBar) elements.botControlBar.style.display = isWA ? 'flex' : 'none';
+    if (isWA) loadBotConfig();
+}
+
 // API Functions
 async function apiCall(action, params = {}) {
     if (!state.apiKey) {
@@ -172,7 +225,7 @@ async function apiCall(action, params = {}) {
                 'Content-Type': 'application/json',
                 'X-Dashboard-Key': state.apiKey
             },
-            body: JSON.stringify({ action, ...params }),
+            body: JSON.stringify({ action, bot_id: state.currentBot, ...params }),
             signal: controller.signal
         });
 
@@ -296,6 +349,7 @@ function showList() {
     elements.chatView.style.display = 'none';
     elements.replyInput.value = '';
     elements.windowWarning.style.display = 'none';
+    updateBotUI();
     loadConversations();
 }
 
@@ -308,10 +362,19 @@ function showChat(phone, name, isPaused, pausedUntil, isArchived) {
     state.isArchived = !!isArchived;
     elements.listView.style.display = 'none';
     elements.chatView.style.display = 'flex';
-    elements.chatName.textContent = name;
-    elements.chatPhone.textContent = formatPhoneDisplay(phone);
-    elements.chatAvatar.textContent = getInitials(name);
-    updateTakeoverButton();
+
+    const isWA = botType() === 'whatsapp';
+    const displayName = isWA ? name : formatWebVisitorName(phone);
+    elements.chatName.textContent = displayName;
+    elements.chatPhone.textContent = isWA ? formatPhoneDisplay(phone) : phone;
+    elements.chatAvatar.textContent = getInitials(displayName);
+
+    // Hide/show WA-only elements
+    if (elements.replyBar) elements.replyBar.style.display = isWA ? 'flex' : 'none';
+    elements.takeoverBtn.style.display = isWA ? 'flex' : 'none';
+    elements.windowWarning.style.display = 'none';
+
+    if (isWA) updateTakeoverButton();
     updateArchiveButton();
     loadMessages(phone);
 }
@@ -339,7 +402,7 @@ function formatTimeRemaining(until) {
 }
 
 async function handleTakeover() {
-    if (!state.currentPhone) return;
+    if (!state.currentPhone || botType() !== 'whatsapp') return;
 
     if (state.isPaused) {
         // Resume agent
@@ -403,7 +466,8 @@ function renderConversations() {
 
     elements.conversationsContainer.innerHTML = sorted.map(conv => {
         const phone = conv.phone_number || conv.phone;
-        const name = conv.contact_name || phone;
+        const isWA = botType() === 'whatsapp';
+        const name = isWA ? (conv.contact_name || phone) : formatWebVisitorName(phone);
         const initials = getInitials(name);
         const time = formatRelativeTime(conv.last_message_at);
         const preview = formatMessagePreview(conv);
@@ -455,7 +519,7 @@ function renderMessages() {
     elements.messagesContainer.innerHTML = state.messages.map(msg => {
         const isIncoming = msg.direction === 'incoming';
         const isHuman = msg.type === 'human';
-        const icon = isIncoming ? getUserIcon() : (isHuman ? getPersonIcon() : getBotIcon());
+        const icon = isIncoming ? getUserIcon() : (isHuman ? getPersonIcon() : getBotIcon(state.currentBot));
         const time = formatRelativeTime(msg.timestamp);
 
         return `
@@ -476,7 +540,7 @@ function formatMessagePreview(conv) {
     let icon = '';
     const dir = conv.last_direction || conv.last_message_direction;
     if (dir === 'out' || dir === 'outgoing') {
-        icon = getBotIcon();
+        icon = getBotIcon(state.currentBot);
     }
 
     const text = conv.last_message.length > 50
@@ -488,6 +552,7 @@ function formatMessagePreview(conv) {
 
 // Event Handlers
 function handleSendReply() {
+    if (botType() !== 'whatsapp') return;
     const message = elements.replyInput.value.trim();
     if (!message || state.isSending) return;
 
@@ -648,6 +713,10 @@ function showToast(message, type = 'info') {
 }
 
 function checkWindowExpiry() {
+    if (botType() !== 'whatsapp') {
+        elements.windowWarning.style.display = 'none';
+        return false;
+    }
     const incoming = [...state.messages].reverse().find(m => m.direction === 'incoming');
     if (!incoming || !incoming.timestamp) {
         elements.windowWarning.style.display = 'none';
@@ -657,6 +726,12 @@ function checkWindowExpiry() {
     const expired = elapsed > 24 * 60 * 60 * 1000;
     elements.windowWarning.style.display = expired ? 'flex' : 'none';
     return expired;
+}
+
+function formatWebVisitorName(sessionId) {
+    if (!sessionId) return 'Visitante';
+    const suffix = sessionId.length > 6 ? sessionId.slice(-6) : sessionId;
+    return 'Visitante #' + suffix;
 }
 
 async function loadBotConfig() {
@@ -686,6 +761,7 @@ async function handleBotToggle() {
 const DAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
 async function openSettings() {
+    if (botType() !== 'whatsapp') return;
     try {
         const data = await apiCall('get-config');
         state.botConfig = { enabled: data.enabled, schedule: data.schedule || [] };
@@ -842,8 +918,14 @@ function toggleArchiveView() {
 }
 
 // SVG Icons
-function getBotIcon() {
-    return `<img src="https://descomplicador.pt/images/Miguel.jpg" alt="Miguel" class="bot-avatar-img">`;
+function getBotIcon(botId) {
+    const bot = BOTS[botId || state.currentBot];
+    if (bot && bot.type === 'whatsapp') {
+        return `<img src="https://descomplicador.pt/images/Miguel.jpg" alt="Miguel" class="bot-avatar-img">`;
+    }
+    const color = bot ? bot.color : '#7c3aed';
+    const initial = bot ? bot.name[0] : 'B';
+    return `<span class="bot-icon-circle" style="background:${color}">${initial}</span>`;
 }
 
 function getPersonIcon() {

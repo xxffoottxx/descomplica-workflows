@@ -26,7 +26,7 @@
       ],
       "webhookId": "a1b2c3d4-2222-4bbb-b222-222222222222",
       "parameters": {
-        "path": "conversion-assistant-flowise",
+        "path": "conversion-assistant",
         "options": {
           "allowedOrigins": "https://your-domain.com",
           "responseHeaders": {

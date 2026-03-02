@@ -312,9 +312,9 @@ Sugestões:
 ### 8.1 Webhook URL
 O WhatsApp Business API precisa de um webhook público. Configure:
 
-1. **URL base:** `https://n8n.descomplicador.pt/webhook/`
+1. **URL base:** `https://hub.descomplicador.pt/webhook/`
 2. **Webhook ID:** Mude o `webhookId` no nó `WhatsApp Trigger` para um UUID único
-3. **URL final:** `https://n8n.descomplicador.pt/webhook/YOUR_WEBHOOK_ID`
+3. **URL final:** `https://hub.descomplicador.pt/webhook/YOUR_WEBHOOK_ID`
 
 ### 8.2 Configuração no Meta Business
 
