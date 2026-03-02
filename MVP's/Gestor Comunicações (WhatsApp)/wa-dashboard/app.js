@@ -8,12 +8,13 @@ const CONFIG = {
 };
 
 // Bot Registry
+const BOT_IMG_BASE = 'https://descomplicador.pt/images/';
 const BOTS = {
-    miguel:  { name: 'Miguel',  type: 'whatsapp', label: 'WhatsApp', color: '#25D366' },
-    andre:   { name: 'André',   type: 'website',  label: 'Conversão', color: '#7c3aed' },
-    jasmim:  { name: 'Jasmim',  type: 'website',  label: 'Hotel', color: '#3b82f6' },
-    rafael:  { name: 'Rafael',  type: 'website',  label: 'Vendas', color: '#f59e0b' },
-    raquel:  { name: 'Raquel',  type: 'website',  label: 'RH', color: '#ec4899' },
+    miguel:  { name: 'Miguel',  type: 'whatsapp', label: 'WhatsApp', color: '#25D366', img: 'Miguel.jpg' },
+    andre:   { name: 'André',   type: 'website',  label: 'Conversão', color: '#7c3aed', img: 'andre-brasil.jpg' },
+    jasmim:  { name: 'Jasmim',  type: 'website',  label: 'Hotel', color: '#3b82f6', img: 'Jasmim.jpg' },
+    rafael:  { name: 'Rafael',  type: 'website',  label: 'Vendas', color: '#f59e0b', img: 'Rafael.jpg' },
+    raquel:  { name: 'Raquel',  type: 'website',  label: 'RH', color: '#ec4899', img: 'Raquel.jpg' },
 };
 
 // State
@@ -190,8 +191,8 @@ function renderBotSidebar() {
 
     elements.botList.innerHTML = Object.entries(BOTS).map(([id, bot]) => {
         const active = id === state.currentBot;
-        const avatar = bot.type === 'whatsapp'
-            ? `<img src="https://descomplicador.pt/images/Miguel.jpg" alt="${bot.name}" class="bot-sidebar-avatar-img">`
+        const avatar = bot.img
+            ? `<img src="${BOT_IMG_BASE}${bot.img}" alt="${bot.name}" class="bot-sidebar-avatar-img">`
             : `<div class="bot-sidebar-avatar-circle" style="background: ${bot.color}">${bot.name[0]}</div>`;
 
         const statusDot = bot.type === 'whatsapp'
@@ -1026,8 +1027,8 @@ function parseUserAgent(ua) {
 // SVG Icons
 function getBotIcon(botId) {
     const bot = BOTS[botId || state.currentBot];
-    if (bot && bot.type === 'whatsapp') {
-        return `<img src="https://descomplicador.pt/images/Miguel.jpg" alt="Miguel" class="bot-avatar-img">`;
+    if (bot && bot.img) {
+        return `<img src="${BOT_IMG_BASE}${bot.img}" alt="${bot.name}" class="bot-avatar-img">`;
     }
     const color = bot ? bot.color : '#7c3aed';
     const initial = bot ? bot.name[0] : 'B';
