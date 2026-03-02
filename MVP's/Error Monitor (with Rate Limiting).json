@@ -149,7 +149,7 @@
   "pinData": {},
   "versionId": "3a83e12e-1ffa-4f71-b7f8-88115aa4dc22",
   "activeVersionId": "3a83e12e-1ffa-4f71-b7f8-88115aa4dc22",
-  "versionCounter": 34,
+  "versionCounter": 35,
   "triggerCount": 0,
   "shared": [
     {
@@ -174,7 +174,7 @@
             "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
             "projectId": "Ngf6hTAwSZXVFW0A",
             "user": {
-              "updatedAt": "2026-02-24T02:17:08.698Z",
+              "updatedAt": "2026-03-02T01:04:11.483Z",
               "createdAt": "2026-01-22T23:41:51.823Z",
               "id": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
               "email": "andrefloresbrasil@gmail.com",
@@ -201,7 +201,7 @@
               },
               "disabled": false,
               "mfaEnabled": false,
-              "lastActiveAt": "2026-02-24",
+              "lastActiveAt": "2026-03-02",
               "isPending": false
             }
           }

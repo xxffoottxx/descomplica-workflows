@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-21T01:53:39.107Z",
+  "updatedAt": "2026-03-02T00:06:57.709Z",
   "createdAt": "2026-02-06T03:54:48.699Z",
   "id": "doLSUTaivmnon3YZ4tf75",
   "name": "Hotel Concierge - flowise",
@@ -534,14 +534,16 @@
   "settings": {
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "7msWfdcUmBjjvZPCLh4F9",
-    "executionOrder": "v1"
+    "availableInMCP": false,
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed"
   },
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "62f77456-9af9-4324-b14b-27b2d81e4038",
-  "activeVersionId": "62f77456-9af9-4324-b14b-27b2d81e4038",
-  "versionCounter": 106,
+  "versionId": "c042af2c-8a3c-4273-aad4-52fb572e311b",
+  "activeVersionId": "c042af2c-8a3c-4273-aad4-52fb572e311b",
+  "versionCounter": 132,
   "triggerCount": 1,
   "shared": [
     {
@@ -566,7 +568,7 @@
             "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
             "projectId": "Ngf6hTAwSZXVFW0A",
             "user": {
-              "updatedAt": "2026-02-24T02:17:08.698Z",
+              "updatedAt": "2026-03-02T01:04:11.483Z",
               "createdAt": "2026-01-22T23:41:51.823Z",
               "id": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
               "email": "andrefloresbrasil@gmail.com",
@@ -593,7 +595,7 @@
               },
               "disabled": false,
               "mfaEnabled": false,
-              "lastActiveAt": "2026-02-24",
+              "lastActiveAt": "2026-03-02",
               "isPending": false
             }
           }
@@ -603,9 +605,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-02-21T01:53:39.108Z",
-    "createdAt": "2026-02-21T01:53:39.108Z",
-    "versionId": "62f77456-9af9-4324-b14b-27b2d81e4038",
+    "updatedAt": "2026-03-02T00:06:57.710Z",
+    "createdAt": "2026-03-02T00:06:57.710Z",
+    "versionId": "c042af2c-8a3c-4273-aad4-52fb572e311b",
     "workflowId": "doLSUTaivmnon3YZ4tf75",
     "nodes": [
       {
@@ -931,7 +933,7 @@
           },
           "options": {}
         },
-        "id": "6b0070f2-4fd0-489c-b53a-e22faa03a93b",
+        "id": "f29c9b4f-5bb9-4b85-9f92-cd738acfd92d",
         "name": "Log Incoming",
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.5,
@@ -973,7 +975,7 @@
           },
           "options": {}
         },
-        "id": "983ac4b0-44e1-4ad0-92b8-2fc65fe64d2c",
+        "id": "70ab59c1-ff3e-4b3e-8e07-80f050f5a1a6",
         "name": "Log Outgoing",
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.5,
@@ -1138,10 +1140,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-02-21T01:53:39.195Z",
-        "id": 615,
+        "createdAt": "2026-03-02T00:06:57.815Z",
+        "id": 692,
         "workflowId": "doLSUTaivmnon3YZ4tf75",
-        "versionId": "62f77456-9af9-4324-b14b-27b2d81e4038",
+        "versionId": "c042af2c-8a3c-4273-aad4-52fb572e311b",
+        "event": "activated",
+        "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
+      },
+      {
+        "createdAt": "2026-03-02T00:06:57.934Z",
+        "id": 693,
+        "workflowId": "doLSUTaivmnon3YZ4tf75",
+        "versionId": "c042af2c-8a3c-4273-aad4-52fb572e311b",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       }

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-21T01:53:38.394Z",
+  "updatedAt": "2026-03-02T00:06:58.218Z",
   "createdAt": "2026-02-06T03:53:56.498Z",
   "id": "je1TEagmmsdBMHddyHpgp",
   "name": "Assistente de RH - flowise",
@@ -642,14 +642,16 @@
   "settings": {
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "7msWfdcUmBjjvZPCLh4F9",
-    "executionOrder": "v1"
+    "availableInMCP": false,
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed"
   },
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "430dd004-d089-4ace-b80e-52670fcfed5b",
-  "activeVersionId": "430dd004-d089-4ace-b80e-52670fcfed5b",
-  "versionCounter": 98,
+  "versionId": "2174b062-3505-4d68-aa4c-ccbc0b8a89eb",
+  "activeVersionId": "2174b062-3505-4d68-aa4c-ccbc0b8a89eb",
+  "versionCounter": 124,
   "triggerCount": 1,
   "shared": [
     {
@@ -674,7 +676,7 @@
             "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
             "projectId": "Ngf6hTAwSZXVFW0A",
             "user": {
-              "updatedAt": "2026-02-24T02:17:08.698Z",
+              "updatedAt": "2026-03-02T01:04:11.483Z",
               "createdAt": "2026-01-22T23:41:51.823Z",
               "id": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
               "email": "andrefloresbrasil@gmail.com",
@@ -701,7 +703,7 @@
               },
               "disabled": false,
               "mfaEnabled": false,
-              "lastActiveAt": "2026-02-24",
+              "lastActiveAt": "2026-03-02",
               "isPending": false
             }
           }
@@ -711,9 +713,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-02-21T01:53:38.396Z",
-    "createdAt": "2026-02-21T01:53:38.396Z",
-    "versionId": "430dd004-d089-4ace-b80e-52670fcfed5b",
+    "updatedAt": "2026-03-02T00:06:58.220Z",
+    "createdAt": "2026-03-02T00:06:58.220Z",
+    "versionId": "2174b062-3505-4d68-aa4c-ccbc0b8a89eb",
     "workflowId": "je1TEagmmsdBMHddyHpgp",
     "nodes": [
       {
@@ -1118,7 +1120,7 @@
           },
           "options": {}
         },
-        "id": "4514c8d6-6d51-431b-82b5-5886b623eaa0",
+        "id": "68d415dd-9598-43e9-bd80-bd1e0e2e1929",
         "name": "Log Incoming",
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.5,
@@ -1160,7 +1162,7 @@
           },
           "options": {}
         },
-        "id": "61579c3a-22b4-4d31-965b-b85846d96536",
+        "id": "10cd4949-74c9-45e4-af98-8a38ea9a3fcc",
         "name": "Log Outgoing",
         "type": "n8n-nodes-base.postgres",
         "typeVersion": 2.5,
@@ -1354,10 +1356,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-02-21T01:53:38.503Z",
-        "id": 611,
+        "createdAt": "2026-03-02T00:06:58.318Z",
+        "id": 696,
         "workflowId": "je1TEagmmsdBMHddyHpgp",
-        "versionId": "430dd004-d089-4ace-b80e-52670fcfed5b",
+        "versionId": "2174b062-3505-4d68-aa4c-ccbc0b8a89eb",
+        "event": "activated",
+        "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
+      },
+      {
+        "createdAt": "2026-03-02T00:06:58.448Z",
+        "id": 697,
+        "workflowId": "je1TEagmmsdBMHddyHpgp",
+        "versionId": "2174b062-3505-4d68-aa4c-ccbc0b8a89eb",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       }

@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-28T05:05:49.331Z",
+  "updatedAt": "2026-02-28T10:38:11.092Z",
   "createdAt": "2026-02-06T12:52:22.184Z",
   "id": "i4wTS1JXtSrfmEYIb9WrY",
   "name": "Vapi - Book Appointment",
@@ -85,21 +85,28 @@
     },
     {
       "parameters": {
-        "calendar": "primary",
-        "start": "={{ $json.date }}T{{ $json.time }}:00",
-        "end": "={{ new Date(new Date($json.date + 'T' + $json.time + ':00').getTime() + $json.duration*60000).toISOString().slice(0, 19) }}",
-        "additionalFields": {
-          "attendees": "={{ $json.customer_email ? $json.customer_email : '' }}",
-          "description": "=Marcacao via Assistente Virtual\n\nCliente: {{ $json.customer_name }}\nTelemovel: {{ $json.customer_phone }}\n{{ $json.customer_email ? 'Email: ' + $json.customer_email : '' }}\nServico: {{ $json.service_type }}\n{{ $json.notes ? 'Notas: ' + $json.notes : '' }}",
-          "location": "",
-          "sendUpdates": "all",
-          "summary": "={{ $json.service_type }} - {{ $json.customer_name }}"
-        }
+        "method": "POST",
+        "url": "https://www.googleapis.com/calendar/v3/calendars/andrefloresbrasil@gmail.com/events",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "sendUpdates",
+              "value": "all"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ summary: $json.service_type + ' - ' + $json.customer_name, description: 'Marcacao via Assistente Virtual\\n\\nCliente: ' + $json.customer_name + '\\nTelemovel: ' + $json.customer_phone + ($json.customer_email ? '\\nEmail: ' + $json.customer_email : '') + '\\nServico: ' + $json.service_type + ($json.notes ? '\\nNotas: ' + $json.notes : ''), start: { dateTime: $json.date + 'T' + $json.time + ':00', timeZone: 'Atlantic/Azores' }, end: { dateTime: new Date(new Date($json.date + 'T' + $json.time + ':00').getTime() + $json.duration * 60000).toISOString().slice(0, 19), timeZone: 'Atlantic/Azores' }, attendees: $json.customer_email ? [{ email: $json.customer_email }] : [] }) }}",
+        "options": {}
       },
       "id": "fedd1135-82e6-4d9c-a3da-f4d7f1b194c6",
       "name": "Create Calendar Event",
-      "type": "n8n-nodes-base.googleCalendar",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
       "position": [
         624,
         96
@@ -296,9 +303,9 @@
   "staticData": null,
   "meta": null,
   "pinData": {},
-  "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
-  "activeVersionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
-  "versionCounter": 82,
+  "versionId": "990b2fa4-1589-4ad9-9ec2-705241d6d9e6",
+  "activeVersionId": "990b2fa4-1589-4ad9-9ec2-705241d6d9e6",
+  "versionCounter": 88,
   "triggerCount": 1,
   "shared": [
     {
@@ -323,7 +330,7 @@
             "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
             "projectId": "Ngf6hTAwSZXVFW0A",
             "user": {
-              "updatedAt": "2026-02-28T01:15:53.282Z",
+              "updatedAt": "2026-03-02T01:04:11.483Z",
               "createdAt": "2026-01-22T23:41:51.823Z",
               "id": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b",
               "email": "andrefloresbrasil@gmail.com",
@@ -350,7 +357,7 @@
               },
               "disabled": false,
               "mfaEnabled": false,
-              "lastActiveAt": "2026-02-28",
+              "lastActiveAt": "2026-03-02",
               "isPending": false
             }
           }
@@ -360,9 +367,9 @@
   ],
   "tags": [],
   "activeVersion": {
-    "updatedAt": "2026-02-28T05:05:49.332Z",
-    "createdAt": "2026-02-28T05:05:49.332Z",
-    "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
+    "updatedAt": "2026-02-28T10:38:11.093Z",
+    "createdAt": "2026-02-28T10:38:11.093Z",
+    "versionId": "990b2fa4-1589-4ad9-9ec2-705241d6d9e6",
     "workflowId": "i4wTS1JXtSrfmEYIb9WrY",
     "nodes": [
       {
@@ -443,21 +450,28 @@
       },
       {
         "parameters": {
-          "calendar": "primary",
-          "start": "={{ $json.date }}T{{ $json.time }}:00",
-          "end": "={{ new Date(new Date($json.date + 'T' + $json.time + ':00').getTime() + $json.duration*60000).toISOString().slice(0, 19) }}",
-          "additionalFields": {
-            "attendees": "={{ $json.customer_email ? $json.customer_email : '' }}",
-            "description": "=Marcacao via Assistente Virtual\n\nCliente: {{ $json.customer_name }}\nTelemovel: {{ $json.customer_phone }}\n{{ $json.customer_email ? 'Email: ' + $json.customer_email : '' }}\nServico: {{ $json.service_type }}\n{{ $json.notes ? 'Notas: ' + $json.notes : '' }}",
-            "location": "",
-            "sendUpdates": "all",
-            "summary": "={{ $json.service_type }} - {{ $json.customer_name }}"
-          }
+          "method": "POST",
+          "url": "https://www.googleapis.com/calendar/v3/calendars/andrefloresbrasil@gmail.com/events",
+          "authentication": "predefinedCredentialType",
+          "nodeCredentialType": "googleApi",
+          "sendQuery": true,
+          "queryParameters": {
+            "parameters": [
+              {
+                "name": "sendUpdates",
+                "value": "all"
+              }
+            ]
+          },
+          "sendBody": true,
+          "specifyBody": "json",
+          "jsonBody": "={{ JSON.stringify({ summary: $json.service_type + ' - ' + $json.customer_name, description: 'Marcacao via Assistente Virtual\\n\\nCliente: ' + $json.customer_name + '\\nTelemovel: ' + $json.customer_phone + ($json.customer_email ? '\\nEmail: ' + $json.customer_email : '') + '\\nServico: ' + $json.service_type + ($json.notes ? '\\nNotas: ' + $json.notes : ''), start: { dateTime: $json.date + 'T' + $json.time + ':00', timeZone: 'Atlantic/Azores' }, end: { dateTime: new Date(new Date($json.date + 'T' + $json.time + ':00').getTime() + $json.duration * 60000).toISOString().slice(0, 19), timeZone: 'Atlantic/Azores' }, attendees: $json.customer_email ? [{ email: $json.customer_email }] : [] }) }}",
+          "options": {}
         },
         "id": "fedd1135-82e6-4d9c-a3da-f4d7f1b194c6",
         "name": "Create Calendar Event",
-        "type": "n8n-nodes-base.googleCalendar",
-        "typeVersion": 1,
+        "type": "n8n-nodes-base.httpRequest",
+        "typeVersion": 4.2,
         "position": [
           624,
           96
@@ -650,18 +664,18 @@
     "autosaved": false,
     "workflowPublishHistory": [
       {
-        "createdAt": "2026-02-28T05:05:49.407Z",
-        "id": 633,
+        "createdAt": "2026-02-28T10:38:11.155Z",
+        "id": 641,
         "workflowId": "i4wTS1JXtSrfmEYIb9WrY",
-        "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
+        "versionId": "990b2fa4-1589-4ad9-9ec2-705241d6d9e6",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       },
       {
-        "createdAt": "2026-02-28T05:05:58.602Z",
-        "id": 635,
+        "createdAt": "2026-02-28T10:38:26.376Z",
+        "id": 643,
         "workflowId": "i4wTS1JXtSrfmEYIb9WrY",
-        "versionId": "c7654535-1ce5-4d63-afa5-5e404ba9866c",
+        "versionId": "990b2fa4-1589-4ad9-9ec2-705241d6d9e6",
         "event": "activated",
         "userId": "bd40af0a-dea0-4936-bcd4-e151c9d8fc8b"
       }
