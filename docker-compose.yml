@@ -116,6 +116,34 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
+  channel-manager:
+    build:
+      context: ../channel-manager
+      dockerfile: Dockerfile
+    container_name: channel-manager
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-admin}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/channel_manager
+      - ADMIN_USERNAME=${CM_ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${CM_ADMIN_PASSWORD}
+      - AUTH_ENABLED=true
+      - CORS_ORIGINS=${CM_CORS_ORIGINS}
+      - EMAIL_ENABLED=${CM_EMAIL_ENABLED:-true}
+      - EMAIL_FROM=${CM_EMAIL_FROM}
+      - EMAIL_TO=${CM_EMAIL_TO}
+      - SMTP_HOST=${CM_SMTP_HOST}
+      - SMTP_PORT=${CM_SMTP_PORT:-587}
+      - SMTP_USER=${CM_SMTP_USER}
+      - SMTP_PASS=${CM_SMTP_PASS}
+      - SYNC_INTERVAL_MINUTES=${CM_SYNC_INTERVAL_MINUTES:-5}
+      - WEBSITE_URL=https://refugioazores.pt
+    networks:
+      - ai-agents-network
+    depends_on:
+      - postgres
+
   # Uncomment if you want Ollama running in Docker (instead of host)
   # Note: Running on host is recommended for better performance
   # ollama:
