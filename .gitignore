@@ -53,3 +53,6 @@ coverage/
 # OS
 Thumbs.db
 n8n-automation-key.json
+
+# Agent state directories
+.ralph/
