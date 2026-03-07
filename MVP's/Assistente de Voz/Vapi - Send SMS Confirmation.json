@@ -144,6 +144,19 @@
         800,
         0
       ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- Vapi Webhook Authentication ---\nconst headers = $input.item.json.headers || {};\nconst vapiSecret = headers['x-vapi-secret'] || '';\nconst expected = process.env.VAPI_WEBHOOK_SECRET;\nif (!expected) {\n  return { _error: true, errorMessage: 'VAPI_WEBHOOK_SECRET not configured.', toolCallId: '' };\n}\nif (vapiSecret !== expected) {\n  return { _error: true, errorMessage: 'Pedido nao autorizado.', toolCallId: '' };\n}\n// --- End Authentication ---\n\n// Pass through input data\nreturn $input.item.json;"
+      },
+      "id": "auth-wv3ghcl5",
+      "name": "Validate Vapi Auth",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        0
+      ]
     }
   ],
   "connections": {
@@ -151,7 +164,7 @@
       "main": [
         [
           {
-            "node": "Extract SMS Data",
+            "node": "Validate Vapi Auth",
             "type": "main",
             "index": 0
           }
@@ -190,6 +203,17 @@
         [
           {
             "node": "Respond to Vapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Vapi Auth": {
+      "main": [
+        [
+          {
+            "node": "Extract SMS Data",
             "type": "main",
             "index": 0
           }
